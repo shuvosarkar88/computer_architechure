@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide to Linux Filesystem Internals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Soothing Stone -->
+    <!-- Application Structure Plan: A single-page application with a fixed sidebar for primary navigation between core topics: VFS Concepts, Filesystem Deep Dives (ext4 vs. XFS), Kernel Operations, and Caching. This thematic structure allows users to learn sequentially or jump to specific areas of interest. The main content area uses interactive elements like clickable diagrams, tabbed interfaces, and dynamic charts to explain complex relationships (e.g., VFS objects), compare filesystem features, and visualize processes (e.g., system call flow), which is more engaging and digestible than a linear text document. -->
+    <!-- Visualization & Content Choices: 
+        - VFS Objects: Goal: Organize/Relate -> Viz: Interactive diagram of styled divs. Interaction: Click to show details. Justification: Visually demonstrates the object hierarchy and relationships. Method: HTML/CSS/JS.
+        - ext4 vs. XFS Journaling: Goal: Compare -> Viz: Interactive buttons for each mode. Interaction: Click to update description text. Justification: Allows direct comparison of complex trade-offs. Method: HTML/JS.
+        - Filesystem Feature Comparison: Goal: Compare -> Viz: Bar chart. Interaction: Static view with tooltips. Justification: Provides a quick, high-level quantitative and qualitative comparison. Library: Chart.js.
+        - System Call Flow: Goal: Illustrate Process -> Viz: HTML/CSS flowchart. Interaction: Hover over steps to highlight and show info. Justification: Breaks down a complex sequence into manageable, explorable steps. Method: HTML/CSS/JS.
+        - On-Disk Layouts: Goal: Explain Structure -> Viz: Diagrams of styled divs. Interaction: Hover for details. Justification: Makes abstract layouts concrete and easy to understand. Method: HTML/CSS/JS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f7f4;
+            color: #4a4a4a;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #a8a29e;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #78716c;
+        }
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+        }
+        .nav-link.active {
+            background-color: #d6d3d1;
+            color: #1c1917;
+            font-weight: 600;
+        }
+        .content-card {
+            background-color: #ffffff;
+            border: 1px solid #e7e5e4;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            transition: all 0.3s ease-in-out;
+        }
+        .tab-button {
+            transition: all 0.2s ease-in-out;
+        }
+        .tab-button.active {
+            background-color: #a8a29e;
+            color: white;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .flowchart-step {
+             border: 2px solid transparent;
+             transition: all 0.3s ease;
+        }
+        .flowchart-step:hover {
+            border-color: #a8a29e;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="relative min-h-screen md:flex">
+        <aside id="sidebar" class="bg-stone-200 text-stone-800 w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition duration-200 ease-in-out z-20">
+            <a href="#" class="text-stone-900 flex items-center space-x-2 px-4">
+                <span class="text-2xl">🗂️</span>
+                <span class="text-2xl font-bold">Filesystem Internals</span>
+            </a>
+            <nav id="nav-menu">
+                <a href="#vfs" class="nav-link block py-2.5 px-4 rounded hover:bg-stone-300">VFS Concepts</a>
+                <a href="#deepdive" class="nav-link block py-2.5 px-4 rounded hover:bg-stone-300">Filesystem Deep Dive</a>
+                <a href="#kernelops" class="nav-link block py-2.5 px-4 rounded hover:bg-stone-300">Kernel Operations</a>
+                <a href="#caching" class="nav-link block py-2.5 px-4 rounded hover:bg-stone-300">Caching</a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 p-4 sm:p-6 lg:p-10">
+            <button id="sidebar-toggle" class="md:hidden mb-4 p-2 rounded-md bg-stone-200 text-stone-800">
+                Menu
+            </button>
+            
+            <section id="vfs" class="mb-12 scroll-mt-20">
+                <h1 class="text-4xl font-bold text-stone-800 mb-4">The Virtual File System (VFS)</h1>
+                <p class="text-lg text-stone-600 mb-6">The VFS is a crucial abstraction layer in the Linux kernel. Its primary role is to provide a single, unified interface for user-space applications to interact with all kinds of filesystems, whether they are on a local disk, a network share, or a virtual device. This design makes applications portable and simplifies adding new filesystem types to the kernel.</p>
+                
+                <div class="content-card p-6">
+                    <h2 class="text-2xl font-semibold text-stone-700 mb-4">Core VFS Objects</h2>
+                    <p class="mb-6">The VFS defines a common model based on four main objects. Click on an object below to see its role and how it connects to the others. This structure is the foundation of Linux's filesystem abstraction.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="flex flex-col items-center space-y-4">
+                             <div id="vfs-objects-diagram" class="w-full space-y-2">
+                                <div id="vfs-obj-super_block" class="vfs-object-btn p-3 text-center border-2 border-stone-300 rounded-lg cursor-pointer hover:bg-stone-100">
+                                    <h3 class="font-bold">Superblock</h3>
+                                    <p class="text-sm">Mounted Filesystem Instance</p>
+                                </div>
+                                <div class="flex justify-center text-3xl">↓</div>
+                                <div id="vfs-obj-inode" class="vfs-object-btn p-3 text-center border-2 border-stone-300 rounded-lg cursor-pointer hover:bg-stone-100">
+                                    <h3 class="font-bold">Inode</h3>
+                                    <p class="text-sm">File / Directory Metadata</p>
+                                </div>
+                                <div class="flex justify-around">
+                                    <div class="flex flex-col items-center"><div class="text-3xl">↙</div></div>
+                                    <div class="flex flex-col items-center"><div class="text-3xl">↘</div></div>
+                                </div>
+                                <div class="flex justify-around gap-4">
+                                    <div id="vfs-obj-dentry" class="vfs-object-btn p-3 w-1/2 text-center border-2 border-stone-300 rounded-lg cursor-pointer hover:bg-stone-100">
+                                        <h3 class="font-bold">Dentry</h3>
+                                        <p class="text-sm">Filename to Inode Link</p>
+                                    </div>
+                                    <div id="vfs-obj-file" class="vfs-object-btn p-3 w-1/2 text-center border-2 border-stone-300 rounded-lg cursor-pointer hover:bg-stone-100">
+                                        <h3 class="font-bold">File</h3>
+                                        <p class="text-sm">Open File Instance</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="vfs-object-details" class="bg-stone-50 p-4 rounded-lg border border-stone-200 min-h-[200px]">
+                            <!-- Details will be injected here by JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="deepdive" class="mb-12 scroll-mt-20">
+                <h1 class="text-4xl font-bold text-stone-800 mb-4">Filesystem Deep Dive</h1>
+                <p class="text-lg text-stone-600 mb-6">While VFS provides the common interface, filesystems like ext4 and XFS have unique internal designs optimized for different goals. Explore their architectures, journaling methods, and data storage strategies below.</p>
+                <div class="content-card p-6">
+                    <div class="flex justify-center mb-6">
+                        <div class="bg-stone-200 rounded-full p-1 flex">
+                            <button id="tab-ext4" class="tab-button px-6 py-2 rounded-full active">ext4</button>
+                            <button id="tab-xfs" class="tab-button px-6 py-2 rounded-full">XFS</button>
+                        </div>
+                    </div>
+                    
+                    <div id="content-ext4" class="tab-content">
+                        <!-- ext4 content here -->
+                    </div>
+                    <div id="content-xfs" class="tab-content hidden">
+                        <!-- XFS content here -->
+                    </div>
+
+                    <div class="mt-8 pt-6 border-t border-stone-200">
+                         <h2 class="text-2xl font-semibold text-stone-700 mb-4 text-center">Feature Comparison: ext4 vs. XFS</h2>
+                         <p class="text-center text-stone-600 mb-6">This chart provides a high-level comparison of the key design philosophies and features of ext4 and XFS.</p>
+                         <div class="chart-container">
+                            <canvas id="fsCompareChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="kernelops" class="mb-12 scroll-mt-20">
+                <h1 class="text-4xl font-bold text-stone-800 mb-4">Kernel Operations: A System Call's Journey</h1>
+                <p class="text-lg text-stone-600 mb-6">When you run a command like `cat file.txt`, it triggers a complex sequence of events inside the kernel. The VFS orchestrates this process, translating a simple user request into specific actions on the hardware. Hover over each step below to trace the journey of an `open()` system call.</p>
+                <div class="content-card p-6">
+                    <div id="syscall-flow" class="space-y-4">
+                        <div data-info="A program in user space (e.g., shell, application) calls a library function like `open()` from libc." class="flowchart-step bg-blue-100 text-blue-800 p-4 rounded-lg text-center">
+                            <h3 class="font-bold">1. User Space Application</h3>
+                            <p>e.g., `open("file.txt", O_RDONLY)`</p>
+                        </div>
+                        <div class="flex justify-center text-3xl text-stone-400">↓</div>
+                        <div data-info="The library function triggers a special instruction (`syscall`) to switch from user mode to the protected kernel mode. The system call number and arguments are passed in CPU registers." class="flowchart-step bg-green-100 text-green-800 p-4 rounded-lg text-center">
+                            <h3 class="font-bold">2. System Call Interface</h3>
+                            <p>Transition to Kernel Mode</p>
+                        </div>
+                        <div class="flex justify-center text-3xl text-stone-400">↓</div>
+                        <div data-info="The kernel's generic system call handler dispatches to the VFS. The VFS begins path resolution, checking the Dentry Cache (dcache) for 'file.txt'." class="flowchart-step bg-purple-100 text-purple-800 p-4 rounded-lg text-center">
+                             <h3 class="font-bold">3. VFS Pathname Resolution</h3>
+                             <p>Search Dentry Cache (dcache)</p>
+                        </div>
+                        <div class="flex justify-center text-3xl text-stone-400">↓</div>
+                         <div data-info="If the dentry is not cached (a miss), the VFS asks the filesystem driver to find the file in its parent directory by calling the `lookup` operation on the directory's inode." class="flowchart-step bg-orange-100 text-orange-800 p-4 rounded-lg text-center">
+                            <h3 class="font-bold">4. Filesystem Driver `lookup()`</h3>
+                            <p>On-disk directory search (e.g., in ext4 HTree or XFS B+tree)</p>
+                        </div>
+                        <div class="flex justify-center text-3xl text-stone-400">↓</div>
+                        <div data-info="The driver finds the file, reads its inode from disk into the Inode Cache (icache), and the VFS creates a dentry to link the name to the inode." class="flowchart-step bg-teal-100 text-teal-800 p-4 rounded-lg text-center">
+                            <h3 class="font-bold">5. Inode & Dentry Creation</h3>
+                            <p>Populate Caches (icache, dcache)</p>
+                        </div>
+                         <div class="flex justify-center text-3xl text-stone-400">↓</div>
+                        <div data-info="The VFS allocates a `struct file` object to represent the open file instance for this process. It connects this object to the file's inode and dentry." class="flowchart-step bg-rose-100 text-rose-800 p-4 rounded-lg text-center">
+                            <h3 class="font-bold">6. `struct file` Allocation</h3>
+                             <p>Create in-memory representation of open file</p>
+                        </div>
+                         <div class="flex justify-center text-3xl text-stone-400">↓</div>
+                        <div data-info="The kernel returns a file descriptor (a small integer) to the user-space process. This descriptor is an index to the `struct file` object in the process's private table." class="flowchart-step bg-indigo-100 text-indigo-800 p-4 rounded-lg text-center">
+                            <h3 class="font-bold">7. Return File Descriptor</h3>
+                            <p>Process can now use `read()`, `write()`, `close()`</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="caching" class="mb-12 scroll-mt-20">
+                <h1 class="text-4xl font-bold text-stone-800 mb-4">Kernel Caching Mechanisms</h1>
+                <p class="text-lg text-stone-600 mb-6">Disk I/O is extremely slow compared to memory access. To boost performance, the kernel aggressively caches filesystem information in RAM. Understanding these caches is key to understanding Linux I/O performance.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="content-card p-6">
+                        <h2 class="text-2xl font-semibold text-stone-700 mb-2">Page Cache</h2>
+                        <h3 class="text-md font-medium text-stone-500 mb-4">Caches: File Data</h3>
+                        <p>The workhorse of file I/O. It stores chunks (pages) of file data in RAM. When you read a file, the kernel checks the page cache first. If the data is there (a 'hit'), it's returned instantly. If not (a 'miss'), the kernel reads it from disk, puts it in the page cache, and then gives it to you. Writes are also typically buffered here before being flushed to disk.</p>
+                    </div>
+                    <div class="content-card p-6">
+                        <h2 class="text-2xl font-semibold text-stone-700 mb-2">Dentry Cache (dcache)</h2>
+                        <h3 class="text-md font-medium text-stone-500 mb-4">Caches: Pathname Lookups</h3>
+                        <p>This cache speeds up the translation of file paths (like `/home/user/file.txt`) into inodes. It stores `dentry` objects, which link filenames to inodes. It even caches 'negative' lookups, so if you try to access a non-existent file repeatedly, the kernel doesn't have to search the disk every time.</p>
+                    </div>
+                    <div class="content-card p-6">
+                        <h2 class="text-2xl font-semibold text-stone-700 mb-2">Inode Cache (icache)</h2>
+                        <h3 class="text-md font-medium text-stone-500 mb-4">Caches: File Metadata</h3>
+                        <p>Stores `inode` objects in memory. The inode contains all the metadata about a file: its permissions, size, owner, and pointers to its data blocks. Caching inodes avoids costly disk reads just to check a file's permissions or find where its data is located on disk.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const vfsObjectData = {
+        super_block: {
+            title: 'struct super_block',
+            description: "Represents a mounted filesystem. It's an in-memory structure holding metadata like the filesystem type, block size, and a pointer to the root dentry. A corrupted on-disk superblock usually prevents a filesystem from being mounted.",
+            relations: "Each mounted filesystem has one superblock. It provides the entry point for all filesystem-level operations, like allocating or writing inodes."
+        },
+        inode: {
+            title: 'struct inode',
+            description: "Represents a single file, directory, or other filesystem object. It holds all metadata about the object EXCEPT its name. This includes permissions, size, timestamps, and pointers to the actual data blocks.",
+            relations: "An inode is referenced by one or more dentries (for hard links). It points to the operations tables (`inode_operations`, `file_operations`) that define how it behaves."
+        },
+        dentry: {
+            title: 'struct dentry',
+            description: "The 'glue' that connects a human-readable filename to a machine-readable inode. Dentries exist mainly in the dentry cache (dcache) for performance and are not stored on disk. They are crucial for resolving pathnames.",
+            relations: "A path like `/home/user` consists of multiple dentries. Each dentry points to an inode. Negative dentries point to NULL, caching the fact that a file doesn't exist."
+        },
+        file: {
+            title: 'struct file',
+            description: "Represents an open file instance by a process. This object exists only in memory and tracks state specific to one `open()` call, like the current read/write position (offset) and access flags (read-only, write-only).",
+            relations: "Multiple `file` objects (from different processes or multiple `open()` calls) can point to the same inode. Each has its own independent file position."
+        }
+    };
+
+    const ext4Content = `
+        <h2 class="text-2xl font-semibold text-stone-700 mb-4">ext4: The All-Rounder</h2>
+        <p class="mb-6">ext4 is the default filesystem for many Linux distributions, prized for its stability, reliability, and good all-around performance. It evolved from ext3 and introduced major improvements like extents, delayed allocation, and metadata checksumming.</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h3 class="text-xl font-semibold text-stone-600 mb-3">On-Disk Layout: Block Groups</h3>
+                <p class="mb-4">ext4 divides the disk into **Block Groups**, which are like mini-filesystems. Each group contains its own copy of critical metadata and data blocks. This design improves locality by trying to keep a file's inode and its data in the same group, reducing disk seek times.</p>
+                <div class="p-4 border border-stone-200 rounded-lg bg-stone-50 space-y-2 text-sm">
+                    <div class="p-2 bg-red-100 rounded">Superblock/Group Descriptors (Backup)</div>
+                    <div class="p-2 bg-yellow-100 rounded">Data Block Bitmap</div>
+                    <div class="p-2 bg-green-100 rounded">Inode Bitmap</div>
+                    <div class="p-2 bg-blue-100 rounded">Inode Table</div>
+                    <div class="p-2 bg-gray-200 rounded h-16">Data Blocks</div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-stone-600 mb-3">Data Storage: Extents</h3>
+                <p>Instead of mapping every single data block, ext4 uses **extents**. An extent is a pointer to a long, contiguous range of data blocks. This is far more efficient for large files, reducing metadata overhead and fragmentation.</p>
+                <h3 class="text-xl font-semibold text-stone-600 mt-4 mb-3">Allocation: Delayed Allocation</h3>
+                <p>ext4 doesn't allocate blocks the moment an application writes data. It waits, or **delays allocation**, until the data is being flushed to disk. This allows the allocator to make smarter decisions, find larger contiguous blocks, and create bigger, more efficient extents.</p>
+            </div>
+        </div>
+
+        <div class="mt-8">
+            <h3 class="text-xl font-semibold text-stone-600 mb-3">Journaling (JBD2)</h3>
+            <p class="mb-4">Journaling protects the filesystem from being left in an inconsistent state after a crash. It's a "write-ahead log" of metadata changes. Select a mode to see how it balances safety and performance:</p>
+            <div class="flex flex-wrap gap-2 mb-4">
+                <button class="journal-btn-ext4 p-2 border rounded-md" data-mode="journal">data=journal (Safest)</button>
+                <button class="journal-btn-ext4 p-2 border rounded-md active bg-stone-200" data-mode="ordered">data=ordered (Default)</button>
+                <button class="journal-btn-ext4 p-2 border rounded-md" data-mode="writeback">data=writeback (Fastest)</button>
+            </div>
+            <div id="journal-details-ext4" class="p-4 bg-stone-50 rounded-lg border border-stone-200 min-h-[100px]"></div>
+        </div>
+    `;
+
+    const xfsContent = `
+        <h2 class="text-2xl font-semibold text-stone-700 mb-4">XFS: The High-Performance Engine</h2>
+        <p class="mb-6">XFS is a high-performance filesystem excelling at parallel I/O and handling very large files and filesystems. Its design is fundamentally based on B+ trees and aggressive concurrency, making it ideal for servers and data-intensive workloads.</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h3 class="text-xl font-semibold text-stone-600 mb-3">On-Disk Layout: Allocation Groups (AGs)</h3>
+                <p class="mb-4">XFS divides the disk into large **Allocation Groups**. Each AG manages its own inodes and free space independently, allowing multiple threads to write to different AGs simultaneously with minimal interference. This is key to its parallelism.</p>
+                <div class="p-4 border border-stone-200 rounded-lg bg-stone-50 space-y-2 text-sm">
+                    <div class="p-2 bg-red-100 rounded">Superblock (in first AG)</div>
+                    <div class="p-2 bg-yellow-100 rounded">Free Space B+ Trees (by size & location)</div>
+                    <div class="p-2 bg-blue-100 rounded">Inode B+ Tree</div>
+                    <div class="p-2 bg-gray-200 rounded h-16">Data Blocks (Extents)</div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-stone-600 mb-3">Metadata Management: B+ Trees</h3>
+                <p>XFS uses **B+ trees** for almost everything: mapping extents in a file, indexing directory entries, tracking free space, and locating inodes. B+ trees provide extremely efficient lookup, insertion, and deletion, which allows XFS to scale to massive sizes without performance degradation.</p>
+                 <h3 class="text-xl font-semibold text-stone-600 mt-4 mb-3">Allocation: Delayed & Preallocation</h3>
+                <p>Like ext4, XFS uses **delayed allocation** to reduce fragmentation. It also has robust support for **preallocation**, allowing applications to reserve large, contiguous chunks of space for a file before the data is even ready, which is critical for databases and streaming media.</p>
+            </div>
+        </div>
+        
+        <div class="mt-8">
+            <h3 class="text-xl font-semibold text-stone-600 mb-3">Journaling: Delayed Logging</h3>
+            <p class="mb-4">XFS has a highly sophisticated journaling system designed for throughput. Its key feature is **delayed logging**, where many small metadata changes are buffered in memory (in a structure called the CIL) before being written to the on-disk log in a single large, efficient transaction. This drastically reduces I/O bottlenecks.</p>
+            <div id="journal-details-xfs" class="p-4 bg-stone-50 rounded-lg border border-stone-200">
+                <h4 class="font-bold">Logical & Physical Logging</h4>
+                <p>XFS uses a hybrid approach. It logically logs changes to high-level structures like inodes (e.g., "increment link count") but physically logs changes to metadata blocks like B-tree nodes. This optimizes log space and performance. It does not journal user data, relying on applications to ensure data integrity with calls like \\\`fsync()\\\`.</p>
+            </div>
+        </div>
+    `;
+
+    const ext4JournalData = {
+        journal: "<strong>Mode:</strong> Full Data Journaling<br><strong>Description:</strong> The safest, but slowest mode. Both metadata (like file size) and file data are written to the journal first, before being written to their final locations. This 'write-twice' penalty for data impacts performance significantly.",
+        ordered: "<strong>Mode:</strong> Ordered Data Mode<br><strong>Description:</strong> The default and a good compromise. Only metadata is journaled. However, the kernel strictly enforces that any data blocks associated with a metadata update are written to disk *before* the metadata is committed to the journal. This prevents metadata from ever pointing to garbage data after a crash.",
+        writeback: "<strong>Mode:</strong> Writeback Data Mode<br><strong>Description:</strong> The fastest, but least safe mode. Only metadata is journaled, and there is no enforced ordering between data writes and metadata commits. After a crash, recovered metadata could point to old or stale data, as the new data may not have hit the disk yet."
+    };
+
+    document.getElementById('content-ext4').innerHTML = ext4Content;
+    document.getElementById('content-xfs').innerHTML = xfsContent;
+    
+    const vfsDetailsContainer = document.getElementById('vfs-object-details');
+    const vfsObjectButtons = document.querySelectorAll('.vfs-object-btn');
+    
+    function updateVfsDetails(key) {
+        const data = vfsObjectData[key];
+        if (data) {
+            vfsDetailsContainer.innerHTML = `
+                <h3 class="text-xl font-semibold text-stone-700 mb-2">${data.title}</h3>
+                <p class="mb-3">${data.description}</p>
+                <p class="text-sm text-stone-500 italic">${data.relations}</p>
+            `;
+            vfsObjectButtons.forEach(btn => {
+                btn.classList.remove('bg-stone-200', 'border-stone-500');
+                btn.classList.add('border-stone-300');
+            });
+            document.getElementById(`vfs-obj-${key}`).classList.add('bg-stone-200', 'border-stone-500');
+            document.getElementById(`vfs-obj-${key}`).classList.remove('border-stone-300');
+        }
+    }
+    
+    vfsObjectButtons.forEach(button => {
+        const key = button.id.replace('vfs-obj-', '');
+        button.addEventListener('click', () => updateVfsDetails(key));
+    });
+
+    updateVfsDetails('super_block'); 
+
+    const tabs = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            const targetId = 'content-' + tab.id.replace('tab-', '');
+            tabContents.forEach(content => {
+                if (content.id === targetId) {
+                    content.classList.remove('hidden');
+                } else {
+                    content.classList.add('hidden');
+                }
+            });
+        });
+    });
+
+    const journalButtonsExt4 = document.querySelectorAll('.journal-btn-ext4');
+    const journalDetailsExt4 = document.getElementById('journal-details-ext4');
+
+    function updateExt4JournalDetails(mode) {
+        journalDetailsExt4.innerHTML = ext4JournalData[mode];
+        journalButtonsExt4.forEach(btn => {
+            btn.classList.remove('active', 'bg-stone-200');
+            if (btn.dataset.mode === mode) {
+                btn.classList.add('active', 'bg-stone-200');
+            }
+        });
+    }
+
+    journalButtonsExt4.forEach(btn => {
+        btn.addEventListener('click', () => updateExt4JournalDetails(btn.dataset.mode));
+    });
+    
+    updateExt4JournalDetails('ordered');
+
+    const flowchartSteps = document.querySelectorAll('.flowchart-step');
+    flowchartSteps.forEach(step => {
+        step.addEventListener('mouseenter', () => {
+            const info = step.dataset.info;
+            const tooltip = document.createElement('div');
+            tooltip.className = 'absolute bg-stone-800 text-white text-xs rounded py-1 px-2 z-10';
+            tooltip.textContent = info;
+            document.body.appendChild(tooltip);
+
+            const rect = step.getBoundingClientRect();
+            tooltip.style.left = `${rect.left + window.scrollX}px`;
+            tooltip.style.top = `${rect.top + window.scrollY - tooltip.offsetHeight - 5}px`;
+            
+            step.addEventListener('mouseleave', () => {
+                tooltip.remove();
+            }, { once: true });
+        });
+    });
+
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebar = document.getElementById('sidebar');
+    sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('-translate-x-full');
+    });
+
+    const navLinks = document.querySelectorAll('#nav-menu a');
+    const sections = document.querySelectorAll('main section');
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').substring(1) === entry.target.id) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+        });
+    }, { rootMargin: "-50% 0px -50% 0px" });
+
+    sections.forEach(section => {
+        observer.observe(section);
+    });
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = link.getAttribute('href');
+            document.querySelector(targetId).scrollIntoView({ behavior: 'smooth' });
+            if (window.innerWidth < 768) {
+              sidebar.classList.add('-translate-x-full');
+            }
+        });
+    });
+    
+    const ctx = document.getElementById('fsCompareChart').getContext('2d');
+    const fsCompareChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Primary Goal', 'Max File Size', 'Max Volume Size', 'Metadata Structure', 'Concurrency'],
+            datasets: [{
+                label: 'ext4',
+                data: [3, 4, 4, 2, 2],
+                backgroundColor: 'rgba(120, 113, 108, 0.7)',
+                borderColor: 'rgba(120, 113, 108, 1)',
+                borderWidth: 1
+            }, {
+                label: 'XFS',
+                data: [5, 5, 5, 5, 5],
+                backgroundColor: 'rgba(168, 162, 158, 0.7)',
+                borderColor: 'rgba(168, 162, 158, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value, index, values) {
+                            const labels = ['', 'Low/Simple', 'Good', 'Very Good', 'Excellent', 'High/Complex'];
+                            return labels[value];
+                        }
+                    },
+                    grid: {
+                       color: '#e7e5e4'
+                    }
+                },
+                y: {
+                     grid: {
+                       display: false
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: false,
+                    text: 'Filesystem Feature Comparison'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            const value = context.raw;
+                            const category = context.label;
+                            let text = '';
+                            if (category === 'Primary Goal') text = value === 3 ? 'General Purpose, Stability' : 'High Performance, Scalability';
+                            else if (category === 'Max File Size') text = value === 4 ? '16 TiB' : '8 EiB';
+                            else if (category === 'Max Volume Size') text = value === 4 ? '1 EiB' : '8 EiB';
+                            else if (category === 'Metadata Structure') text = value === 2 ? 'Bitmaps, HTree' : 'B+ Trees';
+                            else if (category === 'Concurrency') text = value === 2 ? 'Per-CPU locks' : 'Fine-grained, AG-based';
+                            return label + text;
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+</body>
+</html>

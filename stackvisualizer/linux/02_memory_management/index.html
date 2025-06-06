@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Linux Memory Management Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Slate & Sky -->
+    <!-- Application Structure Plan: A thematic, single-page dashboard. The structure abandons the linear report format for a concept-centric one. A sticky top navigation allows users to jump to sections like "Address Translation", "Page Fault Handling", "Kernel Allocators", and "Caching & I/O". This non-linear approach is chosen because the core challenge in understanding Linux memory is grasping the *interconnections* between systems. By grouping related concepts and using interactive visualizations within each section, the application allows users to explore these relationships directly, which is more effective for learning than reading sequential chapters. The goal is to transform static text into an explorable system model. -->
+    <!-- Visualization & Content Choices:
+        - Address Translation: Report Info -> Multi-level page tables. Goal -> Show the process. Viz -> Interactive HTML diagram. Interaction -> Hovering highlights the address bits and corresponding table levels. Justification -> Makes the abstract 4-level walk tangible and easy to follow. Method -> HTML/CSS/JS.
+        - Page Fault Handling: Report Info -> The complex logic of handling faults. Goal -> Clarify decision flow. Viz -> HTML flowchart. Interaction -> Buttons switch between "Anonymous" and "File-Backed" paths, updating the diagram. Justification -> Simplifies the branching logic which is hard to parse in text. Method -> HTML/CSS/JS.
+        - Memory Zones: Report Info -> Zone types and sizes. Goal -> Compare architectures. Viz -> Bar Chart. Interaction -> Dropdown to switch between 32-bit and 64-bit views, dynamically updating the chart. Justification -> Visualizes abstract data and makes comparison clear. Library -> Chart.js.
+        - Buddy & Slab Allocators: Report Info -> Allocation algorithms. Goal -> Explain algorithms visually. Viz -> Interactive HTML block diagrams. Interaction -> Buttons to simulate "allocate" and "free" operations, showing blocks split/merge. Justification -> Animating the algorithms makes them far more intuitive than static descriptions. Method -> HTML/CSS/JS.
+        - Swappiness: Report Info -> vm.swappiness parameter. Goal -> Explain tuning impact. Viz -> Interactive Slider. Interaction -> Dragging the slider updates a descriptive text block in real-time. Justification -> Provides tactile feedback and immediate understanding of the parameter's effect. Method -> HTML/JS.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .nav-link { transition: color 0.2s; }
+        .nav-link:hover, .nav-link.active { color: #0284c7; }
+        .concept-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .concept-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+        .interactive-box { transition: background-color 0.2s; }
+        .highlight-path { background-color: #e0f2fe; border-color: #38bdf8; }
+        .chart-container { position: relative; width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; height: 350px; max-height: 50vh; }
+        @media (max-width: 768px) { .chart-container { height: 300px; max-height: 60vh; } }
+        .buddy-block { transition: all 0.5s ease-in-out; }
+        .buddy-block.free { background-color: #d1fae5; border-color: #10b981; }
+        .buddy-block.allocated { background-color: #fee2e2; border-color: #ef4444; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-slate-50">
+
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="font-bold text-xl text-sky-600">Linux Memory Explorer</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#introduction" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700">Introduction</a>
+                        <a href="#translation" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700">Translation</a>
+                        <a href="#faults" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700">Page Faults</a>
+                        <a href="#allocators" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700">Allocators</a>
+                        <a href="#caching" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700">Caching & I/O</a>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                    <select id="mobile-nav" class="bg-white border border-slate-300 rounded-md py-2 px-3 text-sm">
+                        <option value="#introduction">Introduction</option>
+                        <option value="#translation">Translation</option>
+                        <option value="#faults">Page Faults</option>
+                        <option value="#allocators">Allocators</option>
+                        <option value="#caching">Caching & I/O</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+
+        <section id="introduction" class="mb-16 text-center">
+            <h1 class="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">An Interactive Guide to Linux Memory Management</h1>
+            <p class="mt-6 text-lg leading-8 text-slate-600">This application transforms the dense "Linux Memory Management" report into an explorable experience. Instead of static text, key concepts are presented through interactive diagrams and visualizations. The goal is to clarify the complex relationships between virtual memory, physical memory, kernel allocators, and the page cache. Use the navigation to jump between topics and interact with the elements to see how the system works.</p>
+        </section>
+
+        <!-- Address Translation Section -->
+        <section id="translation" class="mb-24 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-slate-900">Virtual to Physical Address Translation</h2>
+                <p class="mt-4 text-lg text-slate-600">The heart of virtual memory is translating an address a program sees (virtual) into an address in RAM (physical). Linux uses multi-level page tables for this. The diagram below simulates the 4-level page table walk on x86-64. Hover over the parts of the virtual address to see the translation path.</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                <div id="address-translator" class="space-y-4">
+                    <div class="text-center">
+                        <label for="vaddr" class="font-semibold text-slate-800">Simulated 48-bit Virtual Address</label>
+                        <div id="vaddr" class="mt-2 flex justify-center font-mono text-sm select-none">
+                            <span class="p-2 bg-purple-100 border border-purple-200 rounded-l-md" data-level="pgd">39-47 (PGD)</span>
+                            <span class="p-2 bg-blue-100 border-y border-blue-200" data-level="pud">30-38 (PUD)</span>
+                            <span class="p-2 bg-green-100 border border-green-200" data-level="pmd">21-29 (PMD)</span>
+                            <span class="p-2 bg-yellow-100 border-y border-yellow-200" data-level="pt">12-20 (PT)</span>
+                            <span class="p-2 bg-slate-100 border border-slate-200 rounded-r-md" data-level="offset">0-11 (Offset)</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col md:flex-row items-center justify-around space-y-4 md:space-y-0 md:space-x-4 text-center">
+                        <div id="pgd" class="interactive-box p-4 border-2 border-purple-300 rounded-lg w-full md:w-1/5">
+                            <h3 class="font-bold text-purple-800">1. PGD</h3>
+                            <p class="text-sm text-slate-500">Page Global Directory</p>
+                        </div>
+                        <span class="font-bold text-slate-400 text-2xl hidden md:block">&rarr;</span>
+                        <div id="pud" class="interactive-box p-4 border-2 border-blue-300 rounded-lg w-full md:w-1/5">
+                            <h3 class="font-bold text-blue-800">2. PUD</h3>
+                            <p class="text-sm text-slate-500">Page Upper Directory</p>
+                        </div>
+                        <span class="font-bold text-slate-400 text-2xl hidden md:block">&rarr;</span>
+                        <div id="pmd" class="interactive-box p-4 border-2 border-green-300 rounded-lg w-full md:w-1/5">
+                            <h3 class="font-bold text-green-800">3. PMD</h3>
+                            <p class="text-sm text-slate-500">Page Middle Directory</p>
+                        </div>
+                        <span class="font-bold text-slate-400 text-2xl hidden md:block">&rarr;</span>
+                        <div id="pt" class="interactive-box p-4 border-2 border-yellow-300 rounded-lg w-full md:w-1/5">
+                            <h3 class="font-bold text-yellow-800">4. PT</h3>
+                            <p class="text-sm text-slate-500">Page Table</p>
+                        </div>
+                    </div>
+                    <div class="text-center mt-4">
+                        <span class="font-bold text-slate-400 text-2xl">&darr;</span>
+                        <div id="paddr" class="interactive-box p-6 border-2 border-slate-300 rounded-lg mt-2 max-w-md mx-auto">
+                            <h3 class="font-bold text-slate-800">Physical Address</h3>
+                            <p class="text-sm text-slate-500">[Page Frame Number] + [Offset]</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Page Faults Section -->
+        <section id="faults" class="mb-24 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-slate-900">The Journey of a Page Fault</h2>
+                <p class="mt-4 text-lg text-slate-600">A page fault isn't an error, but a signal for the kernel to load memory on demand. The handling process differs based on the type of memory being accessed. Use the buttons to trace the path for anonymous (e.g., heap/stack) vs. file-backed memory.</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                <div class="flex justify-center space-x-4 mb-6">
+                    <button id="fault-anon-btn" class="px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg shadow-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-opacity-75">Anonymous Memory Path</button>
+                    <button id="fault-file-btn" class="px-4 py-2 bg-slate-500 text-white font-semibold rounded-lg shadow-md hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-opacity-75">File-Backed Path</button>
+                </div>
+                <div id="fault-diagram" class="space-y-3 font-mono text-sm">
+                    <!-- Diagram will be built here by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Allocators Section -->
+        <section id="allocators" class="mb-24 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-slate-900">Kernel Memory Allocators</h2>
+                <p class="mt-4 text-lg text-slate-600">The kernel needs its own memory for internal data structures. It uses specialized allocators for efficiency. The Buddy System manages physically contiguous pages, while the Slab allocator sits on top, managing caches of smaller, fixed-size objects.</p>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                    <h3 class="font-bold text-xl text-center text-slate-800 mb-4">The Buddy System</h3>
+                    <p class="text-sm text-slate-600 mb-4">Manages free pages in power-of-two blocks. When a request comes, it finds the smallest block that fits, splitting larger blocks if needed. When freed, it merges "buddies" to form larger blocks, fighting fragmentation. Click to simulate.</p>
+                    <div id="buddy-system-visualizer" class="h-48 bg-slate-100 rounded p-2 flex items-center justify-center space-x-1"></div>
+                    <div class="flex justify-center space-x-2 mt-4">
+                        <button id="buddy-alloc" class="px-3 py-1 bg-green-500 text-white text-sm font-semibold rounded hover:bg-green-600">Allocate 4 Pages</button>
+                        <button id="buddy-free" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded hover:bg-red-600">Free a Block</button>
+                        <button id="buddy-reset" class="px-3 py-1 bg-slate-500 text-white text-sm font-semibold rounded hover:bg-slate-600">Reset</button>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                    <h3 class="font-bold text-xl text-center text-slate-800 mb-4">The Slab Allocator (SLUB)</h3>
+                    <p class="text-sm text-slate-600 mb-4">To avoid wasting space with small allocations, SLUB creates caches for common object sizes (like inodes or process descriptors). It requests large "slabs" of pages from the Buddy System and carves them up into small object slots for fast, low-fragmentation allocation.</p>
+                    <div id="slab-visualizer" class="space-y-2 text-center font-semibold">
+                        <div class="p-3 bg-sky-200 border-2 border-sky-300 rounded">Kernel Objects (e.g., task_struct, inode)</div>
+                        <div class="text-2xl text-slate-400">&darr;</div>
+                        <div class="p-3 bg-cyan-200 border-2 border-cyan-300 rounded">SLUB Cache (Slab of Objects)</div>
+                        <div class="text-2xl text-slate-400">&darr;</div>
+                        <div class="p-3 bg-teal-200 border-2 border-teal-300 rounded">Contiguous Pages from Buddy System</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- Caching & I/O Section -->
+        <section id="caching" class="scroll-mt-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-slate-900">Caching & I/O Performance</h2>
+                <p class="mt-4 text-lg text-slate-600">Linux uses free RAM as a "Page Cache" to drastically speed up file access. It also tunes its behavior based on system parameters. Explore two key concepts below.</p>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                    <h3 class="font-bold text-xl text-center text-slate-800 mb-4">Memory Zone Architecture</h3>
+                    <p class="text-sm text-slate-600 mb-4">Physical memory isn't uniform. It's divided into zones based on hardware constraints (like DMA capabilities). The chart shows a typical layout. Switch between architectures to see how it changes.</p>
+                    <div class="flex justify-center mb-4">
+                        <select id="zone-arch-select" class="bg-white border border-slate-300 rounded-md py-2 px-3 text-sm">
+                            <option value="64">x86-64 Architecture</option>
+                            <option value="32">IA-32 Architecture</option>
+                        </select>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="zone-chart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                    <h3 class="font-bold text-xl text-center text-slate-800 mb-4">The `swappiness` Tunable</h3>
+                    <p class="text-sm text-slate-600 mb-4">This parameter (0-100) tells the kernel how aggressively to swap anonymous memory vs. reclaiming page cache. A low value protects the page cache, while a high value frees memory for applications more readily by swapping. Drag the slider to see the effect.</p>
+                    <div class="mt-8">
+                        <input id="swappiness-slider" type="range" min="0" max="100" value="60" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        <div class="flex justify-between text-xs text-slate-500 mt-2">
+                            <span>0 (Avoid Swap)</span>
+                            <span id="swappiness-value" class="font-bold text-sky-600 text-lg">60</span>
+                            <span>100 (Swap Freely)</span>
+                        </div>
+                    </div>
+                    <div id="swappiness-desc" class="mt-4 p-4 bg-slate-100 rounded-lg text-center text-slate-700 h-28 flex items-center justify-center">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Navigation ---
+            const mobileNav = document.getElementById('mobile-nav');
+            mobileNav.addEventListener('change', () => {
+                window.location.hash = mobileNav.value;
+            });
+            
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('main section');
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 80) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').includes(current)) {
+                        link.classList.add('active');
+                    }
+                });
+            });
+
+            // --- Address Translation Interactive Diagram ---
+            const vaddrSpans = document.querySelectorAll('#vaddr span');
+            const translatorBoxes = document.querySelectorAll('#address-translator .interactive-box');
+            
+            vaddrSpans.forEach(span => {
+                span.addEventListener('mouseenter', () => {
+                    const level = span.dataset.level;
+                    translatorBoxes.forEach(box => {
+                        if (box.id === level || (level !== 'offset' && box.id === 'paddr')) {
+                            box.classList.add('highlight-path');
+                        }
+                    });
+                });
+                span.addEventListener('mouseleave', () => {
+                    translatorBoxes.forEach(box => box.classList.remove('highlight-path'));
+                });
+            });
+            
+            // --- Page Fault Diagram ---
+            const faultDiagram = document.getElementById('fault-diagram');
+            const faultAnonBtn = document.getElementById('fault-anon-btn');
+            const faultFileBtn = document.getElementById('fault-file-btn');
+
+            const faultPaths = {
+                commonStart: [
+                    { label: 'Process Accesses Virtual Address', level: 0 },
+                    { label: 'MMU finds PTE marked "Not Present"', level: 1 },
+                    { label: 'CPU Triggers Page Fault', level: 2 },
+                    { label: 'Kernel Fault Handler Runs', level: 3 },
+                    { label: 'Is Access Valid (VMA exists & perms OK)?', level: 4, decision: true },
+                ],
+                anon: [
+                    { label: 'YES: Fault in Anonymous VMA', level: 5, path: 'yes' },
+                    { label: 'Is page swapped out?', level: 6, decision: true },
+                    { label: 'YES: Read page from Swap', level: 7, path: 'yes' },
+                    { label: 'NO: Allocate new zeroed page (Demand Alloc/CoW)', level: 7, path: 'no' },
+                    { label: 'Update PTE to map to new Physical Page', level: 8 },
+                    { label: 'Resume Process', level: 9 },
+                ],
+                file: [
+                    { label: 'YES: Fault in File-Backed VMA', level: 5, path: 'yes' },
+                    { label: 'Check Page Cache for page', level: 6, decision: true },
+                    { label: 'YES (Hit): Page is in cache', level: 7, path: 'yes' },
+                    { label: 'NO (Miss): Read page from file into cache (Major Fault)', level: 7, path: 'no' },
+                    { label: 'Update PTE to map to page in Cache', level: 8 },
+                    { label: 'Resume Process', level: 9 },
+                ],
+                invalid: [
+                    { label: 'NO: Invalid Access', level: 5, path: 'no', terminal: true },
+                    { label: 'Send SIGSEGV signal to Process (Segmentation Fault)', level: 6, path: 'no', terminal: true },
+                ]
+            };
+
+            function buildFaultDiagram(pathKey) {
+                faultDiagram.innerHTML = '';
+                const steps = [...faultPaths.commonStart, ...faultPaths[pathKey], ...faultPaths.invalid];
+                let html = '';
+                steps.forEach(step => {
+                    let indent = `style="margin-left: ${step.level * 20}px;"`;
+                    let connector = step.level > 0 ? '<span class="mr-2 text-slate-400">&darr;</span>' : '';
+                    let classes = "p-2 rounded flex items-center fade-in ";
+                    if (step.decision) {
+                        classes += "bg-amber-100 border border-amber-300";
+                    } else if (step.terminal) {
+                         classes += "bg-red-100 border border-red-300 text-red-800 font-semibold";
+                    } else {
+                        classes += "bg-slate-100 border border-slate-200";
+                    }
+
+                    if (step.path === 'yes') connector = '<span class="mr-2 text-green-500 font-bold">YES &darr;</span>';
+                    if (step.path === 'no') connector = '<span class="mr-2 text-red-500 font-bold">NO &darr;</span>';
+                    
+                    html += `<div class="${classes}" ${indent}>${connector}${step.label}</div>`;
+                });
+                faultDiagram.innerHTML = html;
+            }
+
+            faultAnonBtn.addEventListener('click', () => {
+                buildFaultDiagram('anon');
+                faultAnonBtn.classList.remove('bg-slate-500', 'hover:bg-slate-600');
+                faultAnonBtn.classList.add('bg-sky-600', 'hover:bg-sky-700');
+                faultFileBtn.classList.add('bg-slate-500', 'hover:bg-slate-600');
+                faultFileBtn.classList.remove('bg-sky-600', 'hover:bg-sky-700');
+
+            });
+            faultFileBtn.addEventListener('click', () => {
+                buildFaultDiagram('file');
+                faultFileBtn.classList.remove('bg-slate-500', 'hover:bg-slate-600');
+                faultFileBtn.classList.add('bg-sky-600', 'hover:bg-sky-700');
+                faultAnonBtn.classList.add('bg-slate-500', 'hover:bg-slate-600');
+                faultAnonBtn.classList.remove('bg-sky-600', 'hover:bg-sky-700');
+            });
+
+            // Initial view
+            buildFaultDiagram('anon');
+
+
+            // --- Buddy System Visualizer ---
+            const buddyVisualizer = document.getElementById('buddy-system-visualizer');
+            const buddyAllocBtn = document.getElementById('buddy-alloc');
+            const buddyFreeBtn = document.getElementById('buddy-free');
+            const buddyResetBtn = document.getElementById('buddy-reset');
+
+            let buddyState = [{ size: 16, free: true, id: 0 }];
+
+            function renderBuddySystem() {
+                buddyVisualizer.innerHTML = '';
+                buddyState.forEach(block => {
+                    const blockDiv = document.createElement('div');
+                    blockDiv.className = `buddy-block h-24 border-2 flex items-center justify-center text-sm font-semibold ${block.free ? 'free' : 'allocated'}`;
+                    blockDiv.style.width = `${block.size / 16 * 100}%`;
+                    blockDiv.textContent = `${block.size} Pages`;
+                    blockDiv.dataset.id = block.id;
+                    buddyVisualizer.appendChild(blockDiv);
+                });
+            }
+
+            buddyAllocBtn.addEventListener('click', () => {
+                let blockToSplitIndex = buddyState.findIndex(b => b.free && b.size > 4);
+                if (blockToSplitIndex === -1) {
+                    blockToSplitIndex = buddyState.findIndex(b => b.free && b.size === 4);
+                    if (blockToSplitIndex !== -1) {
+                        buddyState[blockToSplitIndex].free = false;
+                    }
+                } else {
+                    const blockToSplit = buddyState[blockToSplitIndex];
+                    let currentSize = blockToSplit.size;
+                    let newBlocks = [];
+                    while(currentSize > 4) {
+                        const newSize = currentSize / 2;
+                        newBlocks.push({ size: newSize, free: true, id: Math.random() });
+                        newBlocks.push({ size: newSize, free: true, id: Math.random() });
+                        currentSize = newSize;
+                    }
+                    newBlocks[0].free = false; // Allocate the target block
+                    buddyState.splice(blockToSplitIndex, 1, ...newBlocks);
+                }
+                renderBuddySystem();
+            });
+            
+            buddyFreeBtn.addEventListener('click', () => {
+                 let blockToFreeIndex = buddyState.findIndex(b => !b.free);
+                 if(blockToFreeIndex !== -1) {
+                    buddyState[blockToFreeIndex].free = true;
+                    // Simple coalesce logic for demo
+                    for(let i = 0; i < buddyState.length - 1; i++) {
+                        if(buddyState[i].free && buddyState[i+1].free && buddyState[i].size === buddyState[i+1].size) {
+                            buddyState.splice(i, 2, { size: buddyState[i].size * 2, free: true, id: Math.random() });
+                            i--; // re-check from this new block
+                        }
+                    }
+                 }
+                renderBuddySystem();
+            });
+
+            buddyResetBtn.addEventListener('click', () => {
+                buddyState = [{ size: 16, free: true, id: 0 }];
+                renderBuddySystem();
+            });
+
+            renderBuddySystem();
+
+            // --- Zone Chart ---
+            const zoneCtx = document.getElementById('zone-chart').getContext('2d');
+            let zoneChart;
+            const zoneData = {
+                '64': {
+                    labels: ['ZONE_DMA', 'ZONE_DMA32', 'ZONE_NORMAL'],
+                    data: [16, 4080, 126976] // Example data in MB for a large memory system
+                },
+                '32': {
+                    labels: ['ZONE_DMA', 'ZONE_NORMAL', 'ZONE_HIGHMEM'],
+                    data: [16, 880, 3178] // Example for 4GB system
+                }
+            };
+            
+            function createZoneChart(arch) {
+                if(zoneChart) {
+                    zoneChart.destroy();
+                }
+                zoneChart = new Chart(zoneCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: zoneData[arch].labels,
+                        datasets: [{
+                            label: `Memory (MB) on ${arch}-bit system`,
+                            data: zoneData[arch].data,
+                            backgroundColor: [
+                                'rgba(192, 132, 252, 0.6)',
+                                'rgba(59, 130, 246, 0.6)',
+                                'rgba(16, 185, 129, 0.6)',
+                            ],
+                            borderColor: [
+                                'rgba(192, 132, 252, 1)',
+                                'rgba(59, 130, 246, 1)',
+                                'rgba(16, 185, 129, 1)',
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                type: 'logarithmic',
+                                ticks: {
+                                    callback: function(value, index, values) {
+                                        return Number(value.toString()).toLocaleString() + ' MB';
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return ` ${context.raw.toLocaleString()} MB`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            document.getElementById('zone-arch-select').addEventListener('change', (e) => {
+                createZoneChart(e.target.value);
+            });
+
+            createZoneChart('64');
+
+            // --- Swappiness Slider ---
+            const swappinessSlider = document.getElementById('swappiness-slider');
+            const swappinessValue = document.getElementById('swappiness-value');
+            const swappinessDesc = document.getElementById('swappiness-desc');
+            
+            function updateSwappiness(value) {
+                swappinessValue.textContent = value;
+                let description = '';
+                if (value <= 10) {
+                    description = "Behavior: Extremely reluctant to swap. Kernel will strongly prefer reclaiming file-backed page cache over swapping anonymous memory. Good for cache-heavy workloads.";
+                } else if (value < 60) {
+                    description = "Behavior: Prefers reclaiming page cache, but will swap anonymous memory if pressure is significant. A conservative approach.";
+                } else if (value == 60) {
+                    description = "Behavior: Default. A balanced approach between reclaiming file cache and swapping anonymous pages.";
+                } else {
+                    description = "Behavior: Aggressively swaps anonymous memory to free up RAM for file caches. May be useful for systems with slow I/O where caching is paramount.";
+                }
+                swappinessDesc.textContent = description;
+            }
+
+            swappinessSlider.addEventListener('input', (e) => {
+                updateSwappiness(e.target.value);
+            });
+
+            updateSwappiness(60); // Initial value
+        });
+    </script>
+</body>
+</html>

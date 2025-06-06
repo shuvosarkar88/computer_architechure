@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: Linux Kernel Scheduling & Context Switching</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: The infographic follows a linear narrative structure designed for easy comprehension. It starts with the high-level problem (The Multitasking Challenge), introduces the solution (The Completely Fair Scheduler), details the mechanics of implementation (The Context Switch), and concludes with the practical implications (The True Cost of a Switch). This top-down approach transforms a dense report into a digestible story, guiding the user from concept to consequence. -->
+    <!-- Visualization & Content Choices: 
+        - The Challenge: Goal: Inform. Viz: HTML/CSS diagram. Justification: A simple visual flow is clearest for the core problem.
+        - CFS vruntime Tree: Goal: Organize. Viz: Chart.js Horizontal Bar. Justification: Represents the `vruntime`-ordered list of tasks perfectly, with the "leftmost node" (lowest vruntime) always at the top.
+        - Dynamic Timeslice: Goal: Compare. Viz: Chart.js Stacked Bar. Justification: Shows how a target latency period is divided proportionally based on task weights.
+        - Context Switch Steps: Goal: Organize. Viz: HTML/CSS flow diagram. Justification: Breaks a complex sequence into clear, numbered steps using styled cards.
+        - Overhead Costs: Goal: Compare/Inform. Viz: Chart.js Doughnut. Justification: Powerfully shows the dramatic imbalance between tiny direct costs and huge indirect costs.
+        - Process vs. Thread: Goal: Compare. Viz: Chart.js Bar Chart. Justification: Provides a clear, direct comparison of the performance difference.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #A5D7E8; /* Lightest Blue */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        .flow-arrow {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: -30px;
+            width: 2px;
+            height: 30px;
+            background-color: #19376D;
+            z-index: 0;
+        }
+        .flow-arrow::after {
+            content: '';
+            position: absolute;
+            left: -4px;
+            bottom: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid #19376D;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 400px; }
+        }
+    </style>
+</head>
+<body class="text-[#0B2447]">
+
+    <div class="max-w-4xl mx-auto p-4 md:p-8">
+
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-[#0B2447] tracking-tight">THE KERNEL'S BALANCING ACT</h1>
+            <p class="mt-4 text-xl md:text-2xl text-[#19376D] font-medium">An Infographic on Linux Process Scheduling and Context Switching</p>
+        </header>
+
+        <!-- Section 1: The Multitasking Challenge -->
+        <section class="bg-[#FFFFFF] rounded-xl shadow-2xl p-6 md:p-8 mb-12">
+            <h2 class="text-3xl font-bold text-center mb-6">The Multitasking Challenge</h2>
+            <p class="text-center text-lg max-w-2xl mx-auto mb-8">On a single CPU core, only one thing can happen at a time. The illusion of running multiple apps simultaneously is created by the kernel's scheduler, which rapidly switches between processes. This presents a core challenge: how to divide CPU time fairly and efficiently?</p>
+            <div class="flex flex-col md:flex-row justify-center items-center gap-4 text-center">
+                <div class="p-4 border-2 border-dashed border-[#576CBC] rounded-lg">
+                    <div class="text-4xl mb-2">🖥️</div>
+                    <h3 class="font-bold text-lg">Many Processes</h3>
+                    <p>Web Browser, Music, Code Editor...</p>
+                </div>
+                <div class="text-4xl font-bold text-[#19376D] hidden md:block">→</div>
+                <div class="text-4xl font-bold text-[#19376D] md:hidden">↓</div>
+                <div class="p-4 bg-[#0B2447] text-white rounded-lg shadow-lg">
+                    <div class="text-4xl mb-2">🚦</div>
+                    <h3 class="font-bold text-lg">The Scheduler</h3>
+                    <p>Decides Who Runs Next</p>
+                </div>
+                 <div class="text-4xl font-bold text-[#19376D] hidden md:block">→</div>
+                 <div class="text-4xl font-bold text-[#19376D] md:hidden">↓</div>
+                 <div class="p-4 border-2 border-dashed border-[#576CBC] rounded-lg">
+                    <div class="text-4xl mb-2">⚙️</div>
+                    <h3 class="font-bold text-lg">One CPU Core</h3>
+                    <p>Executes One Instruction Stream</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: The Completely Fair Scheduler (CFS) -->
+        <section class="bg-[#FFFFFF] rounded-xl shadow-2xl p-6 md:p-8 mb-12">
+            <h2 class="text-3xl font-bold text-center mb-2">The Solution: The Completely Fair Scheduler</h2>
+            <p class="text-center text-lg max-w-3xl mx-auto mb-8">CFS abandoned fixed time slices for a simple principle: always run the task that has had the least amount of CPU time. It tracks this using <strong>virtual runtime (vruntime)</strong>. Lower `vruntime` = more deserving.</p>
+            
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Finding the Next Task with O(log N) Speed</h3>
+                    <p class="mb-4">CFS stores all runnable tasks in a Red-Black Tree, ordered by `vruntime`. The scheduler's job is to simply pick the "leftmost" node—the one with the lowest `vruntime`. This chart visualizes that ordered list.</p>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="vruntimeChart"></canvas>
+                    </div>
+                </div>
+                 <div>
+                    <h3 class="text-xl font-bold mb-4">Dynamic Time Slices</h3>
+                    <p class="mb-4">A task's run duration isn't fixed. It's calculated based on a target latency (e.g., 20ms) and the number of running tasks. The more tasks, the smaller each slice, ensuring fairness over the target period.</p>
+                     <div class="chart-container" style="height: 300px;">
+                        <canvas id="sliceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: The Context Switch -->
+        <section class="bg-[#FFFFFF] rounded-xl shadow-2xl p-6 md:p-8 mb-12">
+            <h2 class="text-3xl font-bold text-center mb-6">The Engine: A Context Switch in 4 Steps</h2>
+            <p class="text-center text-lg max-w-3xl mx-auto mb-8">Once the scheduler picks a new task, the kernel performs a context switch. This is the low-level mechanism for swapping one process out and another one in.</p>
+            <div class="relative">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-x-8 gap-y-16 text-center">
+                    <!-- Step 1 -->
+                    <div class="relative bg-[#A5D7E8] p-4 rounded-lg border-2 border-[#576CBC]">
+                        <div class="absolute -top-5 left-1/2 -translate-x-1/2 bg-[#0B2447] text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl">1</div>
+                        <h3 class="font-bold text-lg mt-5">Save State (prev)</h3>
+                        <p class="text-sm">Save registers, instruction pointer, and stack pointer of the current process.</p>
+                        <div class="flow-arrow hidden md:block" style="left: calc(100% + 1rem); bottom: 50%; width: 2rem; height: 2px;"><!-- horizontal arrow --></div>
+                        <div class="flow-arrow md:hidden"></div>
+                    </div>
+                     <!-- Step 2 -->
+                    <div class="relative bg-[#A5D7E8] p-4 rounded-lg border-2 border-[#576CBC]">
+                        <div class="absolute -top-5 left-1/2 -translate-x-1/2 bg-[#0B2447] text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl">2</div>
+                        <h3 class="font-bold text-lg mt-5">Switch Memory</h3>
+                        <p class="text-sm">Update the Memory Management Unit (MMU) to point to the new process's address space (CR3 register).</p>
+                        <div class="flow-arrow hidden md:block" style="left: calc(100% + 1rem); bottom: 50%; width: 2rem; height: 2px;"><!-- horizontal arrow --></div>
+                        <div class="flow-arrow md:hidden"></div>
+                    </div>
+                     <!-- Step 3 -->
+                    <div class="relative bg-[#A5D7E8] p-4 rounded-lg border-2 border-[#576CBC]">
+                        <div class="absolute -top-5 left-1/2 -translate-x-1/2 bg-[#0B2447] text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl">3</div>
+                        <h3 class="font-bold text-lg mt-5">Swap Stacks & IP</h3>
+                        <p class="text-sm">The `switch_to` macro loads the new process's kernel stack and jumps to its last saved instruction pointer.</p>
+                         <div class="flow-arrow hidden md:block" style="left: calc(100% + 1rem); bottom: 50%; width: 2rem; height: 2px;"><!-- horizontal arrow --></div>
+                         <div class="flow-arrow md:hidden"></div>
+                    </div>
+                     <!-- Step 4 -->
+                    <div class="relative bg-[#A5D7E8] p-4 rounded-lg border-2 border-[#576CBC]">
+                         <div class="absolute -top-5 left-1/2 -translate-x-1/2 bg-[#0B2447] text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl">4</div>
+                        <h3 class="font-bold text-lg mt-5">Restore State (next)</h3>
+                        <p class="text-sm">Restore the registers and state of the new process. It resumes as if it was never interrupted.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: The True Cost -->
+        <section class="bg-[#FFFFFF] rounded-xl shadow-2xl p-6 md:p-8 mb-12">
+            <h2 class="text-3xl font-bold text-center mb-2">The True Cost of a Switch</h2>
+            <p class="text-center text-lg max-w-3xl mx-auto mb-8">A context switch isn't free. While the direct cost of saving registers is small, the <span class="font-bold text-[#19376D]">indirect costs</span> are enormous and have the biggest impact on performance.</p>
+            <div class="grid md:grid-cols-5 gap-8 items-center">
+                <div class="md:col-span-2">
+                    <h3 class="text-xl font-bold mb-4">Overhead: Direct vs. Indirect</h3>
+                    <p class="mb-4">Indirect costs come from "cache pollution" and "TLB flushes." The new process's data evicts the old process's data from fast CPU caches, forcing slow main memory access when the old process runs again. This performance hit dwarfs the actual work of the switch itself.</p>
+                     <div class="chart-container" style="height: 300px; max-width: 300px;">
+                        <canvas id="costPieChart"></canvas>
+                    </div>
+                </div>
+                <div class="md:col-span-3">
+                    <h3 class="text-xl font-bold mb-4">Process vs. Thread Switch</h3>
+                     <p class="mb-4">Switching between threads of the same process is much cheaper than switching between different processes. Why? Threads share the same memory space, so there's no need to flush the memory caches (TLB), significantly reducing the devastating indirect costs.</p>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="threadVsProcessChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <footer class="text-center mt-12 text-[#19376D]">
+            <p>Infographic created based on a deep research report on Linux Kernel Internals.</p>
+        </footer>
+
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const chartColors = {
+        darkBlue: '#0B2447',
+        mediumBlue: '#19376D',
+        accentBlue: '#576CBC',
+        lightBlue: '#A5D7E8',
+        white: '#FFFFFF'
+    };
+    
+    const tooltipConfig = {
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    title: function(tooltipItems) {
+                        const item = tooltipItems[0];
+                        let label = item.chart.data.labels[item.dataIndex];
+                        if (Array.isArray(label)) {
+                          return label.join(' ');
+                        } else {
+                          return label;
+                        }
+                    }
+                }
+            }
+        }
+    };
+    
+    function wrapLabel(str, maxWidth) {
+        if (str.length <= maxWidth) {
+            return str;
+        }
+        const words = str.split(' ');
+        let lines = [];
+        let currentLine = words[0];
+
+        for (let i = 1; i < words.length; i++) {
+            if ((currentLine + ' ' + words[i]).length > maxWidth) {
+                lines.push(currentLine);
+                currentLine = words[i];
+            } else {
+                currentLine += ' ' + words[i];
+            }
+        }
+        lines.push(currentLine);
+        return lines;
+    }
+
+    // Chart 1: vruntime Red-Black Tree visualization
+    const vruntimeCtx = document.getElementById('vruntimeChart').getContext('2d');
+    new Chart(vruntimeCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Task D (Interactive)', 'Task C (Background)', 'Task B (CPU-Bound)', 'Task A (Running)'],
+            datasets: [{
+                label: 'Virtual Runtime (vruntime)',
+                data: [1050, 2500, 2550, 2600],
+                backgroundColor: [chartColors.accentBlue, chartColors.mediumBlue, chartColors.mediumBlue, chartColors.mediumBlue],
+                borderColor: chartColors.darkBlue,
+                borderWidth: 2
+            }]
+        },
+        options: {
+            ...tooltipConfig,
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: { display: true, text: 'vruntime (lower is better)' },
+                    grid: { display: false }
+                },
+                y: {
+                     grid: { display: false }
+                }
+            },
+            plugins: {
+                ...tooltipConfig.plugins,
+                legend: { display: false },
+                title: { display: true, text: 'Runnable Tasks Ordered by vruntime' }
+            }
+        }
+    });
+
+    // Chart 2: Dynamic Time Slice visualization
+    const sliceCtx = document.getElementById('sliceChart').getContext('2d');
+    new Chart(sliceCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Target Period (20ms)'],
+            datasets: [
+                { label: 'Task A (nice 0)', data: [10], backgroundColor: chartColors.mediumBlue },
+                { label: 'Task B (nice 0)', data: [10], backgroundColor: chartColors.accentBlue },
+                { label: 'Task C (nice 10)', data: [5], backgroundColor: chartColors.lightBlue, borderColor: chartColors.darkBlue, borderWidth: 1 },
+            ]
+        },
+        options: {
+            ...tooltipConfig,
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+                x: { stacked: true, title: { display: true, text: 'Time Slice (ms)' }, grid: { display: false } },
+                y: { stacked: true, grid: { display: false } }
+            },
+            plugins: {
+                 ...tooltipConfig.plugins,
+                title: { display: true, text: 'Fair Share of a Scheduling Period' },
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // Chart 3: Cost Pie Chart
+    const costPieCtx = document.getElementById('costPieChart').getContext('2d');
+    new Chart(costPieCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Direct Costs (Saving Registers)', wrapLabel('Indirect Costs (Cache/TLB Pollution)', 16)],
+            datasets: [{
+                data: [5, 95],
+                backgroundColor: [chartColors.accentBlue, chartColors.darkBlue],
+                borderColor: chartColors.white,
+                borderWidth: 4
+            }]
+        },
+        options: {
+            ...tooltipConfig,
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                ...tooltipConfig.plugins,
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 20
+                    }
+                }
+            }
+        }
+    });
+    
+    // Chart 4: Thread vs Process Chart
+    const threadVsProcessCtx = document.getElementById('threadVsProcessChart').getContext('2d');
+    new Chart(threadVsProcessCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Thread Switch', 'Process Switch'],
+            datasets: [{
+                label: 'Relative Overhead Cost',
+                data: [15, 100],
+                backgroundColor: [chartColors.accentBlue, chartColors.darkBlue],
+                barThickness: 50
+            }]
+        },
+        options: {
+            ...tooltipConfig,
+            responsive: true,
+            maintainAspectRatio: false,
+             scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Relative Cost' }
+                }
+            },
+            plugins: {
+                ...tooltipConfig.plugins,
+                legend: { display: false }
+            }
+        }
+    });
+});
+</script>
+
+</body>
+</html>

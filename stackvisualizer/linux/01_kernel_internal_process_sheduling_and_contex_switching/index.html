@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux Kernel Internals: An Interactive Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutral Harmony -->
+    <!-- Application Structure Plan: The SPA is designed with a top-down, exploratory structure. It abandons the linear, academic format of the source report in favor of a thematic, three-part interactive dashboard: 1. The Scheduler (CFS), 2. The Context Switch, and 3. The Cost (Performance). This structure allows users to immediately grasp the distinct logical components of the system and explore them in any order. The user flow encourages active learning: high-level concepts are introduced first, followed by interactive visualizations that allow the user to "play" with the concepts (e.g., simulating the CFS red-black tree, manipulating scheduling parameters) to build an intuitive understanding. This is more usable than passive reading because it breaks down immense complexity into manageable, interactive modules. -->
+    <!-- Visualization & Content Choices: 
+        - CFS vruntime/rbtree: Report Info -> CFS uses a vruntime-ordered red-black tree. Goal -> Organize & Inform. Viz -> Interactive HTML/CSS diagram. Interaction -> Buttons to simulate adding/running tasks to visualize vruntime changes and re-ordering. Justification -> Makes the abstract data structure and scheduling logic tangible.
+        - CFS Parameters: Report Info -> sched_latency_ns, sched_min_granularity_ns, and nr_running determine time slices. Goal -> Change & Compare. Viz -> Dynamic Chart.js Bar Chart. Interaction -> Sliders for nr_running and inputs for tunables update the chart. Justification -> Clearly demonstrates the mathematical relationship and trade-offs between parameters.
+        - Context Switch Steps: Report Info -> Detailed sequence of saving/restoring state. Goal -> Organize. Viz -> Step-by-step HTML/CSS process diagram. Interaction -> Next/Prev buttons to walk through the sequence. Justification -> Simplifies a complex, multi-stage procedure into a clear, linear flow.
+        - Context Switch Costs: Report Info -> Indirect costs (cache/TLB) are far greater than direct costs. Goal -> Compare. Viz -> Chart.js Stacked Bar Chart. Interaction -> Hover tooltips. Justification -> A powerful visual to instantly convey the most critical performance takeaway.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F5F5F4; /* stone-100 */
+            color: #44403C; /* stone-700 */
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-button.active {
+            color: #1D4ED8; /* blue-700 */
+            border-bottom-color: #1D4ED8; /* blue-700 */
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+            }
+        }
+        .rb-node {
+            position: relative;
+            padding: 0.5rem 1rem;
+            border: 1px solid #A8A29E; /* stone-400 */
+            border-radius: 9999px;
+            background-color: #FAFAF9; /* stone-50 */
+            transition: all 0.5s ease-in-out;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        }
+        .rb-node.leftmost {
+            border-color: #2563EB; /* blue-600 */
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.5);
+            transform: scale(1.05);
+        }
+        .switch-step {
+            opacity: 0.4;
+            transition: opacity 0.3s ease;
+            border-left: 4px solid #D6D3D1; /* stone-300 */
+        }
+        .switch-step.current {
+            opacity: 1;
+            border-left-color: #2563EB; /* blue-600 */
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 py-8 md:py-12">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-2">Linux Process Scheduling</h1>
+            <p class="text-lg text-stone-600 max-w-3xl mx-auto">An interactive explorer into how the kernel decides what runs next and how it switches between tasks.</p>
+        </header>
+
+        <nav class="mb-8 border-b border-stone-300">
+            <div class="flex justify-center space-x-4 sm:space-x-8 -mb-px">
+                <button class="tab-button active py-4 px-1 text-base sm:text-lg font-medium" data-tab="scheduler">1. The Scheduler (CFS)</button>
+                <button class="tab-button py-4 px-1 text-base sm:text-lg font-medium" data-tab="switch">2. The Context Switch</button>
+                <button class="tab-button py-4 px-1 text-base sm:text-lg font-medium" data-tab="performance">3. The Cost & Performance</button>
+            </div>
+        </nav>
+
+        <main>
+            <!-- Section 1: The Scheduler (CFS) -->
+            <section id="scheduler" class="content-section active">
+                <div class="bg-white p-6 sm:p-8 rounded-lg shadow-sm mb-8">
+                    <h2 class="text-2xl font-bold mb-3 text-gray-800">How Linux Chooses a Process</h2>
+                    <p class="text-stone-600 leading-relaxed">The default Linux scheduler for normal tasks is the <strong>Completely Fair Scheduler (CFS)</strong>. Its goal is to give every process a "fair" share of the CPU. It doesn't use fixed time slices, but instead models an ideal CPU where every task runs at the same time, just slower. To do this, it uses a concept called <strong>virtual runtime (vruntime)</strong>. A process's vruntime increases only when it's running. To be fair, CFS always picks the process with the lowest vruntime to run next. The sections below allow you to explore this core logic and the parameters that guide it.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 sm:p-8 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">Interactive: The vruntime Red-Black Tree</h3>
+                        <p class="text-stone-600 mb-6">CFS keeps all runnable tasks in a red-black tree, ordered by their `vruntime`. The scheduler's job is simple: pick the leftmost node (lowest `vruntime`). This simulation visualizes that process. Click 'Run CPU Cycle' to see the leftmost task "run" (its `vruntime` increases) and get re-inserted into the tree. Notice how it moves to the right, giving another task a chance to be the leftmost.</p>
+                        
+                        <div id="rb-tree-container" class="space-y-3 p-4 bg-stone-50 rounded-md border border-stone-200 min-h-[200px] mb-4">
+                            <!-- JS will populate this -->
+                        </div>
+
+                        <div class="flex flex-wrap gap-2">
+                            <button id="run-cycle-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Run CPU Cycle</button>
+                            <button id="add-task-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 transition">Add New Task</button>
+                             <button id="reset-sim-btn" class="bg-stone-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-stone-600 transition">Reset</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 sm:p-8 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">Dynamic Time Slice Allocation</h3>
+                        <p class="text-stone-600 mb-4">A task's time slice isn't fixed. It's calculated based on a target latency (`sched_latency_ns`) and the number of running tasks. Use the controls below to see how the system balances responsiveness (low latency) with efficiency (avoiding too many context switches) by adjusting the time slice for each task.</p>
+                        
+                        <div class="space-y-4 mb-6">
+                            <div>
+                                <label for="num-tasks-slider" class="block text-sm font-medium text-stone-700">Number of Tasks: <span id="num-tasks-value">5</span></label>
+                                <input id="num-tasks-slider" type="range" min="2" max="50" value="5" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer">
+                            </div>
+                            <div>
+                                <label for="latency-input" class="block text-sm font-medium text-stone-700">Target Latency (ms)</label>
+                                <input id="latency-input" type="number" value="20" class="mt-1 block w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+                            <div>
+                               <label for="min-gran-input" class="block text-sm font-medium text-stone-700">Min Granularity (ms)</label>
+                                <input id="min-gran-input" type="number" value="1" class="mt-1 block w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+                        </div>
+
+                        <div class="chart-container">
+                            <canvas id="timeSliceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: The Context Switch -->
+            <section id="switch" class="content-section">
+                <div class="bg-white p-6 sm:p-8 rounded-lg shadow-sm mb-8">
+                    <h2 class="text-2xl font-bold mb-3 text-gray-800">How Processes are Swapped</h2>
+                    <p class="text-stone-600 leading-relaxed">Once the scheduler chooses a new process to run, the kernel must perform a <strong>context switch</strong>. This is the low-level mechanism for saving the state of the current process (`prev`) and loading the state of the next one (`next`). This state includes registers, the instruction pointer, stack pointer, and memory management information. A context switch can be triggered voluntarily (e.g., a process waits for I/O) or involuntarily (e.g., a timer interrupt). Use the interactive diagram below to walk through the key phases of this fundamental operation.</p>
+                </div>
+                
+                <div class="bg-white p-6 sm:p-8 rounded-lg shadow-sm">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">Interactive: The Context Switch Process</h3>
+                    <p class="text-stone-600 mb-6">Click through the steps to see how the kernel transitions from one process to another. Each step represents a critical action performed by the CPU and kernel code, orchestrated by the architecture-specific `switch_to` macro.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+                        <div id="switch-steps-container" class="md:col-span-1 space-y-4">
+                            <!-- JS populates this -->
+                        </div>
+                        <div class="md:col-span-2 bg-stone-50 rounded-lg p-6 border border-stone-200 min-h-[300px]">
+                            <h4 id="switch-step-title" class="text-lg font-bold mb-2 text-blue-700"></h4>
+                            <p id="switch-step-desc" class="text-stone-600 leading-relaxed"></p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-center gap-4">
+                        <button id="prev-step-btn" class="bg-stone-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-stone-600 transition disabled:opacity-50" disabled>Previous</button>
+                        <button id="next-step-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Next</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: The Performance Cost -->
+            <section id="performance" class="content-section">
+                 <div class="bg-white p-6 sm:p-8 rounded-lg shadow-sm mb-8">
+                    <h2 class="text-2xl font-bold mb-3 text-gray-800">The Cost of Multitasking</h2>
+                    <p class="text-stone-600 leading-relaxed">While essential, context switching is pure overhead—no useful user work is done during the switch. The costs can be broken down into two categories. <strong>Direct costs</strong> are the CPU cycles spent saving/restoring registers and executing scheduler code. <strong>Indirect costs</strong> are often much larger and come from performance hits after the switch is complete. These include CPU cache pollution (the new process's data evicts the old's) and TLB flushes (the memory address cache is cleared), forcing the new process to suffer slow memory accesses until its "working set" is reloaded into these caches.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <div class="bg-white p-6 sm:p-8 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">Comparing Context Switch Costs</h3>
+                        <p class="text-stone-600 mb-6">This chart illustrates the dramatic difference in overhead. A <strong>thread switch</strong> is cheap because threads in the same process share the same memory space, so no TLB flush is needed and cache pollution is lower. A full <strong>process switch</strong> is much more expensive as the memory context must be completely swapped, leading to significant indirect costs. Notice how indirect costs dominate, especially for process switches.</p>
+                        <div class="chart-container">
+                            <canvas id="costChart"></canvas>
+                        </div>
+                    </div>
+                     <div class="bg-white p-6 sm:p-8 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">Factors Affecting Overhead</h3>
+                        <div class="space-y-4 text-stone-600">
+                           <div class="flex items-start gap-3">
+                                <span class="text-blue-600 font-bold text-lg mt-1">&#10144;</span>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800">Hardware & CPU Architecture</h4>
+                                    <p>Features like tagged TLBs (using ASIDs) can avoid full flushes, significantly reducing indirect costs.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="text-blue-600 font-bold text-lg mt-1">&#10144;</span>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800">System Load</h4>
+                                    <p>More runnable tasks can lead to smaller time slices and a higher rate of context switches, increasing total overhead.</p>
+                                </div>
+                            </div>
+                           <div class="flex items-start gap-3">
+                                <span class="text-blue-600 font-bold text-lg mt-1">&#10144;</span>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800">Workload Characteristics</h4>
+                                    <p>Processes with large memory footprints ("working sets") cause more cache pollution and suffer more from it, increasing indirect costs.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // --- Tab Navigation ---
+    const tabs = document.querySelectorAll('.tab-button');
+    const contentSections = document.querySelectorAll('.content-section');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(item => item.classList.remove('active'));
+            tab.classList.add('active');
+
+            const target = tab.getAttribute('data-tab');
+            contentSections.forEach(section => {
+                section.classList.remove('active');
+                if (section.id === target) {
+                    section.classList.add('active');
+                }
+            });
+        });
+    });
+
+    // --- Section 1: Scheduler (CFS) ---
+    // 1a: Red-Black Tree Simulation
+    const rbTreeContainer = document.getElementById('rb-tree-container');
+    const runCycleBtn = document.getElementById('run-cycle-btn');
+    const addTaskBtn = document.getElementById('add-task-btn');
+    const resetSimBtn = document.getElementById('reset-sim-btn');
+
+    let tasks = [];
+    let nextTaskId = 1;
+
+    function createTask(id, vruntime) {
+        return { id, vruntime };
+    }
+    
+    function renderRBTree() {
+        rbTreeContainer.innerHTML = '';
+        if (tasks.length === 0) {
+            rbTreeContainer.innerHTML = '<p class="text-stone-500 text-center py-8">No tasks in the runqueue. Add one!</p>';
+            return;
+        }
+
+        tasks.sort((a, b) => a.vruntime - b.vruntime);
+
+        tasks.forEach((task, index) => {
+            const nodeEl = document.createElement('div');
+            nodeEl.className = 'rb-node';
+            nodeEl.textContent = `Task ${task.id} (vruntime: ${task.vruntime.toFixed(2)})`;
+            if (index === 0) {
+                nodeEl.classList.add('leftmost');
+                nodeEl.innerHTML += ' <span class="text-xs font-semibold text-blue-600">[Next to run]</span>';
+            }
+            rbTreeContainer.appendChild(nodeEl);
+        });
+    }
+    
+    function runCycle() {
+        if (tasks.length === 0) return;
+        
+        const runningTask = tasks.shift(); // Get leftmost task
+        
+        // Simulate running: vruntime increases. Give it a bigger boost to show movement.
+        const runtime = 5 + Math.random() * 10;
+        runningTask.vruntime += runtime;
+        
+        tasks.push(runningTask); // Re-insert task
+        renderRBTree();
+    }
+    
+    function addTask() {
+        const minVruntime = tasks.length > 0 ? tasks[0].vruntime : 0;
+        const newVruntime = minVruntime + Math.random() * 5;
+        tasks.push(createTask(nextTaskId++, newVruntime));
+        renderRBTree();
+    }
+
+    function resetSimulation() {
+        tasks = [];
+        nextTaskId = 1;
+        addTask();
+        addTask();
+        addTask();
+    }
+
+    runCycleBtn.addEventListener('click', runCycle);
+    addTaskBtn.addEventListener('click', addTask);
+    resetSimBtn.addEventListener('click', resetSimulation);
+
+    // 1b: Time Slice Chart
+    const numTasksSlider = document.getElementById('num-tasks-slider');
+    const numTasksValue = document.getElementById('num-tasks-value');
+    const latencyInput = document.getElementById('latency-input');
+    const minGranInput = document.getElementById('min-gran-input');
+    const timeSliceCtx = document.getElementById('timeSliceChart').getContext('2d');
+    let timeSliceChart;
+
+    function updateTimeSliceChart() {
+        const numTasks = parseInt(numTasksSlider.value);
+        const latency = parseFloat(latencyInput.value) || 20;
+        const minGranularity = parseFloat(minGranInput.value) || 1;
+
+        numTasksValue.textContent = numTasks;
+
+        let idealSlice = latency / numTasks;
+        let actualSlice = Math.max(idealSlice, minGranularity);
+        
+        const period = (numTasks * minGranularity > latency) ? numTasks * minGranularity : latency;
+        
+        const labels = ['Ideal Slice per Task', 'Actual Slice per Task', 'Total Period'];
+        const data = [idealSlice.toFixed(2), actualSlice.toFixed(2), period.toFixed(2)];
+
+        if (timeSliceChart) {
+            timeSliceChart.data.labels = labels;
+            timeSliceChart.data.datasets[0].data = data;
+            timeSliceChart.update();
+        } else {
+            timeSliceChart = new Chart(timeSliceCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Time (ms)',
+                        data: data,
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.5)',
+                            'rgba(29, 78, 216, 0.7)',
+                            'rgba(239, 68, 68, 0.5)'
+                        ],
+                        borderColor: [
+                             'rgba(59, 130, 246, 1)',
+                             'rgba(29, 78, 216, 1)',
+                             'rgba(239, 68, 68, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Milliseconds (ms)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.raw} ms`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    numTasksSlider.addEventListener('input', updateTimeSliceChart);
+    latencyInput.addEventListener('input', updateTimeSliceChart);
+    minGranInput.addEventListener('input', updateTimeSliceChart);
+    
+
+    // --- Section 2: Context Switch ---
+    const switchStepsContainer = document.getElementById('switch-steps-container');
+    const stepTitleEl = document.getElementById('switch-step-title');
+    const stepDescEl = document.getElementById('switch-step-desc');
+    const prevBtn = document.getElementById('prev-step-btn');
+    const nextBtn = document.getElementById('next-step-btn');
+
+    const switchSteps = [
+        { title: '1. Switch Triggered', desc: 'A switch is initiated, either voluntarily (process blocks on I/O) or involuntarily (timer interrupt, higher-priority task wakes up). The kernel sets a flag (`TIF_NEED_RESCHED`) indicating a switch is required.' },
+        { title: '2. Save CPU State', desc: 'The hardware context of the outgoing process (`prev`) is saved. This includes general-purpose registers, the program counter (next instruction), and the CPU flags. This state is saved to the process\'s kernel stack and its `task_struct`.' },
+        { title: '3. Save FPU/SIMD State', desc: 'The state of the Floating-Point Unit and any vector (SIMD) registers is saved. This can be a costly operation, so modern kernels often do this lazily, only saving it if the new process actually uses these units.' },
+        { title: '4. Switch Memory Context (MMU)', desc: 'For a full process switch (not a thread switch), the kernel updates the Memory Management Unit. It loads the pointer to the incoming process\'s (`next`) page tables into the CR3 register (on x86). This makes `next`\'s virtual address space active.' },
+        { title: '5. Execute `switch_to`', desc: 'The core of the switch. This low-level, assembly-heavy macro saves the kernel stack pointer of `prev`, loads the stack pointer of `next`, and jumps to the instruction where `next` was last suspended. From this moment on, the CPU is executing `next`\'s code.' },
+        { title: '6. Restore CPU State', desc: 'The state of the `next` process is restored from its `task_struct` and kernel stack. The general-purpose registers and flags are loaded back into the CPU, preparing it to resume execution exactly where it left off.' },
+        { title: '7. Return to Execution', desc: 'If the process was interrupted in user mode, a special instruction (`iret` or `sysret` on x86) returns control. The CPU is now fully running the `next` process as if it were never interrupted.' }
+    ];
+
+    let currentStep = 0;
+
+    function renderSwitchSteps() {
+        switchStepsContainer.innerHTML = '';
+        switchSteps.forEach((step, index) => {
+            const stepEl = document.createElement('div');
+            stepEl.className = 'switch-step p-4 rounded-lg cursor-pointer';
+            if(index === currentStep) stepEl.classList.add('current');
+            stepEl.textContent = step.title;
+            stepEl.dataset.index = index;
+            stepEl.addEventListener('click', () => {
+                currentStep = index;
+                updateSwitchView();
+            });
+            switchStepsContainer.appendChild(stepEl);
+        });
+    }
+
+    function updateSwitchView() {
+        const step = switchSteps[currentStep];
+        stepTitleEl.textContent = step.title;
+        stepDescEl.textContent = step.desc;
+        
+        document.querySelectorAll('.switch-step').forEach(el => el.classList.remove('current'));
+        document.querySelector(`.switch-step[data-index='${currentStep}']`).classList.add('current');
+
+        prevBtn.disabled = currentStep === 0;
+        nextBtn.disabled = currentStep === switchSteps.length - 1;
+    }
+
+    prevBtn.addEventListener('click', () => {
+        if (currentStep > 0) {
+            currentStep--;
+            updateSwitchView();
+        }
+    });
+
+    nextBtn.addEventListener('click', () => {
+        if (currentStep < switchSteps.length - 1) {
+            currentStep++;
+            updateSwitchView();
+        }
+    });
+    
+    
+    // --- Section 3: Performance Cost ---
+    const costCtx = document.getElementById('costChart').getContext('2d');
+    let costChart;
+
+    function renderCostChart() {
+        if(costChart) costChart.destroy();
+        costChart = new Chart(costCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Thread Switch', 'Process Switch'],
+                datasets: [
+                    {
+                        label: 'Direct Costs (Registers, Scheduler)',
+                        data: [10, 15],
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)', 
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Indirect Costs (Cache, TLB)',
+                        data: [20, 150],
+                        backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Relative Overhead Cost (Arbitrary Units)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Comparison of Context Switch Overhead'
+                    }
+                }
+            }
+        });
+    }
+
+    // --- Initializations ---
+    function initialize() {
+        // CFS Sim
+        resetSimulation();
+        // Time Slice Chart
+        updateTimeSliceChart();
+        // Context Switch
+        renderSwitchSteps();
+        updateSwitchView();
+        // Cost Chart
+        renderCostChart();
+    }
+
+    initialize();
+});
+</script>
+
+</body>
+</html>
