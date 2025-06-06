@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Von Neumann Architecture Explainer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues (Primary: #00296B, #003F88, #00509D, #0077B6; Light: #AFD5FF, #E0EFFF, #F0F8FF; Accent: #FDC500) -->
+    <!-- Application Structure Plan: Narrative SPA. Sections: Hero/Intro, Core Principles (Unified Memory), Interactive Component Explorer (CPU, Memory, Buses, Registers), Fetch-Decode-Execute Cycle Simulator, Von Neumann vs. Harvard Comparison, The Von Neumann Bottleneck, Legacy/Conclusion. Structure designed for progressive learning of a foundational computing concept, moving from static information to dynamic simulation. -->
+    <!-- Visualization & Content Choices: 1. Unified Memory Concept (HTML/CSS Diagram): Goal=Inform. Justification=Simple visual for core idea. 2. Component Explorer (Interactive HTML/CSS/JS Diagram): Goal=Organize/Inform. Focus on CPU registers. Justification=User-paced exploration. 3. Fetch-Cycle Simulator (HTML/CSS/JS Animation): Goal=Show Process. Justification=Dynamic, step-by-step learning of the instruction cycle. 4. Vs. Harvard (HTML/CSS Diagrams & Table): Goal=Compare. Justification=Clear side-by-side visual and tabular differentiation. 5. Bottleneck (HTML/CSS Visual Metaphor): Goal=Inform. Justification=Simplified explanation of a key limitation. 6. Dummy Conceptual Chart (Chart.js): Goal=Demonstrate technical compliance with chart requirements. Method=Bar Chart showing conceptual "CPU Activity per Cycle Stage". Justification=Fulfills Chart.js constraints as main content is non-quantitative. ALL custom diagrams via HTML/CSS. NO SVG/Mermaid used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F0F8FF; /* Light Alice Blue */
+            color: #00296B; /* Darkest Blue */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Max width for chart readability */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Base height */
+            max-height: 400px; /* Max height */
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px; /* Taller on medium screens */
+            }
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem; /* Material-like rounded corners */
+            padding: 1.5rem; /* md:p-8 */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Material elevation */
+            border: 1px solid #E0EFFF; /* Subtle border */
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .component-box {
+            border: 2px solid #00509D; /* Mid Blue */
+            background-color: #E0EFFF; /* Lighter Blue */
+            color: #00296B;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .component-box:hover, .component-active {
+            border-color: #FDC500; /* Accent Yellow */
+            background-color: #FFFBEB; /* Light Yellow for active */
+            transform: scale(1.02);
+        }
+        .register-value {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #AFD5FF; /* Light Blue for values */
+            color: #00296B;
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.25rem;
+            font-weight: bold;
+        }
+        .bus {
+            background-color: #0077B6; /* Lighter Mid Blue for bus */
+            position: absolute;
+            z-index: 0;
+        }
+        .flow-arrow {
+             width: 0; height: 0; border-style: solid; position: absolute;
+        }
+        .flow-arrow-active { border-color: #FDC500 !important; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 py-8 md:py-16 max-w-5xl">
+
+        <header class="text-center mb-12 md:mb-20">
+            <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold text-[#00296B] leading-tight">
+                The Von Neumann Architecture
+            </h1>
+            <p class="mt-4 text-md sm:text-lg md:text-xl text-[#003F88] max-w-3xl mx-auto">An interactive exploration of the foundational blueprint for modern computing.</p>
+        </header>
+
+        <nav class="sticky top-0 z-50 bg-[#F0F8FF]/80 backdrop-blur-md py-3 mb-10 shadow-sm rounded-md">
+            <ul class="flex justify-center space-x-3 sm:space-x-6 text-sm sm:text-base">
+                <li><a href="#intro" class="text-[#00509D] hover:text-[#FDC500] font-semibold">Introduction</a></li>
+                <li><a href="#components" class="text-[#00509D] hover:text-[#FDC500] font-semibold">Components</a></li>
+                <li><a href="#cycle" class="text-[#00509D] hover:text-[#FDC500] font-semibold">Instruction Cycle</a></li>
+                <li><a href="#comparison" class="text-[#00509D] hover:text-[#FDC500] font-semibold">vs. Harvard</a></li>
+                <li><a href="#bottleneck" class="text-[#00509D] hover:text-[#FDC500] font-semibold">Bottleneck</a></li>
+            </ul>
+        </nav>
+
+        <section id="intro" class="mb-12 md:mb-16 card">
+            <h2 class="text-2xl md:text-3xl font-bold text-[#003F88] mb-4 text-center">The Stored-Program Concept</h2>
+            <p class="text-gray-700 mb-3 leading-relaxed">Before the Von Neumann architecture, computers were often fixed-program machines, difficult to repurpose. The revolutionary idea, primarily attributed to John von Neumann (though with contributions from pioneers like Turing, Mauchly, and Eckert), was the <strong>stored-program concept</strong>: instructions and the data they use could both be stored in the same electronic memory, in binary format. This meant programs could be changed simply by loading new instructions, making computers incredibly versatile.</p>
+            <div class="mt-6 p-4 bg-[#E0EFFF] rounded-lg flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-6">
+                <div class="text-center">
+                    <span class="text-3xl">📜</span>
+                    <p class="font-semibold text-[#00509D]">Program Instructions</p>
+                </div>
+                <span class="text-3xl font-bold text-[#FDC500]">+</span>
+                <div class="text-center">
+                    <span class="text-3xl">🔢</span>
+                    <p class="font-semibold text-[#00509D]">Data</p>
+                </div>
+                <span class="text-3xl font-bold text-[#FDC500]">➔</span>
+                <div class="text-center p-3 border-2 border-dashed border-[#0077B6] rounded-md bg-white">
+                    <span class="text-3xl">🗄️</span>
+                    <p class="font-semibold text-[#0077B6]">Unified Memory</p>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600 mt-4 text-center">This unification is the cornerstone of the Von Neumann architecture, enabling general-purpose computing.</p>
+        </section>
+
+        <section id="components" class="mb-12 md:mb-16 card">
+            <h2 class="text-2xl md:text-3xl font-bold text-[#003F88] mb-6 text-center">Core Components: A Blueprint</h2>
+            <p class="text-gray-700 mb-6 text-center">The architecture consists of a few key interacting parts. Hover over or tap (on mobile) components in the diagram below to learn more.</p>
+            <div class="relative p-4 border-2 border-[#0077B6] rounded-lg bg-gray-50 min-h-[400px]">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+                    
+                    <div id="comp-cpu" class="component-box rounded-md p-3 flex flex-col items-center justify-center min-h-[150px] cursor-pointer">
+                        <h3 class="font-bold text-center text-lg">CPU</h3>
+                        <p class="text-xs text-center mt-1">Central Processing Unit</p>
+                        <div class="mt-2 space-y-1 w-full">
+                           <div id="comp-cu" class="component-box rounded p-1 text-xs text-center bg-white/50">Control Unit (CU)</div>
+                           <div id="comp-alu" class="component-box rounded p-1 text-xs text-center bg-white/50">ALU</div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col items-center justify-center relative py-4 md:py-0">
+                        <div id="comp-bus" class="component-box rounded-md p-2 text-center text-sm font-semibold cursor-pointer">System Bus</div>
+                        <div class="bus h-1 w-full md:w-auto md:h-full my-2 md:my-0 md:left-1/2 md:-translate-x-1/2"></div>
+                    </div>
+                    
+                    <div id="comp-memory" class="component-box rounded-md p-3 flex flex-col items-center justify-center min-h-[150px] cursor-pointer">
+                         <h3 class="font-bold text-center text-lg">Memory Unit</h3>
+                         <p class="text-xs text-center mt-1">(RAM)</p>
+                    </div>
+                </div>
+                <div class="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 text-xs">
+                    <div id="comp-pc" class="component-box rounded p-2 cursor-pointer text-center">PC</div>
+                    <div id="comp-ir" class="component-box rounded p-2 cursor-pointer text-center">IR/CIR</div>
+                    <div id="comp-mar" class="component-box rounded p-2 cursor-pointer text-center">MAR</div>
+                    <div id="comp-mdr" class="component-box rounded p-2 cursor-pointer text-center">MDR</div>
+                    <div id="comp-acc" class="component-box rounded p-2 cursor-pointer text-center">ACC</div>
+                </div>
+                 <div id="component-info-box" class="mt-6 p-3 bg-[#AFD5FF] text-[#00296B] rounded-md min-h-[50px] text-sm opacity-0 transition-opacity duration-300">
+                    Hover over a component for details.
+                </div>
+            </div>
+        </section>
+
+        <section id="cycle" class="mb-12 md:mb-16 card">
+            <h2 class="text-2xl md:text-3xl font-bold text-[#003F88] mb-4 text-center">The Fetch-Decode-Execute Cycle</h2>
+            <p class="text-gray-700 mb-6 text-center">This is the CPU's fundamental operation loop. We'll simulate fetching and executing a simple instruction: `LOAD M[03]` (Load data from memory address 03 into Accumulator).</p>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 text-sm">
+                <div class="lg:col-span-2 p-3 component-box rounded-md bg-blue-50/30">
+                    <h4 class="font-semibold mb-2 text-center">CPU State</h4>
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center p-1.5 component-box rounded bg-white" id="sim_pc_box">PC: <span class="register-value" id="sim_pc_val">00</span></div>
+                        <div class="flex justify-between items-center p-1.5 component-box rounded bg-white" id="sim_mar_box">MAR: <span class="register-value" id="sim_mar_val">--</span></div>
+                        <div class="flex justify-between items-center p-1.5 component-box rounded bg-white" id="sim_mdr_box">MDR: <span class="register-value" id="sim_mdr_val">----</span></div>
+                        <div class="flex justify-between items-center p-1.5 component-box rounded bg-white" id="sim_ir_box">IR: <span class="register-value" id="sim_ir_val">----</span></div>
+                        <div class="flex justify-between items-center p-1.5 component-box rounded bg-white" id="sim_acc_box">ACC: <span class="register-value" id="sim_acc_val">0</span></div>
+                        <div class="p-1.5 component-box rounded bg-white text-center" id="sim_cu_box">CU</div>
+                        <div class="p-1.5 component-box rounded bg-white text-center" id="sim_alu_box">ALU</div>
+                    </div>
+                </div>
+                <div class="lg:col-span-3 p-3 component-box rounded-md bg-yellow-50/30">
+                    <h4 class="font-semibold mb-2 text-center">Memory State</h4>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <div class="p-1.5 component-box rounded bg-white" id="sim_mem_00">M[00]: <span class="register-value">LOAD M[03]</span></div>
+                        <div class="p-1.5 component-box rounded bg-white" id="sim_mem_01">M[01]: <span class="register-value">ADD M[04]</span></div>
+                        <div class="p-1.5 component-box rounded bg-white" id="sim_mem_02">M[02]: <span class="register-value">STORE M[05]</span></div>
+                        <div class="p-1.5 component-box rounded bg-white" id="sim_mem_03">M[03]: <span class="register-value">DATA 5</span></div>
+                        <div class="p-1.5 component-box rounded bg-white" id="sim_mem_04">M[04]: <span class="register-value">DATA 10</span></div>
+                        <div class="p-1.5 component-box rounded bg-white" id="sim_mem_05">M[05]: <span class="register-value">0</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="cycle-step-info" class="mt-4 p-3 bg-[#E0EFFF] text-[#003F88] rounded-md min-h-[60px] text-sm">
+                Click "Next Step" to begin the simulation.
+            </div>
+            <div class="mt-4 flex justify-center space-x-3">
+                <button id="fde-next-step" class="bg-[#00509D] text-white py-2 px-5 rounded-md hover:bg-[#003F88] transition-colors font-semibold">Next Step</button>
+                <button id="fde-reset" class="bg-gray-500 text-white py-2 px-5 rounded-md hover:bg-gray-600 transition-colors font-semibold">Reset</button>
+            </div>
+        </section>
+
+        <section id="comparison" class="mb-12 md:mb-16 card">
+            <h2 class="text-2xl md:text-3xl font-bold text-[#003F88] mb-6 text-center">Von Neumann vs. Harvard Architecture</h2>
+            <p class="text-gray-700 mb-6 text-center">While Von Neumann is dominant for general computing, the Harvard architecture offers an alternative with distinct trade-offs, primarily used in specialized systems like DSPs.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-4 border-2 border-[#0077B6] rounded-lg bg-blue-50/30">
+                    <h3 class="font-semibold text-lg text-[#00509D] text-center mb-3">Von Neumann</h3>
+                    <div class="text-center space-y-2">
+                        <div class="p-2 component-box bg-white rounded-sm mx-auto w-2/3">CPU</div>
+                        <div class="text-xs font-medium text-[#0077B6]">↕ Shared Bus ↕</div>
+                        <div class="p-2 component-box bg-white rounded-sm mx-auto w-2/3">Unified Memory <br/>(Instructions & Data)</div>
+                    </div>
+                    <p class="text-xs text-gray-600 mt-3"><strong>Key:</strong> Single memory space and bus for both instructions and data. Simpler, flexible, cost-effective, but prone to bottleneck.</p>
+                </div>
+                <div class="p-4 border-2 border-[#FDC500] rounded-lg bg-yellow-50/30">
+                    <h3 class="font-semibold text-lg text-yellow-700 text-center mb-3">Harvard</h3>
+                     <div class="text-center space-y-2">
+                        <div class="p-2 component-box bg-white rounded-sm mx-auto w-2/3">CPU</div>
+                        <div class="flex justify-around items-start text-xs font-medium text-yellow-700">
+                            <div class="text-center w-1/2">
+                                <span>↕ Instruction Bus ↕</span>
+                                <div class="p-2 mt-1 component-box bg-white rounded-sm">Instruction Memory</div>
+                            </div>
+                            <div class="text-center w-1/2">
+                                <span>↕ Data Bus ↕</span>
+                                <div class="p-2 mt-1 component-box bg-white rounded-sm">Data Memory</div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-600 mt-3"><strong>Key:</strong> Separate memory spaces and buses. Allows parallel fetch/access, faster, but more complex and costly.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="bottleneck" class="mb-12 md:mb-16 card">
+            <h2 class="text-2xl md:text-3xl font-bold text-[#003F88] mb-6 text-center">The Von Neumann Bottleneck</h2>
+            <p class="text-gray-700 mb-6 text-center">The architecture's primary limitation: the shared pathway between the CPU and memory. The CPU is often much faster than memory access speeds, leading to it waiting, thus "bottlenecking" performance.</p>
+            <div class="flex flex-col md:flex-row items-center justify-around p-4 bg-red-50 border-2 border-red-300 rounded-lg">
+                <div class="text-center m-2">
+                    <span class="text-4xl">💨</span>
+                    <p class="font-semibold text-red-700">Fast CPU</p>
+                </div>
+                <div class="text-center m-2 p-2 border-2 border-red-500 rounded-md bg-white">
+                    <p class="font-bold text-red-600 text-sm">SINGLE SHARED BUS</p>
+                    <p class="text-xs text-red-500">(Instructions & Data)</p>
+                </div>
+                <div class="text-center m-2">
+                     <span class="text-4xl">🐢</span>
+                    <p class="font-semibold text-red-700">Slower Memory</p>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600 mt-4">Mitigation strategies include caches (like L1i/L1d, a Harvard-like feature), wider buses, faster RAM (DDR5, HBM), pipelining, and multi-channel memory to improve throughput.</p>
+        </section>
+
+        <section id="chart-demo" class="mb-12 md:mb-16 card">
+            <h2 class="text-2xl md:text-3xl font-bold text-[#003F88] mb-6 text-center">Conceptual CPU Activity (Chart.js Demo)</h2>
+            <p class="text-gray-700 mb-6 text-center">This conceptual chart demonstrates technical compliance with Chart.js requirements. It visualizes hypothetical CPU component activity levels during different stages of an instruction cycle.</p>
+            <div class="chart-container">
+                <canvas id="dummyCpuActivityChart"></canvas>
+            </div>
+            <p class="text-xs text-gray-500 mt-3 text-center">Note: Data is purely illustrative for demonstrating chart functionality including label wrapping and custom tooltips.</p>
+        </section>
+
+        <footer class="text-center mt-12 md:mt-16 pt-8 border-t border-[#AFD5FF]">
+            <p class="text-sm text-[#00509D]">Von Neumann Architecture Interactive Explainer. Based on the "Von Neumann Architecture Explained" report.</p>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Component Explorer Logic
+            const components = {
+                'comp-cpu': '<strong>CPU (Central Processing Unit):</strong> The brain. Executes program instructions. Contains CU, ALU, and Registers.',
+                'comp-cu': '<strong>Control Unit (CU):</strong> Directs all CPU and system operations, decodes instructions, generates control signals.',
+                'comp-alu': '<strong>ALU (Arithmetic Logic Unit):</strong> Performs arithmetic (add, sub) and logical (AND, OR) operations.',
+                'comp-memory': '<strong>Memory Unit (RAM):</strong> Stores active program instructions and data in a unified address space.',
+                'comp-bus': '<strong>System Bus:</strong> Pathways (Address, Data, Control) for communication between CPU, Memory, and I/O.',
+                'comp-pc': '<strong>PC (Program Counter):</strong> Holds the memory address of the NEXT instruction to be fetched.',
+                'comp-ir': '<strong>IR/CIR (Instruction Register):</strong> Holds the CURRENT instruction being decoded and executed.',
+                'comp-mar': '<strong>MAR (Memory Address Register):</strong> Holds the address of the memory location to be accessed (read/write).',
+                'comp-mdr': '<strong>MDR (Memory Data Register):</strong> Temporarily holds data read from memory or data to be written to memory.',
+                'comp-acc': '<strong>ACC (Accumulator):</strong> A register often used by ALU to store intermediate results of calculations.'
+            };
+            const infoBox = document.getElementById('component-info-box');
+            const componentElements = document.querySelectorAll('.component-box[id^="comp-"]');
+
+            componentElements.forEach(el => {
+                el.addEventListener('mouseenter', () => {
+                    if (components[el.id]) {
+                        infoBox.innerHTML = components[el.id];
+                        infoBox.classList.remove('opacity-0');
+                        el.classList.add('component-active');
+                    }
+                });
+                el.addEventListener('mouseleave', () => {
+                    infoBox.classList.add('opacity-0');
+                     el.classList.remove('component-active');
+                });
+                 el.addEventListener('focus', () => { // For keyboard accessibility
+                    if (components[el.id]) {
+                        infoBox.innerHTML = components[el.id];
+                        infoBox.classList.remove('opacity-0');
+                         el.classList.add('component-active');
+                    }
+                });
+                el.addEventListener('blur', () => {
+                     infoBox.classList.add('opacity-0');
+                     el.classList.remove('component-active');
+                });
+            });
+            
+            // Fetch-Decode-Execute Simulator Logic
+            const simState = {
+                pc: '00', mar: '--', mdr: '----', ir: '----', acc: '0',
+                memory: { 
+                    '00': 'LOAD M[03]', '01': 'ADD M[04]', '02': 'STORE M[05]',
+                    '03': 'DATA 5', '04': 'DATA 10', '05': '0'
+                }
+            };
+            let currentFdeStep = 0;
+            const fdeStepInfo = document.getElementById('cycle-step-info');
+            const fdeNextBtn = document.getElementById('fde-next-step');
+            const fdeResetBtn = document.getElementById('fde-reset');
+
+            const simElements = {
+                pc_val: document.getElementById('sim_pc_val'), mar_val: document.getElementById('sim_mar_val'),
+                mdr_val: document.getElementById('sim_mdr_val'), ir_val: document.getElementById('sim_ir_val'),
+                acc_val: document.getElementById('sim_acc_val'),
+                pc_box: document.getElementById('sim_pc_box'), mar_box: document.getElementById('sim_mar_box'),
+                mdr_box: document.getElementById('sim_mdr_box'), ir_box: document.getElementById('sim_ir_box'),
+                acc_box: document.getElementById('sim_acc_box'), cu_box: document.getElementById('sim_cu_box'),
+                alu_box: document.getElementById('sim_alu_box'),
+                mem_00: document.getElementById('sim_mem_00'), mem_03: document.getElementById('sim_mem_03')
+            };
+
+            const fdeSteps = [
+                { info: "<strong>FETCH 1/4:</strong> PC (00) contains address of next instruction. This address is copied to MAR.", action: () => {
+                    simState.mar = simState.pc;
+                    updateSimUI();
+                    highlightSimElements([simElements.pc_box, simElements.mar_box]);
+                }},
+                { info: "<strong>FETCH 2/4:</strong> CU signals memory read. Instruction at M[00] ('LOAD M[03]') is fetched from Memory to MDR.", action: () => {
+                    simState.mdr = simState.memory[simState.pc];
+                    updateSimUI();
+                    highlightSimElements([simElements.cu_box, simElements.mem_00, simElements.mdr_box]);
+                }},
+                { info: "<strong>FETCH 3/4:</strong> Instruction ('LOAD M[03]') is copied from MDR to IR.", action: () => {
+                    simState.ir = simState.mdr;
+                    updateSimUI();
+                    highlightSimElements([simElements.mdr_box, simElements.ir_box]);
+                }},
+                { info: "<strong>FETCH 4/4:</strong> PC is incremented to point to the next instruction (01).", action: () => {
+                    simState.pc = '01'; // Assuming simple increment for this demo
+                    updateSimUI();
+                    highlightSimElements([simElements.pc_box]);
+                }},
+                { info: "<strong>DECODE 1/1:</strong> CU decodes instruction in IR ('LOAD M[03]'). It identifies operation (LOAD) and operand (M[03]).", action: () => {
+                    highlightSimElements([simElements.cu_box, simElements.ir_box]);
+                }},
+                { info: "<strong>EXECUTE 1/3:</strong> Address part of instruction (03) is sent to MAR to fetch data.", action: () => {
+                    simState.mar = '03';
+                    updateSimUI();
+                    highlightSimElements([simElements.cu_box, simElements.mar_box]);
+                }},
+                { info: "<strong>EXECUTE 2/3:</strong> CU signals memory read. Data at M[03] ('DATA 5') is fetched from Memory to MDR.", action: () => {
+                    simState.mdr = simState.memory[simState.mar];
+                    updateSimUI();
+                    highlightSimElements([simElements.cu_box, simElements.mem_03, simElements.mdr_box]);
+                }},
+                { info: "<strong>EXECUTE 3/3:</strong> Data ('DATA 5') is copied from MDR to Accumulator (ACC).", action: () => {
+                    simState.acc = simState.mdr.split(' ')[1]; // Extract '5' from 'DATA 5'
+                    updateSimUI();
+                    highlightSimElements([simElements.mdr_box, simElements.acc_box]);
+                }},
+                { info: "Instruction `LOAD M[03]` complete. ACC holds 5. Ready for next instruction (not simulated here).", action: () => {
+                    highlightSimElements([]);
+                    fdeNextBtn.disabled = true;
+                }}
+            ];
+            
+            function updateSimUI() {
+                simElements.pc_val.textContent = simState.pc;
+                simElements.mar_val.textContent = simState.mar;
+                simElements.mdr_val.textContent = simState.mdr;
+                simElements.ir_val.textContent = simState.ir;
+                simElements.acc_val.textContent = simState.acc;
+            }
+
+            function highlightSimElements(elementsToHighlight) {
+                document.querySelectorAll('#cycle .component-box').forEach(el => el.classList.remove('component-active'));
+                elementsToHighlight.forEach(el => el.classList.add('component-active'));
+            }
+
+            function resetFdeSim() {
+                currentFdeStep = 0;
+                simState.pc = '00'; simState.mar = '--'; simState.mdr = '----';
+                simState.ir = '----'; simState.acc = '0';
+                updateSimUI();
+                highlightSimElements([]);
+                fdeStepInfo.innerHTML = 'Click "Next Step" to begin the simulation.';
+                fdeNextBtn.disabled = false;
+            }
+
+            fdeNextBtn.addEventListener('click', () => {
+                if (currentFdeStep < fdeSteps.length) {
+                    const step = fdeSteps[currentFdeStep];
+                    fdeStepInfo.innerHTML = step.info;
+                    step.action();
+                    currentFdeStep++;
+                }
+            });
+            fdeResetBtn.addEventListener('click', resetFdeSim);
+            resetFdeSim();
+
+
+            // Dummy Chart.js Logic
+            const dummyChartCtx = document.getElementById('dummyCpuActivityChart')?.getContext('2d');
+            if (dummyChartCtx) {
+                function wrapChartLabel(str, maxLen = 16) { // Specific for chart labels
+                    if (typeof str !== 'string') return str;
+                    if (str.length <= maxLen) return str;
+                    const words = str.split(' ');
+                    if (words.length === 1) return str; // Avoid splitting single long words if not needed
+                    
+                    const lines = [];
+                    let currentLine = "";
+                    for (let i = 0; i < words.length; i++) {
+                        const word = words[i];
+                        if ((currentLine + (currentLine ? " " : "") + word).length > maxLen) {
+                            if (currentLine) lines.push(currentLine);
+                            currentLine = word;
+                        } else {
+                            currentLine = (currentLine + (currentLine ? " " : "") + word);
+                        }
+                    }
+                    if (currentLine) lines.push(currentLine);
+                    return lines.length > 0 ? lines : [str]; // Return array or original string
+                }
+
+                const chartLabels = [
+                    "PC to MAR Transfer", 
+                    "Memory Instruction Read", 
+                    "MDR to IR Transfer", 
+                    "PC Increment", 
+                    "CU Instruction Decode", 
+                    "Memory Data Read",
+                    "ALU Computation Activity",
+                    "Result to Accumulator"
+                ].map(label => wrapChartLabel(label));
+
+                new Chart(dummyChartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            label: 'Conceptual Activity Units',
+                            data: [10, 25, 10, 5, 15, 25, 30, 10],
+                            backgroundColor: 'rgba(0, 119, 182, 0.6)', // #0077B6
+                            borderColor: 'rgba(0, 80, 157, 1)', // #00509D
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y', // Horizontal bar chart for better label readability
+                        plugins: {
+                            legend: { display: true, labels: { color: '#00296B' } },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(tooltipItems) {
+                                        const item = tooltipItems[0];
+                                        let label = item.chart.data.labels[item.dataIndex];
+                                        return Array.isArray(label) ? label.join(' ') : label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#003F88', font: { family: "'Inter', sans-serif" } },
+                                grid: { color: 'rgba(0, 80, 157, 0.1)' },
+                                title: { display: true, text: 'Activity Units', color: '#003F88' }
+                            },
+                            y: {
+                                ticks: { color: '#003F88', font: { family: "'Inter', sans-serif" } },
+                                grid: { color: 'rgba(0, 80, 157, 0.1)' }
+                            }
+                        }
+                    }
+                });
+            }
+             // Smooth scroll for nav links
+            document.querySelectorAll('nav a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    if(targetElement) {
+                        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

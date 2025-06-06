@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Interactive World of Computer Storage</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .nav-link.active {
+            color: #0369a1; /* text-sky-700 */
+            border-bottom-color: #0369a1; /* border-sky-700 */
+            font-weight: 600;
+        }
+        .tech-tab.active {
+            background-color: #0369a1; /* bg-sky-700 */
+            color: #ffffff;
+        }
+        .hdd-part:hover .hdd-label, .hdd-part.active .hdd-label {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        .flow-step {
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800">
+
+<!-- Chosen Palette: Warm Neutrals (Stone) with a Sky Blue accent for clarity and focus. -->
+<!-- Application Structure Plan: The SPA is organized into thematic sections accessible via a sticky navigation bar. The flow is designed for progressive discovery: 1) Fundamentals (RAM vs Storage), 2) Technology Deep Dives (HDD/SSD), 3) The Connection (Interfaces), 4) Head-to-Head Comparison, 5) How it Works (File Access), and 6) Future Tech. This structure breaks down the complex topic logically, fostering understanding better than a linear report format by allowing users to compare related concepts and explore topics of interest non-linearly. -->
+<!-- Visualization & Content Choices: Data from the report is translated into interactive visualizations. Goal: Compare -> Chart.js Bar/Radar charts for quantitative data (speeds, capacities, specs). Goal: Organize/Inform -> Custom HTML/CSS/JS diagrams for abstract concepts (HDD anatomy, file access flow). Goal: Explore -> Tabbed content and clickable elements for deep dives (NAND types, HDD parts). This approach avoids static tables, encourages user interaction, and enhances data comprehension. Library/Method: Chart.js for all charts due to its flexibility and canvas-based rendering, ensuring no SVG is used. -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <div class="min-h-screen">
+        <header class="bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-50">
+            <div class="container mx-auto px-4">
+                <nav class="flex items-center justify-between h-16">
+                    <h1 class="text-xl md:text-2xl font-bold text-sky-800">Storage Explorer</h1>
+                    <div class="hidden md:flex items-center space-x-4 lg:space-x-6">
+                        <a href="#fundamentals" class="nav-link text-stone-600 hover:text-sky-700 border-b-2 border-transparent pb-1 transition-colors">Fundamentals</a>
+                        <a href="#deep-dive" class="nav-link text-stone-600 hover:text-sky-700 border-b-2 border-transparent pb-1 transition-colors">Technology</a>
+                        <a href="#interfaces" class="nav-link text-stone-600 hover:text-sky-700 border-b-2 border-transparent pb-1 transition-colors">Interfaces</a>
+                        <a href="#comparison" class="nav-link text-stone-600 hover:text-sky-700 border-b-2 border-transparent pb-1 transition-colors">Comparison</a>
+                        <a href="#file-system" class="nav-link text-stone-600 hover:text-sky-700 border-b-2 border-transparent pb-1 transition-colors">File System</a>
+                    </div>
+                </nav>
+            </div>
+        </header>
+
+        <main class="container mx-auto p-4 md:p-8">
+
+            <section class="text-center mb-16 pt-8">
+                <h2 class="text-4xl md:text-5xl font-bold text-stone-900 mb-4">An Interactive Journey into Computer Storage</h2>
+                <p class="max-w-3xl mx-auto text-lg text-stone-600">From the spinning disks of HDDs to the lightning-fast flash cells of NVMe SSDs, storage is the foundation of our digital world. This guide transforms a comprehensive report into an interactive experience, allowing you to explore, compare, and understand the technologies that hold our data.</p>
+            </section>
+            
+            <section id="fundamentals" class="mb-16 scroll-mt-24">
+                <h3 class="text-3xl font-bold text-center mb-2 text-stone-900">The Foundation: Memory vs. Storage</h3>
+                <p class="text-center text-stone-600 max-w-2xl mx-auto mb-10">Before diving into specific devices, it's crucial to understand the two main types of data repositories in a computer: volatile memory (RAM) and non-volatile storage. They exist in a hierarchy, balancing speed, cost, and capacity to keep a system running efficiently. This section breaks down their core differences.</p>
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div class="bg-white p-6 rounded-xl shadow-md border border-stone-200">
+                        <h4 class="text-2xl font-semibold mb-3 text-sky-800">🧠 RAM: The Workbench</h4>
+                        <p class="text-stone-600 mb-4">Random Access Memory is the computer's short-term, working memory. It's incredibly fast but volatile, meaning it forgets everything when the power is turned off. It holds the OS, active applications, and data currently in use by the CPU.</p>
+                        <ul class="space-y-2">
+                            <li class="flex items-start"><span class="text-sky-600 mr-2 mt-1">⚡️</span> <strong>Speed:</strong> Extremely Fast (Nanoseconds)</li>
+                            <li class="flex items-start"><span class="text-sky-600 mr-2 mt-1">🔋</span> <strong>Volatility:</strong> Volatile (Data lost on power off)</li>
+                            <li class="flex items-start"><span class="text-sky-600 mr-2 mt-1">📦</span> <strong>Capacity:</strong> Smaller (e.g., 8-64 GB)</li>
+                            <li class="flex items-start"><span class="text-sky-600 mr-2 mt-1">💰</span> <strong>Cost:</strong> Highest per GB</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md border border-stone-200">
+                        <h4 class="text-2xl font-semibold mb-3 text-sky-800">🗄️ Storage: The Filing Cabinet</h4>
+                        <p class="text-stone-600 mb-4">Persistent storage (HDDs, SSDs) is the computer's long-term memory. It's slower than RAM but non-volatile, keeping your OS, files, and applications safe even without power. It's the permanent home for your digital life.</p>
+                        <ul class="space-y-2">
+                            <li class="flex items-start"><span class="text-sky-600 mr-2 mt-1">🐢</span> <strong>Speed:</strong> Slower (Micro/Milliseconds)</li>
+                            <li class="flex items-start"><span class="text-sky-600 mr-2 mt-1">💾</span> <strong>Volatility:</strong> Non-Volatile (Data retained)</li>
+                            <li class="flex items-start"><span class="text-sky-600 mr-2 mt-1">📦</span> <strong>Capacity:</strong> Larger (e.g., 256 GB - 22+ TB)</li>
+                            <li class="flex items-start"><span class="text-sky-600 mr-2 mt-1">💸</span> <strong>Cost:</strong> Lower per GB</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="deep-dive" class="mb-16 scroll-mt-24">
+                <h3 class="text-3xl font-bold text-center mb-2 text-stone-900">Technology Deep Dive</h3>
+                <p class="text-center text-stone-600 max-w-2xl mx-auto mb-6">Explore the inner workings of the two main storage technologies: Hard Disk Drives (HDDs) and Solid-State Drives (SSDs). This section provides interactive diagrams and comparative charts to explain how each device stores and retrieves your data.</p>
+                <div class="flex justify-center mb-8">
+                    <div class="flex space-x-2 bg-stone-200 p-1 rounded-full">
+                        <button id="show-hdd" class="tech-tab px-4 py-2 rounded-full text-sm font-semibold transition-colors active">HDD Internals</button>
+                        <button id="show-ssd" class="tech-tab px-4 py-2 rounded-full text-sm font-semibold transition-colors">SSD Internals</button>
+                    </div>
+                </div>
+
+                <div id="hdd-content">
+                    <div class="grid md:grid-cols-2 gap-8 items-center">
+                        <div class="bg-white p-6 rounded-xl shadow-md border border-stone-200">
+                            <h4 class="text-xl font-semibold mb-3">Anatomy of a Hard Disk Drive</h4>
+                            <div id="hdd-diagram" class="relative w-full aspect-square max-w-sm mx-auto bg-stone-100 rounded-full flex items-center justify-center">
+                                <div class="absolute w-10/12 h-10/12 bg-stone-300 rounded-full border-2 border-stone-400"></div>
+                                <div class="absolute w-10/12 h-10/12 bg-stone-300/50 rounded-full border-2 border-stone-400 transform -translate-y-2"></div>
+                                <div class="absolute w-1/4 h-1/4 bg-stone-500 rounded-full border-2 border-stone-600"></div>
+                                <!-- Parts -->
+                                <div class="hdd-part absolute top-[25%] left-[65%]" data-info="Platters: Rigid disks coated with magnetic material where data is stored. They spin at thousands of RPM.">
+                                    <div class="h-4 w-4 bg-sky-600 rounded-full cursor-pointer"></div>
+                                    <span class="hdd-label absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-stone-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 transform-gpu transition-all duration-200 scale-90">Platters</span>
+                                </div>
+                                 <div class="hdd-part absolute top-1/2 left-1/4 -translate-y-1/2" data-info="Actuator Arm: Moves the read/write heads across the platters to access different data tracks.">
+                                    <div class="h-4 w-4 bg-sky-600 rounded-full cursor-pointer"></div>
+                                    <div class="absolute top-1/2 left-4 h-1 w-20 bg-stone-400 rounded-r-full -translate-y-1/2"></div>
+                                     <span class="hdd-label absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-stone-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 transform-gpu transition-all duration-200 scale-90">Actuator Arm</span>
+                                </div>
+                                <div class="hdd-part absolute top-[48%] left-[40%]" data-info="Read/Write Heads: Tiny components on the actuator arm that 'fly' nanometers above the platters to read or write data by altering magnetic fields.">
+                                    <div class="h-4 w-4 bg-sky-600 rounded-full cursor-pointer"></div>
+                                    <span class="hdd-label absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-stone-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 transform-gpu transition-all duration-200 scale-90">Read/Write Heads</span>
+                                </div>
+                                 <div class="hdd-part absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" data-info="Spindle Motor: Rotates the stack of platters at a constant high speed (e.g., 7200 RPM).">
+                                    <div class="h-4 w-4 bg-sky-600 rounded-full cursor-pointer"></div>
+                                     <span class="hdd-label absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-stone-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 transform-gpu transition-all duration-200 scale-90">Spindle Motor</span>
+                                </div>
+                            </div>
+                            <p id="hdd-info-box" class="mt-4 text-stone-600 text-sm h-24">Hover over or tap a blue dot to learn about a component. HDDs are mechanical marvels, but their moving parts introduce delays.</p>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="bg-white p-6 rounded-xl shadow-md border border-stone-200">
+                                <h4 class="text-xl font-semibold mb-3">Performance Factors</h4>
+                                <p class="text-stone-600 mb-3 text-sm">HDD speed is limited by mechanics. Total access time is a sum of these physical delays:</p>
+                                <div class="flex flex-col space-y-2 text-sm">
+                                    <p><strong>Seek Time:</strong> Moving the arm to the correct track (~8-10 ms)</p>
+                                    <p><strong>Rotational Latency:</strong> Waiting for the data to spin under the head (~4.17 ms @ 7200 RPM)</p>
+                                    <p><strong>Data Transfer:</strong> Reading the bits from the platter.</p>
+                                </div>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-md border border-stone-200">
+                                <h4 class="text-xl font-semibold mb-3">Key Takeaway</h4>
+                                <p class="text-stone-600 text-sm">HDDs excel at providing massive storage capacity for a low cost, making them ideal for archives and bulk data. However, their reliance on moving parts makes them slower, less durable, and noisier than SSDs.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ssd-content" class="hidden">
+                    <div class="grid md:grid-cols-2 gap-8 items-center">
+                        <div class="bg-white p-6 rounded-xl shadow-md border border-stone-200">
+                            <h4 class="text-xl font-semibold mb-3">Inside a Solid-State Drive</h4>
+                            <p class="text-stone-600 text-sm mb-4">SSDs use non-volatile NAND flash memory. Data is stored by trapping electrons in cells. This architecture has no moving parts, enabling incredible speed. Explore the trade-offs between different NAND types.</p>
+                             <div class="chart-container">
+                                <canvas id="nandChart"></canvas>
+                            </div>
+                            <div id="nand-info-box" class="mt-4 text-stone-600 text-sm h-12">This chart compares NAND types by endurance. Notice how storing more bits per cell reduces the number of program/erase cycles the cell can withstand.</div>
+                        </div>
+                         <div class="space-y-4">
+                            <div class="bg-white p-6 rounded-xl shadow-md border border-stone-200">
+                                <h4 class="text-xl font-semibold mb-3">Essential Management Tech</h4>
+                                <p class="text-stone-600 mb-3 text-sm">Sophisticated controllers use these techniques to maximize an SSD's life and performance:</p>
+                                <div class="flex flex-col space-y-2 text-sm">
+                                    <p><strong>Wear Leveling:</strong> Distributes writes evenly to prevent premature cell failure.</p>
+                                    <p><strong>TRIM Command:</strong> Allows the OS to tell the SSD which blocks are no longer in use, improving efficiency.</p>
+                                    <p><strong>Garbage Collection:</strong> Reclaims space from blocks with invalid data.</p>
+                                </div>
+                            </div>
+                             <div class="bg-white p-6 rounded-xl shadow-md border border-stone-200">
+                                <h4 class="text-xl font-semibold mb-3">Key Takeaway</h4>
+                                <p class="text-stone-600 text-sm">SSDs offer revolutionary speed and durability. The trade-off is higher cost and a finite cell lifespan, but modern management technology makes them highly reliable for everyday and high-performance use.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="interfaces" class="mb-16 scroll-mt-24">
+                <h3 class="text-3xl font-bold text-center mb-2 text-stone-900">The Connection: Interfaces & Protocols</h3>
+                <p class="text-center text-stone-600 max-w-2xl mx-auto mb-10">A storage device is only as fast as its connection to the computer. The interface (the physical connection and protocol) is a critical component that has evolved to keep up with faster storage media. This section compares the main contenders: SATA and NVMe over PCIe.</p>
+                <div class="bg-white p-6 rounded-xl shadow-md border border-stone-200">
+                    <h4 class="text-xl font-semibold mb-4 text-center">Throughput Evolution: SATA vs PCIe</h4>
+                    <p class="text-center text-stone-600 max-w-2xl mx-auto mb-6 text-sm">As SSDs got faster, the SATA III interface became a bottleneck. The PCIe bus, with its direct line to the CPU, offered far more bandwidth, leading to the development of NVMe SSDs that could fully leverage this speed. This chart visualizes the massive leap in potential performance.</p>
+                    <div class="chart-container">
+                        <canvas id="interfaceChart"></canvas>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="comparison" class="mb-16 scroll-mt-24">
+                <h3 class="text-3xl font-bold text-center mb-2 text-stone-900">Head-to-Head: HDD vs. SSD</h3>
+                <p class="text-center text-stone-600 max-w-2xl mx-auto mb-10">Now let's put it all together. The choice between an HDD and an SSD involves a trade-off across multiple factors. This interactive radar chart provides a holistic comparison, while the cards below highlight the most user-impactful differences.</p>
+                <div class="grid md:grid-cols-3 gap-8 items-start">
+                    <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-md border border-stone-200">
+                         <h4 class="text-xl font-semibold mb-4 text-center">Multi-Factor Performance Comparison</h4>
+                         <div class="chart-container h-[400px] max-h-[500px]">
+                            <canvas id="comparisonRadarChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-white p-6 rounded-xl shadow-md border border-stone-200">
+                            <h5 class="font-semibold text-lg mb-2">⚡️ Speed</h5>
+                            <p class="text-sm text-stone-600">The most dramatic difference. An SSD can boot an OS, load apps, and transfer files multiple times faster than an HDD.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md border border-stone-200">
+                             <h5 class="font-semibold text-lg mb-2">💰 Cost per Gigabyte</h5>
+                            <p class="text-sm text-stone-600">HDDs remain the undisputed champion of cheap capacity. You can get terabytes of HDD storage for the price of a much smaller SSD.</p>
+                        </div>
+                         <div class="bg-white p-6 rounded-xl shadow-md border border-stone-200">
+                             <h5 class="font-semibold text-lg mb-2">💪 Durability</h5>
+                            <p class="text-sm text-stone-600">With no moving parts, SSDs are far more resistant to drops and shocks, making them essential for laptops and portable devices.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="file-system" class="scroll-mt-24">
+                 <h3 class="text-3xl font-bold text-center mb-2 text-stone-900">How It All Works: The Journey of a File</h3>
+                <p class="text-center text-stone-600 max-w-2xl mx-auto mb-10">Hardware is only half the story. The Operating System's File System (like NTFS or ext4) organizes raw storage into the files and folders we use every day. This diagram shows the simplified, layered journey of a request to read a file, from your click to the data being retrieved from the disk.</p>
+                <div id="flow-diagram" class="relative space-y-4 md:space-y-0 md:flex md:justify-between md:items-center">
+                    <!-- Steps -->
+                    <div class="flow-step bg-white p-4 rounded-lg shadow-md border border-stone-200 text-center w-full md:w-48 opacity-50">
+                        <div class="text-3xl mb-2">🖥️</div>
+                        <h5 class="font-semibold">1. App Request</h5>
+                        <p class="text-xs text-stone-500">You open a file. The app makes a system call to the OS.</p>
+                    </div>
+                    <div class="flow-step bg-white p-4 rounded-lg shadow-md border border-stone-200 text-center w-full md:w-48 opacity-50">
+                        <div class="text-3xl mb-2">📂</div>
+                        <h5 class="font-semibold">2. File System</h5>
+                        <p class="text-xs text-stone-500">The OS asks the file system to find the file's location data (metadata).</p>
+                    </div>
+                    <div class="flow-step bg-white p-4 rounded-lg shadow-md border border-stone-200 text-center w-full md:w-48 opacity-50">
+                        <div class="text-3xl mb-2">🗺️</div>
+                        <h5 class="font-semibold">3. LBA Mapping</h5>
+                        <p class="text-xs text-stone-500">The file system translates the file's logical blocks to physical addresses (LBAs).</p>
+                    </div>
+                    <div class="flow-step bg-white p-4 rounded-lg shadow-md border border-stone-200 text-center w-full md:w-48 opacity-50">
+                        <div class="text-3xl mb-2">⚙️</div>
+                        <h5 class="font-semibold">4. Device Driver</h5>
+                        <p class="text-xs text-stone-500">The driver converts the request into low-level commands for the hardware.</p>
+                    </div>
+                    <div class="flow-step bg-white p-4 rounded-lg shadow-md border border-stone-200 text-center w-full md:w-48 opacity-50">
+                        <div class="text-3xl mb-2">💾</div>
+                        <h5 class="font-semibold">5. Hardware Access</h5>
+                        <p class="text-xs text-stone-500">The drive controller retrieves the data from the platters or flash cells.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const techTabs = {
+        hdd: document.getElementById('show-hdd'),
+        ssd: document.getElementById('show-ssd')
+    };
+    const techContents = {
+        hdd: document.getElementById('hdd-content'),
+        ssd: document.getElementById('ssd-content')
+    };
+
+    techTabs.hdd.addEventListener('click', () => showTechContent('hdd'));
+    techTabs.ssd.addEventListener('click', () => showTechContent('ssd'));
+
+    function showTechContent(tech) {
+        Object.keys(techContents).forEach(key => {
+            techContents[key].classList.add('hidden');
+            techTabs[key].classList.remove('active');
+        });
+        techContents[tech].classList.remove('hidden');
+        techTabs[tech].classList.add('active');
+    }
+
+    const hddParts = document.querySelectorAll('.hdd-part');
+    const hddInfoBox = document.getElementById('hdd-info-box');
+    const initialHddInfo = hddInfoBox.textContent;
+
+    hddParts.forEach(part => {
+        part.addEventListener('mouseenter', () => {
+            hddInfoBox.textContent = part.dataset.info;
+        });
+        part.addEventListener('mouseleave', () => {
+            if (!document.querySelector('.hdd-part.active')) {
+                hddInfoBox.textContent = initialHddInfo;
+            }
+        });
+        part.addEventListener('click', () => {
+            hddParts.forEach(p => p.classList.remove('active'));
+            part.classList.add('active');
+            hddInfoBox.textContent = part.dataset.info;
+        });
+    });
+    
+    document.getElementById('hdd-diagram').addEventListener('mouseleave', () => {
+         hddParts.forEach(p => p.classList.remove('active'));
+         hddInfoBox.textContent = initialHddInfo;
+    });
+
+    const nandData = {
+        labels: ['SLC', 'MLC', 'TLC', 'QLC'],
+        datasets: [{
+            label: 'Typical P/E Cycles (Endurance)',
+            data: [100000, 10000, 3000, 1000],
+            backgroundColor: ['#0ea5e9', '#38bdf8', '#7dd3fc', '#bae6fd'],
+            borderColor: ['#0284c7', '#0369a1', '#075985', '#0c4a6e'],
+            borderWidth: 1
+        }]
+    };
+
+    const nandCtx = document.getElementById('nandChart').getContext('2d');
+    new Chart(nandCtx, {
+        type: 'bar',
+        data: nandData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    type: 'logarithmic',
+                    title: {
+                        display: true,
+                        text: 'Program/Erase Cycles (Log Scale)'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'NAND Flash Endurance Comparison'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toLocaleString();
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    const interfaceData = {
+        labels: ['SATA I', 'SATA II', 'SATA III', 'PCIe 3.0 x4', 'PCIe 4.0 x4', 'PCIe 5.0 x4'],
+        datasets: [{
+            label: 'Effective Transfer Speed (MB/s)',
+            data: [150, 300, 600, 3940, 7880, 15760],
+            backgroundColor: ['#f59e0b', '#facc15', '#a3e635', '#4ade80', '#2dd4bf', '#0ea5e9'],
+            borderWidth: 1
+        }]
+    };
+    const interfaceCtx = document.getElementById('interfaceChart').getContext('2d');
+    new Chart(interfaceCtx, {
+        type: 'bar',
+        data: interfaceData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+             scales: {
+                x: {
+                    type: 'logarithmic',
+                    title: {
+                        display: true,
+                        text: 'Speed in MB/s (Log Scale)'
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: 'Maximum Throughput by Interface'
+                },
+                 tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                             return context.parsed.x.toLocaleString() + ' MB/s';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    const comparisonData = {
+        labels: ['Speed', 'Cost/GB', 'Capacity', 'Durability', 'Power Efficiency'],
+        datasets: [{
+            label: 'SSD (NVMe)',
+            data: [5, 2, 4, 4, 5],
+            fill: true,
+            backgroundColor: 'rgba(3, 105, 161, 0.2)',
+            borderColor: 'rgb(3, 105, 161)',
+            pointBackgroundColor: 'rgb(3, 105, 161)',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: 'rgb(3, 105, 161)'
+        }, {
+            label: 'HDD',
+            data: [1, 5, 5, 2, 2],
+            fill: true,
+            backgroundColor: 'rgba(245, 158, 11, 0.2)',
+            borderColor: 'rgb(245, 158, 11)',
+            pointBackgroundColor: 'rgb(245, 158, 11)',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: 'rgb(245, 158, 11)'
+        }]
+    };
+    const radarCtx = document.getElementById('comparisonRadarChart').getContext('2d');
+    new Chart(radarCtx, {
+        type: 'radar',
+        data: comparisonData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            elements: {
+                line: {
+                    borderWidth: 3
+                }
+            },
+            scales: {
+                r: {
+                    angleLines: {
+                        display: true
+                    },
+                    suggestedMin: 0,
+                    suggestedMax: 5,
+                    pointLabels: {
+                        font: {
+                            size: 14
+                        }
+                    },
+                    ticks: {
+                        stepSize: 1,
+                        display: false
+                    }
+                }
+            },
+            plugins: {
+                title: { display: false }
+            }
+        }
+    });
+
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.nav-link');
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.4
+    };
+
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const id = entry.target.getAttribute('id');
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${id}`) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+        });
+    }, observerOptions);
+
+    sections.forEach(section => {
+        observer.observe(section);
+    });
+    
+    const flowSteps = document.querySelectorAll('.flow-step');
+    const flowObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                 entry.target.style.opacity = '1';
+                 entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.5 });
+    
+    flowSteps.forEach((step, index) => {
+        step.style.transform = 'translateY(20px)';
+        step.style.transitionDelay = `${index * 100}ms`;
+        flowObserver.observe(step);
+    });
+
+});
+</script>
+</body>
+</html>

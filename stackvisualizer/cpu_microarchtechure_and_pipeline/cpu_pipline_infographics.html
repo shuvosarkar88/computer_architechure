@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: The infographic follows a logical, educational narrative, starting from high-level concepts and drilling down to specifics. The structure is: 1. Introduction (Hook). 2. Core Concepts (ISA vs. Microarchitecture). 3. The Engine (Datapath & Control). 4. The Process (Pipelining). 5. Problems (Hazards). 6. Solutions (Mitigation). This top-down approach was chosen for usability, allowing a user unfamiliar with the topic to build knowledge progressively, making the complex subject matter more accessible than a non-linear or dashboard approach. -->
+    <!-- Visualization & Content Choices:
+        - ISA vs. Microarchitecture -> Goal: Compare -> Viz: Side-by-side HTML cards. Justification: Clear, direct comparison of two foundational concepts. Method: HTML/CSS.
+        - Datapath & Control -> Goal: Organize/Process -> Viz: HTML/CSS flowchart. Justification: Best way to show interaction and flow between components without using SVG/Mermaid. Method: HTML/CSS.
+        - Pipelining Throughput -> Goal: Change -> Viz: Line Chart. Justification: Visually demonstrates the performance increase over time, which is the core benefit of pipelining. Library: Chart.js.
+        - The 5-Stage Pipeline -> Goal: Organize/Process -> Viz: HTML/CSS process diagram. Justification: Clearly illustrates the sequential stages of the pipeline. Method: HTML/CSS.
+        - Hazard Impact Comparison -> Goal: Compare -> Viz: Radar Chart. Justification: Provides a compelling visual comparison of the relative frequency/impact of different hazard types. Library: Chart.js.
+        - Hazard Resolution Mix -> Goal: Compare/Inform -> Viz: Donut Chart. Justification: Shows the composition of mitigation techniques in a simple, high-level view. Library: Chart.js.
+        - NO SVG and NO Mermaid JS have been used in this infographic.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <title>The Processor Pipeline: An Infographic</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f9ff;
+        }
+        .text-balance { text-wrap: balance; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 350px; }
+        }
+        .stage-arrow {
+            position: relative;
+            background: #94d2bd;
+        }
+        .stage-arrow::after {
+            content: '';
+            position: absolute;
+            right: -20px;
+            top: 0;
+            border-top: 40px solid transparent;
+            border-bottom: 40px solid transparent;
+            border-left: 20px solid #94d2bd;
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Header Section -->
+    <header class="bg-[#005f73] text-white p-8 text-center">
+        <div class="container mx-auto">
+            <h1 class="text-4xl md:text-6xl font-black mb-2">The Processor Pipeline</h1>
+            <p class="text-lg md:text-xl text-balance max-w-3xl mx-auto text-sky-200">A Visual Journey Into The Heart of CPU Performance</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+
+        <!-- Section 1: Core Concepts -->
+        <section id="concepts" class="my-12">
+            <h2 class="text-3xl font-bold text-center mb-2">The Blueprint and The Build</h2>
+            <p class="text-center text-slate-600 mb-8 max-w-2xl mx-auto text-balance">Every processor has a "contract" for what it can do and a "design" for how it gets it done. Understanding this difference is key to understanding CPU technology.</p>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-lg border-l-4 border-[#0a9396]">
+                    <h3 class="text-2xl font-bold text-[#005f73] mb-3">The ISA: The "What"</h3>
+                    <p class="font-semibold text-slate-700">Instruction Set Architecture</p>
+                    <p class="mt-2 text-slate-600">The ISA is the abstract rulebook for the processor, visible to software. It defines the instructions (`ADD`, `LOAD`), registers, and memory model. It ensures a program written for one processor will run on another with the same ISA.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg border-l-4 border-[#ee9b00]">
+                    <h3 class="text-2xl font-bold text-[#ca6702] mb-3">The Microarchitecture: The "How"</h3>
+                    <p class="font-semibold text-slate-700">The Hardware Implementation</p>
+                    <p class="mt-2 text-slate-600">This is the actual physical design that implements the ISA's rules. It includes the pipeline depth, cache sizes, and functional units. Different microarchitectures can offer wildly different performance for the same ISA.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Datapath & Control -->
+        <section id="engine" class="my-20">
+            <h2 class="text-3xl font-bold text-center mb-2">Inside the Engine Room</h2>
+            <p class="text-center text-slate-600 mb-8 max-w-2xl mx-auto text-balance">Instruction execution requires two key partners: the "Brain" that gives commands and the "Brawn" that performs the work.</p>
+            <div class="bg-white p-8 rounded-lg shadow-xl flex flex-col md:flex-row items-center justify-center gap-8">
+                <div class="text-center">
+                    <div class="bg-[#bb3e03] text-white p-6 rounded-lg shadow-md w-48">
+                        <p class="text-5xl mb-2">🧠</p>
+                        <h4 class="font-bold text-lg">Control Unit</h4>
+                        <p class="text-sm">The Brain</p>
+                    </div>
+                    <p class="mt-4 text-slate-600 max-w-xs text-balance">Interprets instructions and sends control signals.</p>
+                </div>
+                <div class="text-5xl text-[#0a9396] font-bold mx-4 hidden md:block">&harr;</div>
+                <div class="text-5xl text-[#0a9396] font-bold my-4 md:hidden">&darr;</div>
+                <div class="text-center">
+                     <div class="bg-[#0a9396] text-white p-6 rounded-lg shadow-md w-48">
+                        <p class="text-5xl mb-2">💪</p>
+                        <h4 class="font-bold text-lg">Datapath</h4>
+                        <p class="text-sm">The Brawn</p>
+                    </div>
+                    <p class="mt-4 text-slate-600 max-w-xs text-balance">Contains the ALU, registers, and connections to move and process data.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Pipelining -->
+        <section id="pipelining" class="my-20">
+            <h2 class="text-3xl font-bold text-center mb-2">The Assembly Line Advantage</h2>
+            <p class="text-center text-slate-600 mb-8 max-w-2xl mx-auto text-balance">Pipelining revolutionizes performance by overlapping instructions, working like a factory assembly line to dramatically increase throughput.</p>
+
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-bold text-center mb-4 text-[#005f73]">Pipeline Throughput Boost</h3>
+                    <div class="chart-container">
+                        <canvas id="pipelineThroughputChart"></canvas>
+                    </div>
+                    <p class="text-sm text-center mt-4 text-slate-500">A pipelined approach (blue) completes instructions at a much faster rate than a non-pipelined one (orange), even if a single instruction's total time is similar.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-center mb-4 text-[#005f73]">The Classic 5-Stage Pipeline</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center">
+                            <div class="w-16 h-20 flex items-center justify-center bg-[#0a9396] text-white font-bold rounded-l-lg">IF</div>
+                            <div class="h-20 flex-1 flex items-center justify-center p-4 stage-arrow">Instruction Fetch</div>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-16 h-20 flex items-center justify-center bg-[#0a9396] text-white font-bold rounded-l-lg">ID</div>
+                            <div class="h-20 flex-1 flex items-center justify-center p-4 stage-arrow">Instruction Decode</div>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-16 h-20 flex items-center justify-center bg-[#0a9396] text-white font-bold rounded-l-lg">EX</div>
+                            <div class="h-20 flex-1 flex items-center justify-center p-4 stage-arrow">Execute</div>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-16 h-20 flex items-center justify-center bg-[#0a9396] text-white font-bold rounded-l-lg">MEM</div>
+                            <div class="h-20 flex-1 flex items-center justify-center p-4 stage-arrow">Memory Access</div>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-16 h-20 flex items-center justify-center bg-[#0a9396] text-white font-bold rounded-l-lg">WB</div>
+                            <div class="h-20 flex-1 flex items-center justify-center p-4 bg-[#94d2bd] rounded-r-lg">Write Back</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Hazards -->
+        <section id="hazards" class="my-20">
+            <h2 class="text-3xl font-bold text-center mb-2">Glitches in the System</h2>
+            <p class="text-center text-slate-600 mb-8 max-w-2xl mx-auto text-balance">The speed of pipelining creates challenges. Hazards are conditions that can disrupt the flow and cause errors if not handled correctly.</p>
+
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+                        <p class="text-6xl mb-3">🧱</p>
+                        <h3 class="font-bold text-lg text-[#005f73]">Structural Hazard</h3>
+                        <p class="text-sm text-slate-500 mt-1">A resource conflict, where two instructions need the same hardware (like memory) at the same time.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+                        <p class="text-6xl mb-3">🔄</p>
+                        <h3 class="font-bold text-lg text-[#ae2012]">Data Hazard</h3>
+                        <p class="text-sm text-slate-500 mt-1">An instruction needs the result from a previous instruction that isn't finished yet (e.g., Read-After-Write).</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-lg text-center sm:col-span-2">
+                        <p class="text-6xl mb-3">🚦</p>
+                        <h3 class="font-bold text-lg text-[#ca6702]">Control Hazard</h3>
+                        <p class="text-sm text-slate-500 mt-1">A branch instruction changes the program flow, making the already-fetched instructions incorrect.</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-bold text-center mb-4 text-[#005f73]">Relative Hazard Impact</h3>
+                    <div class="chart-container">
+                        <canvas id="hazardImpactChart"></canvas>
+                    </div>
+                     <p class="text-sm text-center mt-4 text-slate-500">In typical programs, Data and Control hazards have a much higher performance impact than Structural hazards, which are often designed out of modern CPUs.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Mitigation -->
+        <section id="mitigation" class="my-20">
+            <h2 class="text-3xl font-bold text-center mb-2">Keeping the Flow Smooth</h2>
+            <p class="text-center text-slate-600 mb-8 max-w-2xl mx-auto text-balance">To combat hazards, CPUs use clever hardware techniques to resolve conflicts on the fly, keeping the pipeline moving efficiently.</p>
+            
+            <div class="grid lg:grid-cols-3 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center justify-center">
+                    <h3 class="text-xl font-bold text-center mb-4 text-[#005f73]">Hazard Resolution Mix</h3>
+                    <div class="chart-container h-64 md:h-72">
+                        <canvas id="mitigationMixChart"></canvas>
+                    </div>
+                    <p class="text-sm text-center mt-4 text-slate-500">Modern CPUs rely heavily on forwarding and branch prediction, using stalling only when absolutely necessary.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-lg lg:col-span-2">
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div>
+                            <h3 class="text-xl font-bold text-[#ca6702] mb-3">Data Forwarding (Bypassing)</h3>
+                            <p class="text-slate-600 mb-4">The primary fix for data hazards. Instead of waiting for a result to be written back, it's "forwarded" directly from the ALU to where it's needed next.</p>
+                             <div class="font-mono text-sm space-y-2 p-4 bg-slate-50 rounded-md">
+                                <p>I1: <span class="text-blue-600">ADD R0, R1, R2</span></p>
+                                <p class="relative">I2: SUB R4, <span class="text-red-600">R0</span>, R3 
+                                    <span class="absolute -top-6 left-1/2 -translate-x-1/2 text-2xl text-teal-500 animate-bounce">↓</span>
+                                </p>
+                                <div class="border-t-2 border-dashed border-teal-500 my-1"></div>
+                                <p class="text-center text-xs text-teal-600 font-semibold">ALU result forwarded!</p>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-[#9b2226] mb-3">Stalling (Bubble Insertion)</h3>
+                            <p class="text-slate-600 mb-4">The last resort. The pipeline is paused, and a "bubble" (a no-operation instruction) is inserted to create a delay, ensuring correctness.</p>
+                            <div class="font-mono text-sm space-y-2 p-4 bg-slate-50 rounded-md">
+                                <p>I1: LW R1, 0(R2)</p>
+                                <p class="text-red-600 line-through">I2: ADD R3, R1, R4</p>
+                                <p class="bg-red-100 text-red-700 p-1 rounded">BUBBLE INSERTED</p>
+                                <p>I2: ADD R3, R1, R4 <span class="text-xs text-green-600">(Resumes)</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    
+    <footer class="bg-[#005f73] text-white mt-12 p-4 text-center">
+        <p class="text-sm text-sky-200">Infographic created to visualize the core concepts of CPU Microarchitecture and Pipelining.</p>
+    </footer>
+
+    <script>
+        const wrapLabel = (label, maxLength = 16) => {
+            if (typeof label !== 'string' || label.length <= maxLength) {
+                return label;
+            }
+            const words = label.split(' ');
+            const lines = [];
+            let currentLine = '';
+            for (const word of words) {
+                if ((currentLine + ' ' + word).length > maxLength && currentLine.length > 0) {
+                    lines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    currentLine = currentLine ? currentLine + ' ' + word : word;
+                }
+            }
+            lines.push(currentLine);
+            return lines;
+        };
+        
+        const tooltipTitleCallback = (tooltipItems) => {
+            const item = tooltipItems[0];
+            let label = item.chart.data.labels[item.dataIndex];
+            if (Array.isArray(label)) {
+                return label.join(' ');
+            }
+            return label;
+        };
+        
+        const chartDefaultOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#334155',
+                        font: {
+                            family: "'Inter', sans-serif"
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: tooltipTitleCallback
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#475569' },
+                    grid: { display: false }
+                },
+                y: {
+                    ticks: { color: '#475569' },
+                    grid: { color: '#e2e8f0' }
+                }
+            }
+        };
+
+        // Chart 1: Pipeline Throughput
+        const throughputCtx = document.getElementById('pipelineThroughputChart').getContext('2d');
+        new Chart(throughputCtx, {
+            type: 'line',
+            data: {
+                labels: ['1', '2', '3', '4', '5', '6', '7', '8'],
+                datasets: [{
+                    label: 'Pipelined Throughput',
+                    data: [0, 0, 0, 0, 1, 2, 3, 4],
+                    borderColor: '#0a9396',
+                    backgroundColor: 'rgba(10, 147, 150, 0.1)',
+                    fill: true,
+                    tension: 0.1
+                }, {
+                    label: 'Non-Pipelined Throughput',
+                    data: [0, 0, 0, 0, 1, 1, 1, 1],
+                    borderColor: '#ee9b00',
+                    backgroundColor: 'rgba(238, 155, 0, 0.1)',
+                    fill: true,
+                    tension: 0.1,
+                    borderDash: [5, 5]
+                }]
+            },
+            options: { ...chartDefaultOptions,
+                scales: {
+                    x: { ...chartDefaultOptions.scales.x, title: { display: true, text: 'Clock Cycles', color: '#475569' } },
+                    y: { ...chartDefaultOptions.scales.y, title: { display: true, text: 'Instructions Completed', color: '#475569' }, beginAtZero: true }
+                }
+            }
+        });
+
+        // Chart 2: Hazard Impact
+        const hazardCtx = document.getElementById('hazardImpactChart').getContext('2d');
+        new Chart(hazardCtx, {
+            type: 'radar',
+            data: {
+                labels: ['Data Hazards (RAW)', 'Control Hazards', 'Structural Hazards'],
+                datasets: [{
+                    label: 'Frequency & Performance Impact',
+                    data: [9, 8, 2],
+                    backgroundColor: 'rgba(174, 32, 18, 0.2)',
+                    borderColor: '#ae2012',
+                    pointBackgroundColor: '#ae2012',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: '#ae2012'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { ...chartDefaultOptions.plugins.legend.labels }
+                    },
+                    tooltip: {
+                         callbacks: {
+                            title: (tooltipItems) => tooltipItems[0].label
+                         }
+                    }
+                },
+                scales: {
+                    r: {
+                        angleLines: { color: '#cbd5e1' },
+                        grid: { color: '#e2e8f0' },
+                        pointLabels: {
+                            font: { size: 14, family: "'Inter', sans-serif" },
+                            color: '#334155'
+                        },
+                        ticks: {
+                            display: false,
+                            stepSize: 2
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 10
+                    }
+                }
+            }
+        });
+
+        // Chart 3: Mitigation Mix
+        const mitigationCtx = document.getElementById('mitigationMixChart').getContext('2d');
+        new Chart(mitigationCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [wrapLabel('Data Forwarding'), wrapLabel('Branch Prediction'), wrapLabel('Pipeline Stalling')],
+                datasets: [{
+                    label: 'Resolution Technique',
+                    data: [50, 40, 10],
+                    backgroundColor: ['#0a9396', '#ca6702', '#bb3e03'],
+                    borderColor: '#f0f9ff',
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                     legend: {
+                        position: 'bottom',
+                        labels: { ...chartDefaultOptions.plugins.legend.labels }
+                     },
+                     tooltip: {
+                        callbacks: {
+                            title: tooltipTitleCallback
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

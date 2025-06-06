@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide to Assembler Design</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Calm Harmony Neutrals -->
+    <!-- Application Structure Plan: The application transforms the linear report into a task-oriented SPA. A sticky navigation bar allows users to jump between core conceptual areas: 'Core Concepts', 'Assembler Architecture', 'Translation in Action', 'Build Process', and 'Output Formats'. This structure is chosen to facilitate non-linear exploration and focus on user tasks. The centerpiece is the interactive 'Translation in Action' section, which visually demonstrates the abstract encoding process, making it the primary learning tool. This is more effective for understanding than simply reading the text, as it connects theory directly to a practical, animated example. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Core concepts of ISA, Assembly, Machine Code. -> Goal: Inform. -> Viz/Method: Interactive HTML cards with hover effects. -> Interaction: Hover to reveal summary text. -> Justification: Breaks down dense text into digestible chunks.
+        - Report Info: Two-Pass Assembler Architecture. -> Goal: Organize/Explain. -> Viz/Method: A two-column diagram (HTML/CSS) showing Pass 1 building a SYMTAB and Pass 2 using it. -> Interaction: Clicking on a pass could reveal more details (not implemented, but planned). -> Justification: Visually separates the two distinct stages for clarity.
+        - Report Info: Instruction formats and encoding examples. -> Goal: Relate/Demonstrate. -> Viz/Method: A dynamic, animated 'workbench' with dropdowns. -> Interaction: User selects an instruction, triggering a JS-driven animation showing tokenization, table lookups, and encoding into a visual instruction format diagram. -> Justification: This is the core interactive element, turning a static table into an active learning process.
+        - Report Info: Step-by-step build guide. -> Goal: Guide. -> Viz/Method: An interactive checklist. -> Interaction: Users can check off items. -> Justification: Provides a sense of progression and active participation.
+        - Report Info: Output formats (.bin, .hex, .lst). -> Goal: Compare. -> Viz/Method: A tabbed interface. -> Interaction: Clicking tabs reveals different format examples. -> Justification: Allows for easy side-by-side comparison of distinct concepts.
+        - Library/Method: All visuals are created with HTML and Tailwind CSS. All interactions are powered by vanilla JavaScript.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
+        .font-mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .tab-btn.active {
+            border-color: #0d9488;
+            background-color: #ccfbf1;
+            color: #0d9488;
+        }
+        .nav-btn.active {
+            color: #0d9488;
+            font-weight: 600;
+        }
+        .diagram-box {
+            transition: all 0.3s ease-in-out;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out forwards;
+        }
+        .slide-in-left {
+            animation: slideInLeft 0.5s ease-in-out forwards;
+        }
+        .slide-in-right {
+            animation: slideInRight 0.5s ease-in-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between py-4">
+                <h1 class="text-xl md:text-2xl font-bold text-teal-700">The Assembler Journey</h1>
+                <nav class="hidden md:flex items-center space-x-4 lg:space-x-6">
+                    <a href="#concepts" class="nav-btn text-slate-600 hover:text-teal-600 transition-colors duration-200 active">Core Concepts</a>
+                    <a href="#architecture" class="nav-btn text-slate-600 hover:text-teal-600 transition-colors duration-200">Architecture</a>
+                    <a href="#translation" class="nav-btn text-slate-600 hover:text-teal-600 transition-colors duration-200">Translation in Action</a>
+                    <a href="#build" class="nav-btn text-slate-600 hover:text-teal-600 transition-colors duration-200">Build Process</a>
+                    <a href="#output" class="nav-btn text-slate-600 hover:text-teal-600 transition-colors duration-200">Output Formats</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        
+        <div id="concepts" class="content-section active min-h-screen">
+            <h2 class="text-3xl font-bold mb-2">I. Core Concepts</h2>
+            <p class="text-slate-600 mb-8 max-w-3xl">An assembler is a translator that converts human-readable assembly language into binary machine code that the CPU can execute. This interactive guide explores how to build one for a custom "toy" Instruction Set Architecture (ISA).</p>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h3 class="font-bold text-lg mb-2 text-teal-700">Instruction Set Architecture (ISA)</h3>
+                    <p class="text-slate-600">The ISA is the computer's blueprint. It defines the processor's instructions, registers, and memory model—the fundamental language the hardware speaks. Every design choice here dictates how the assembler must work.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h3 class="font-bold text-lg mb-2 text-teal-700">Assembly Language</h3>
+                    <p class="text-slate-600">A low-level language using symbolic mnemonics (like <code class="font-mono text-sm bg-slate-200 px-1 rounded">ADD</code> or <code class="font-mono text-sm bg-slate-200 px-1 rounded">JMP</code>) to represent machine instructions. It provides a more manageable way to program hardware compared to writing raw binary.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h3 class="font-bold text-lg mb-2 text-teal-700">Machine Code</h3>
+                    <p class="text-slate-600">The ultimate output. A sequence of 0s and 1s that the CPU directly executes. The assembler's primary job is to produce this binary code from the assembly source, correctly and reliably.</p>
+                </div>
+            </div>
+             <div class="mt-10 bg-white p-6 rounded-lg shadow-sm">
+                <h3 class="font-bold text-lg mb-4 text-teal-700">Example Toy ISA Specification</h3>
+                <p class="text-slate-600 mb-6">For our project, we define a simple ISA to keep the assembler manageable. This specification is the contract the assembler must follow.</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-100">
+                            <tr>
+                                <th class="p-3 font-semibold">Component</th>
+                                <th class="p-3 font-semibold">Specification</th>
+                                <th class="p-3 font-semibold">Rationale</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b"><td class="p-3">Word Size</td><td class="p-3">8 bits</td><td class="p-3">Simplifies data handling.</td></tr>
+                            <tr class="border-b bg-slate-50"><td class="p-3">Registers</td><td class="p-3">4 general-purpose 8-bit registers (R0-R3)</td><td class="p-3">Small number for simplicity.</td></tr>
+                            <tr class="border-b"><td class="p-3">Address Space</td><td class="p-3">256 bytes (8-bit addresses)</td><td class="p-3">Manageable for a toy system.</td></tr>
+                            <tr class="border-b bg-slate-50"><td class="p-3">Instruction Length</td><td class="p-3">Fixed, 16 bits (2 bytes)</td><td class="p-3">Simplifies fetching and decoding.</td></tr>
+                            <tr class="border-b"><td class="p-3">Addressing Modes</td><td class="p-3">Immediate, Register Direct, Memory Direct</td><td class="p-3">A limited, simple set.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="architecture" class="content-section min-h-screen">
+            <h2 class="text-3xl font-bold mb-2">II. Assembler Architecture</h2>
+            <p class="text-slate-600 mb-8 max-w-3xl">To handle "forward references" (using a label before it's defined), most assemblers use a two-pass architecture. Each pass scans the source code with a specific goal.</p>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-teal-500">
+                    <h3 class="font-bold text-xl mb-3">Pass 1: Symbol Definition</h3>
+                    <p class="text-slate-600 mb-4">The first pass reads the code to find all labels and calculate their memory addresses. It doesn't generate machine code, but builds a crucial map called the <strong class="font-semibold text-teal-700">Symbol Table (SYMTAB)</strong>.</p>
+                    <ul class="space-y-2 list-disc list-inside text-slate-600">
+                        <li>Initialize Location Counter (LOCCTR) to 0.</li>
+                        <li>Read each line.</li>
+                        <li>If a label exists, add `(Label, LOCCTR value)` to SYMTAB.</li>
+                        <li>Increment LOCCTR by the instruction's size.</li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-sky-500">
+                    <h3 class="font-bold text-xl mb-3">Pass 2: Code Generation</h3>
+                    <p class="text-slate-600 mb-4">The second pass re-reads the code. With the complete SYMTAB, it can now translate every instruction and its operands into binary machine code.</p>
+                     <ul class="space-y-2 list-disc list-inside text-slate-600">
+                        <li>Read each line again.</li>
+                        <li>Look up instruction mnemonic in an Opcode Table (OPTAB).</li>
+                        <li>Look up symbolic operands in the SYMTAB to get their addresses.</li>
+                        <li>Assemble the final binary instruction word.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div id="translation" class="content-section min-h-screen">
+            <h2 class="text-3xl font-bold mb-2">III. Translation in Action</h2>
+            <p class="text-slate-600 mb-6 max-w-3xl">Select an assembly instruction to see a step-by-step visualization of the Pass 2 translation process. Watch how the assembler uses its data structures to encode the instruction into binary.</p>
+            
+            <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
+                <label for="instruction-selector" class="block font-semibold mb-2">Select an Instruction:</label>
+                <select id="instruction-selector" class="w-full md:w-1/2 p-2 border rounded-md bg-white shadow-sm font-mono">
+                    <option value="LOAD R1, DATA">LOAD R1, DATA</option>
+                    <option value="ADDR R2, R3">ADDR R2, R3</option>
+                    <option value="ADDI R0, #42">ADDI R0, #42</option>
+                    <option value="JMP LOOP">JMP LOOP</option>
+                </select>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-8 items-start">
+                <div class="lg:col-span-2 space-y-6">
+                    <div id="translation-steps" class="space-y-4">
+                        <!-- JS will populate this -->
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-white p-4 rounded-lg shadow-sm">
+                        <h4 class="font-bold mb-2 text-center text-teal-700">Opcode Table (OPTAB)</h4>
+                        <table class="w-full text-sm font-mono text-center">
+                            <thead class="bg-slate-100"><tr><th class="p-2">Mnemonic</th><th class="p-2">Opcode</th><th class="p-2">Format</th></tr></thead>
+                            <tbody>
+                                <tr id="optab-LOAD" class="border-b"><td class="p-1">LOAD</td><td class="p-1">0001</td><td class="p-1">Type 1</td></tr>
+                                <tr id="optab-ADDR" class="border-b bg-slate-50"><td class="p-1">ADDR</td><td class="p-1">0101</td><td class="p-1">Type 2</td></tr>
+                                <tr id="optab-ADDI" class="border-b"><td class="p-1">ADDI</td><td class="p-1">0100</td><td class="p-1">Type 3</td></tr>
+                                <tr id="optab-JMP" class="bg-slate-50"><td class="p-1">JMP</td><td class="p-1">1000</td><td class="p-1">Type 4</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                     <div class="bg-white p-4 rounded-lg shadow-sm">
+                        <h4 class="font-bold mb-2 text-center text-teal-700">Symbol Table (SYMTAB)</h4>
+                        <table class="w-full text-sm font-mono text-center">
+                            <thead class="bg-slate-100"><tr><th class="p-2">Symbol</th><th class="p-2">Address (Hex)</th></tr></thead>
+                            <tbody>
+                                <tr id="symtab-LOOP" class="border-b"><td class="p-1">LOOP</td><td class="p-1">0x1A</td></tr>
+                                <tr id="symtab-DATA" class="bg-slate-50"><td class="p-1">DATA</td><td class="p-1">0x30</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="build" class="content-section min-h-screen">
+             <h2 class="text-3xl font-bold mb-2">IV. The Build Process</h2>
+            <p class="text-slate-600 mb-8 max-w-3xl">Building an assembler is a structured process. Follow these conceptual steps, implementing and testing each component incrementally.</p>
+            <div class="space-y-4 max-w-2xl">
+                <div class="bg-white p-4 rounded-lg shadow-sm flex items-start space-x-4">
+                    <input type="checkbox" class="mt-1 h-5 w-5 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
+                    <div>
+                        <h3 class="font-semibold">1. Finalize Your Toy ISA Definition</h3>
+                        <p class="text-slate-600 text-sm">The blueprint. Lock down registers, memory, opcodes, and instruction formats before writing any code.</p>
+                    </div>
+                </div>
+                 <div class="bg-white p-4 rounded-lg shadow-sm flex items-start space-x-4">
+                    <input type="checkbox" class="mt-1 h-5 w-5 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
+                    <div>
+                        <h3 class="font-semibold">2. Implement the Lexical Analyzer (Tokenizer)</h3>
+                        <p class="text-slate-600 text-sm">Create a function to break each line of source code into a list of tokens (label, mnemonic, operand, etc.).</p>
+                    </div>
+                </div>
+                 <div class="bg-white p-4 rounded-lg shadow-sm flex items-start space-x-4">
+                    <input type="checkbox" class="mt-1 h-5 w-5 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
+                    <div>
+                        <h3 class="font-semibold">3. Implement Pass 1</h3>
+                        <p class="text-slate-600 text-sm">Scan the tokenized code, manage the Location Counter (LOCCTR), and build the Symbol Table (SYMTAB).</p>
+                    </div>
+                </div>
+                 <div class="bg-white p-4 rounded-lg shadow-sm flex items-start space-x-4">
+                    <input type="checkbox" class="mt-1 h-5 w-5 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
+                    <div>
+                        <h3 class="font-semibold">4. Implement Pass 2</h3>
+                        <p class="text-slate-600 text-sm">The main event. Re-scan the code, use the OPTAB and SYMTAB to resolve all symbols, and generate the final binary machine code.</p>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm flex items-start space-x-4">
+                    <input type="checkbox" class="mt-1 h-5 w-5 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
+                    <div>
+                        <h3 class="font-semibold">5. Test and Debug Rigorously</h3>
+                        <p class="text-slate-600 text-sm">Create a suite of test programs to validate every instruction, directive, and error condition. Compare output against manual calculations.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="output" class="content-section min-h-screen">
+             <h2 class="text-3xl font-bold mb-2">V. Output Formats</h2>
+             <p class="text-slate-600 mb-8 max-w-3xl">The assembler's final job is to produce files. While complex object files exist, a toy assembler typically generates simpler formats.</p>
+            <div class="max-w-3xl">
+                <div class="flex border-b border-slate-200">
+                    <button class="tab-btn py-2 px-4 font-semibold text-slate-600 border-b-2 border-transparent hover:border-teal-500 hover:text-teal-600 transition active" data-tab="bin">Raw Binary (.bin)</button>
+                    <button class="tab-btn py-2 px-4 font-semibold text-slate-600 border-b-2 border-transparent hover:border-teal-500 hover:text-teal-600 transition" data-tab="hex">Intel HEX (.hex)</button>
+                    <button class="tab-btn py-2 px-4 font-semibold text-slate-600 border-b-2 border-transparent hover:border-teal-500 hover:text-teal-600 transition" data-tab="lst">Listing File (.lst)</button>
+                </div>
+                <div class="mt-6">
+                    <div id="tab-bin" class="tab-content">
+                        <h3 class="font-bold text-lg mb-2">Raw Binary (.bin)</h3>
+                        <p class="text-slate-600 mb-4">The simplest format. It's a direct, byte-for-byte image of the machine code, exactly as it would appear in memory. It contains no addresses or metadata, just pure binary data.</p>
+                        <div class="bg-slate-900 text-white font-mono text-sm p-4 rounded-md">
+                            <p>15 30 5B 00 40 2A 80 1A</p>
+                        </div>
+                    </div>
+                    <div id="tab-hex" class="tab-content hidden">
+                        <h3 class="font-bold text-lg mb-2">Intel HEX (.hex)</h3>
+                        <p class="text-slate-600 mb-4">Represents binary as ASCII text. Each line includes a byte count, start address, data, and a checksum for error detection. It's widely used for programming microcontrollers.</p>
+                        <div class="bg-slate-900 text-white font-mono text-sm p-4 rounded-md whitespace-pre-wrap">:0800000015305B00402A801AF0
+:00000001FF</div>
+                    </div>
+                     <div id="tab-lst" class="tab-content hidden">
+                        <h3 class="font-bold text-lg mb-2">Listing File (.lst)</h3>
+                        <p class="text-slate-600 mb-4">A human-readable diagnostic tool. It shows the original source code alongside its assigned memory address and the generated machine code (in hex). Invaluable for debugging.</p>
+                        <div class="bg-slate-900 text-white font-mono text-sm p-4 rounded-md whitespace-pre-wrap">
+0000  1530      LOAD R1, DATA
+0002  5B00      ADDR R2, R3
+0004  402A      ADDI R0, #42
+...
+001A            LOOP:
+...
+0030            DATA: DB 0
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.querySelectorAll('.nav-btn');
+            const sections = document.querySelectorAll('.content-section');
+
+            const instructionSelector = document.getElementById('instruction-selector');
+            const translationStepsContainer = document.getElementById('translation-steps');
+
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            const isaData = {
+                opcodes: {
+                    'LOAD': { bin: '0001', format: 'Type 1', name: 'Mem Op' },
+                    'ADDR': { bin: '0101', format: 'Type 2', name: 'Reg Op' },
+                    'ADDI': { bin: '0100', format: 'Type 3', name: 'Imm Op' },
+                    'JMP':  { bin: '1000', format: 'Type 4', name: 'JMP Op' },
+                },
+                symbols: {
+                    'LOOP': '0x1A',
+                    'DATA': '0x30'
+                },
+                registers: { 'R0': '00', 'R1': '01', 'R2': '10', 'R3': '11' },
+                instructions: {
+                    "LOAD R1, DATA": {
+                        tokens: ["LOAD", "R1", ",", "DATA"],
+                        mnemonic: "LOAD",
+                        operands: ["R1", "DATA"],
+                        format: "Type 1",
+                        formatLayout: "OP (4) | Rd (2) | Addr (8)",
+                        encoding: (op, regs, syms) => [op.bin, regs['R1'], parseInt(syms['DATA'], 16).toString(2).padStart(8, '0')],
+                        hex: "1530"
+                    },
+                    "ADDR R2, R3": {
+                        tokens: ["ADDR", "R2", ",", "R3"],
+                        mnemonic: "ADDR",
+                        operands: ["R2", "R3"],
+                        format: "Type 2",
+                        formatLayout: "OP (4) | Rd (2) | Rs (2) | Unused (6)",
+                        encoding: (op, regs) => [op.bin, regs['R2'], regs['R3'], '000000'],
+                        hex: "5B00"
+                    },
+                    "ADDI R0, #42": {
+                        tokens: ["ADDI", "R0", ",", "#42"],
+                        mnemonic: "ADDI",
+                        operands: ["R0", "#42"],
+                        format: "Type 3",
+                        formatLayout: "OP (4) | Rd (2) | Imm (8)",
+                        encoding: (op, regs) => [op.bin, regs['R0'], (42).toString(2).padStart(8, '0')],
+                        hex: "402A"
+                    },
+                    "JMP LOOP": {
+                        tokens: ["JMP", "LOOP"],
+                        mnemonic: "JMP",
+                        operands: ["LOOP"],
+                        format: "Type 4",
+                        formatLayout: "OP (4) | Unused(4) | Addr (8)",
+                        encoding: (op, regs, syms) => [op.bin, '0000', parseInt(syms['LOOP'], 16).toString(2).padStart(8, '0')],
+                        hex: "80A2"
+                    }
+                }
+            };
+
+            function showSection(hash) {
+                sections.forEach(section => {
+                    if ('#' + section.id === hash) {
+                        section.classList.add('active');
+                    } else {
+                        section.classList.remove('active');
+                    }
+                });
+                navLinks.forEach(link => {
+                    if (link.getAttribute('href') === hash) {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+            }
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = e.target.getAttribute('href');
+                    history.pushState(null, null, targetId);
+                    showSection(targetId);
+                });
+            });
+
+            window.addEventListener('popstate', () => {
+                showSection(window.location.hash || '#concepts');
+            });
+            
+            showSection(window.location.hash || '#concepts');
+
+
+            function highlightTableRow(tableId, rowId, duration = 1000) {
+                 document.querySelectorAll(`#${tableId} tbody tr`).forEach(r => r.classList.remove('bg-teal-200'));
+                 const row = document.getElementById(rowId);
+                 if (row) {
+                    row.classList.add('bg-teal-200');
+                    setTimeout(() => row.classList.remove('bg-teal-200'), duration);
+                 }
+            }
+            
+            function createStep(title, content, delay, animationClass) {
+                const stepDiv = document.createElement('div');
+                stepDiv.className = `bg-white p-4 rounded-lg shadow-sm border-l-4 border-slate-300 opacity-0 ${animationClass}`;
+                stepDiv.style.animationDelay = `${delay}s`;
+                stepDiv.innerHTML = `<h4 class="font-semibold text-slate-700">${title}</h4><div class="font-mono text-sm mt-2">${content}</div>`;
+                translationStepsContainer.appendChild(stepDiv);
+            }
+
+            function runTranslationAnimation(instructionKey) {
+                translationStepsContainer.innerHTML = '';
+                const instruction = isaData.instructions[instructionKey];
+                if (!instruction) return;
+                
+                let delay = 0;
+                
+                createStep('1. Parse Instruction', `<p class="text-slate-600">The assembler tokenizes the line:</p><p class="mt-1">${instruction.tokens.map(t => `<span class='bg-slate-200 px-2 py-1 rounded-md'>${t}</span>`).join(' ')}</p>`, delay, 'slide-in-left');
+                delay += 0.5;
+
+                createStep('2. Look up Mnemonic in OPTAB', `<p class="text-slate-600">It finds <code class="bg-teal-100 text-teal-800 px-1 rounded">${instruction.mnemonic}</code> in the Opcode Table to get its binary opcode and instruction format.</p>`, delay, 'slide-in-right');
+                setTimeout(() => highlightTableRow('optab-LOAD'.replace('LOAD', instruction.mnemonic), `optab-${instruction.mnemonic}`), delay * 1000);
+                delay += 0.7;
+
+                let operandContent = '<p class="text-slate-600">The assembler encodes each operand:</p><ul class="list-disc list-inside mt-2 text-slate-600 space-y-1">';
+                let symFound = false;
+                instruction.operands.forEach(op => {
+                    if (isaData.registers[op]) {
+                        operandContent += `<li>Register <code class="bg-slate-200 px-1 rounded">${op}</code> is encoded as <code class="bg-slate-200 px-1 rounded">${isaData.registers[op]}</code>.</li>`;
+                    } else if (isaData.symbols[op]) {
+                        operandContent += `<li>Symbol <code class="bg-teal-100 text-teal-800 px-1 rounded">${op}</code> is resolved in the SYMTAB to address <code class="bg-slate-200 px-1 rounded">${isaData.symbols[op]}</code>.</li>`;
+                        symFound = op;
+                    } else { // Immediate
+                        operandContent += `<li>Immediate value <code class="bg-slate-200 px-1 rounded">${op}</code> is converted to binary.</li>`;
+                    }
+                });
+                operandContent += '</ul>';
+                createStep('3. Resolve & Encode Operands', operandContent, delay, 'slide-in-left');
+                if (symFound) {
+                    setTimeout(() => highlightTableRow('symtab-LOOP'.replace('LOOP', symFound), `symtab-${symFound}`), delay * 1000);
+                }
+                delay += 0.7;
+                
+                const formatParts = instruction.formatLayout.split('|').map(p => p.trim());
+                const encoding = instruction.encoding(isaData.opcodes[instruction.mnemonic], isaData.registers, isaData.symbols);
+                let encodingHtml = `<div class="flex flex-wrap gap-x-1">`;
+                encoding.forEach((part, i) => {
+                    encodingHtml += `<div class="text-center"><div class="text-xs text-slate-500">${formatParts[i]}</div><div class="bg-sky-100 text-sky-800 px-3 py-1 rounded">${part}</div></div>`
+                })
+                encodingHtml += `</div>`;
+
+                createStep('4. Assemble Binary Word', `<p class="text-slate-600">The binary parts are assembled into the 16-bit word according to the format <code class="bg-slate-200 px-1 rounded">${instruction.format}</code>:</p><div class="mt-2">${encodingHtml}</div>`, delay, 'slide-in-right');
+                delay += 0.7;
+                
+                createStep('5. Final Machine Code', `<p class="text-slate-600">The final assembled instruction:</p><div class="mt-2 flex items-center space-x-4"><span class="font-semibold">Binary:</span><code class="bg-slate-800 text-white px-2 py-1 rounded">${encoding.join(' ')}</code></div><div class="mt-2 flex items-center space-x-4"><span class="font-semibold">Hex:</span><code class="bg-slate-800 text-white px-2 py-1 rounded">${instruction.hex}</code></div>`, delay, 'fade-in');
+
+            }
+
+            instructionSelector.addEventListener('change', (e) => {
+                runTranslationAnimation(e.target.value);
+            });
+            
+            runTranslationAnimation(instructionSelector.value);
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabId = button.dataset.tab;
+
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+
+                    tabContents.forEach(content => {
+                        if (content.id === `tab-${tabId}`) {
+                            content.classList.remove('hidden');
+                        } else {
+                            content.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>

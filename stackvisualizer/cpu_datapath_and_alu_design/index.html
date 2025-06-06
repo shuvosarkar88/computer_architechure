@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide to CPU Design</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Calm Neutrals -->
+    <!-- Application Structure Plan: A tabbed single-page application design was chosen to break down the dense, hierarchical information of the report into manageable, user-driven sections. This non-linear structure promotes exploration and better understanding compared to a simple scrollable document. The main sections are: Overview (high-level concepts), The ALU (interactive builder and operation explorer), Registers & Memory (visualizing data storage and transfer), Control & Execution (explaining the fetch-decode-execute cycle), and a capstone Datapath Explorer. This final interactive simulation allows users to trace instruction execution, solidifying their understanding of how all components work together. This structure moves from foundational knowledge to practical application, which is an effective pedagogical approach. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Core CPU Components & Architecture. Goal: Inform/Organize. Viz: HTML/CSS block diagrams with hover effects. Justification: Provides a clear, high-level map of the CPU's structure.
+        - Report Info: ALU Operations (Arithmetic, Logic, Shift). Goal: Inform/Explore. Viz: Interactive content display tied to filter buttons. Justification: Allows users to easily compare and contrast different ALU capabilities.
+        - Report Info: Hierarchical construction of an ALU from logic gates. Goal: Explain Process. Viz: A step-by-step interactive diagram built with HTML/CSS. Interaction: User clicks a button to progress from gates to half-adders, full-adders, and finally an N-bit adder. Justification: Visually demonstrates the core principle of abstraction in digital design.
+        - Report Info: Fetch-Decode-Execute Cycle. Goal: Explain Process. Viz: Clickable process flow diagram (HTML/CSS). Interaction: Clicking a stage reveals detailed text. Justification: Deconstructs the CPU's fundamental operational cycle for easier learning.
+        - Report Info: Step-by-step execution of ADD and LOAD instructions. Goal: Simulate Process. Viz: An interactive datapath diagram built with HTML/CSS divs. Interaction: User selects an instruction and clicks a "Step" button to see data paths and components highlight, with accompanying explanatory text. Justification: Provides a dynamic, visual walkthrough that is far more intuitive than static text for understanding data flow and control.
+        - Library/Method: All visualizations and interactions are custom-built using HTML, Tailwind CSS, and vanilla JavaScript. No Chart.js/Plotly.js is used as the source report contains conceptual information, not quantitative data suitable for traditional charts.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; }
+        .tab-button.active {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            color: #2563eb;
+            font-weight: 600;
+        }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .datapath-component {
+            border: 2px solid #d1d5db;
+            background-color: #f9fafb;
+            transition: all 0.3s ease-in-out;
+        }
+        .datapath-component.active {
+            border-color: #3b82f6;
+            background-color: #dbeafe;
+            transform: scale(1.05);
+            box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.5);
+        }
+        .datapath-path {
+            position: absolute;
+            background-color: #9ca3af;
+            transition: all 0.3s ease-in-out;
+            z-index: -1;
+        }
+        .datapath-path.active {
+            background-color: #3b82f6;
+        }
+        .truth-table td, .truth-table th {
+            border: 1px solid #e5e7eb;
+            padding: 0.5rem;
+            text-align: center;
+        }
+        .truth-table th { background-color: #f3f4f6; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) { .chart-container { height: 350px; } }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-stone-100 text-stone-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-blue-600">Interactive Guide to CPU Design</h1>
+            <p class="mt-4 text-lg text-stone-600 max-w-3xl mx-auto">An exploration of the fundamental components of a Central Processing Unit, from basic logic gates to a functional datapath.</p>
+        </header>
+
+        <nav class="flex flex-wrap justify-center border-b-2 border-stone-300 mb-8">
+            <button class="tab-button text-sm md:text-base p-4 border-b-4 border-transparent transition" data-tab="overview">Overview</button>
+            <button class="tab-button text-sm md:text-base p-4 border-b-4 border-transparent transition" data-tab="alu">The ALU</button>
+            <button class="tab-button text-sm md:text-base p-4 border-b-4 border-transparent transition" data-tab="registers">Registers & Memory</button>
+            <button class="tab-button text-sm md:text-base p-4 border-b-4 border-transparent transition" data-tab="control">Control & Execution</button>
+            <button class="tab-button text-sm md:text-base p-4 border-b-4 border-transparent transition" data-tab="datapath">Datapath Explorer</button>
+        </nav>
+
+        <main>
+            <!-- Overview Section -->
+            <section id="overview" class="content-section">
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-3xl font-bold mb-4">CPU Architecture: The Big Picture</h2>
+                    <p class="mb-6">The Central Processing Unit (CPU) is the brain of a computer, responsible for executing instructions. It's built from several core functional units that work together. This interactive guide will break down each component, showing how they contribute to the CPU's operation. The Von Neumann architecture, a common design, stores both program instructions and data in the same memory, which has performance implications known as the "Von Neumann bottleneck."</p>
+                    
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="p-4 border border-stone-200 rounded-lg bg-stone-50 hover:shadow-md transition">
+                            <h3 class="font-bold text-xl text-blue-600">Arithmetic Logic Unit (ALU)</h3>
+                            <p>The computational heart of the CPU. It performs all math (add, subtract) and logic (AND, OR, XOR) operations.</p>
+                        </div>
+                        <div class="p-4 border border-stone-200 rounded-lg bg-stone-50 hover:shadow-md transition">
+                            <h3 class="font-bold text-xl text-blue-600">Registers</h3>
+                            <p>Extremely fast, small memory locations inside the CPU that hold data, instructions, and addresses for immediate use.</p>
+                        </div>
+                        <div class="p-4 border border-stone-200 rounded-lg bg-stone-50 hover:shadow-md transition">
+                            <h3 class="font-bold text-xl text-blue-600">Control Unit (CU)</h3>
+                            <p>The orchestrator. It fetches, decodes, and executes instructions by sending control signals to other components.</p>
+                        </div>
+                        <div class="p-4 border border-stone-200 rounded-lg bg-stone-50 hover:shadow-md transition">
+                            <h3 class="font-bold text-xl text-blue-600">Datapath</h3>
+                            <p>The network of components (ALU, registers, buses) through which data flows during processing.</p>
+                        </div>
+                        <div class="p-4 border border-stone-200 rounded-lg bg-stone-50 hover:shadow-md transition">
+                            <h3 class="font-bold text-xl text-blue-600">Control Path</h3>
+                            <p>The circuitry within the Control Unit that generates the signals to direct the datapath's operations.</p>
+                        </div>
+                         <div class="p-4 border border-stone-200 rounded-lg bg-stone-50 hover:shadow-md transition">
+                            <h3 class="font-bold text-xl text-blue-600">Buses</h3>
+                            <p>The communication channels (Address, Data, Control) that connect all CPU components and link the CPU to memory.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ALU Section -->
+            <section id="alu" class="content-section">
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-3xl font-bold mb-4">The Arithmetic Logic Unit (ALU)</h2>
+                    <p class="mb-6">The ALU is a combinational digital circuit that performs arithmetic and bitwise logic operations. Its speed and the variety of operations it can perform directly impact the CPU's overall performance. An ALU takes data operands and an operation code (opcode) as input and produces a result and status flags.</p>
+
+                    <div class="mb-8">
+                        <h3 class="text-2xl font-bold mb-4">Interactive: ALU Operations</h3>
+                        <div class="flex flex-wrap gap-2 mb-4" id="alu-op-filters">
+                            <button class="px-4 py-2 text-sm font-semibold bg-blue-100 text-blue-700 rounded-full" data-op="arithmetic">Arithmetic</button>
+                            <button class="px-4 py-2 text-sm font-semibold bg-gray-100 text-gray-700 rounded-full" data-op="logical">Logical</button>
+                            <button class="px-4 py-2 text-sm font-semibold bg-gray-100 text-gray-700 rounded-full" data-op="shift">Shift & Rotate</button>
+                        </div>
+                        <div id="alu-op-display" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-bold mb-4">Interactive: Building an ALU from Logic Gates</h3>
+                        <p class="mb-4">An ALU is a perfect example of hierarchical design. We start with basic logic gates and combine them to create more complex components. Click through the steps to see how a multi-bit adder is constructed.</p>
+                        <div class="flex justify-center mb-4">
+                            <button id="alu-builder-prev" class="px-6 py-2 bg-gray-200 rounded-l-md hover:bg-gray-300">Prev</button>
+                            <button id="alu-builder-next" class="px-6 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600">Next</button>
+                        </div>
+                        <div id="alu-builder-display" class="p-6 border-2 border-dashed border-stone-300 rounded-lg min-h-[300px] flex flex-col items-center justify-center">
+                            <!-- ALU Builder content will be injected here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Registers Section -->
+            <section id="registers" class="content-section">
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-3xl font-bold mb-4">CPU Registers & Memory Interaction</h2>
+                    <p class="mb-6">Registers are the CPU's internal, high-speed memory. They hold the data and instructions the CPU is currently working on, providing much faster access than main memory (RAM). The number and type of registers define a CPU's architecture and affect its performance.</p>
+                    
+                    <div class="grid md:grid-cols-2 gap-6 mb-8">
+                        <div class="p-4 bg-stone-50 rounded-lg border">
+                            <h3 class="font-bold text-xl mb-2">Program Counter (PC)</h3>
+                            <p>Holds the memory address of the <span class="font-semibold text-blue-600">next instruction</span> to be fetched.</p>
+                        </div>
+                        <div class="p-4 bg-stone-50 rounded-lg border">
+                            <h3 class="font-bold text-xl mb-2">Instruction Register (IR)</h3>
+                            <p>Stores the instruction <span class="font-semibold text-blue-600">currently being executed.</span></p>
+                        </div>
+                        <div class="p-4 bg-stone-50 rounded-lg border">
+                            <h3 class="font-bold text-xl mb-2">Memory Address Reg (MAR)</h3>
+                            <p>Holds the memory address for a <span class="font-semibold text-blue-600">read or write operation.</span></p>
+                        </div>
+                        <div class="p-4 bg-stone-50 rounded-lg border">
+                            <h3 class="font-bold text-xl mb-2">Memory Data Reg (MDR)</h3>
+                            <p>A buffer that holds data being <span class="font-semibold text-blue-600">transferred to or from memory.</span></p>
+                        </div>
+                        <div class="p-4 bg-stone-50 rounded-lg border">
+                            <h3 class="font-bold text-xl mb-2">General Purpose Regs (GPRs)</h3>
+                            <p>A set of registers for general data storage and manipulation (e.g., R1, R2).</p>
+                        </div>
+                         <div class="p-4 bg-stone-50 rounded-lg border">
+                            <h3 class="font-bold text-xl mb-2">Status Register (Flags)</h3>
+                            <p>Holds bits indicating the outcome of ALU operations (e.g., Zero, Carry, Negative).</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-bold mb-4">Interactive: The Instruction Fetch Sequence</h3>
+                        <p class="mb-4">The first step of executing any instruction is to fetch it from memory. This involves a precise dance between several key registers. Click "Step" to visualize the process.</p>
+                        <div class="text-center mb-4">
+                            <button id="fetch-step-btn" class="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">Start</button>
+                        </div>
+                        <div class="relative p-4 bg-gray-100 rounded-lg h-64 md:h-48 flex items-center justify-around flex-wrap gap-4">
+                            <!-- Visualization components -->
+                            <div id="fetch-pc" class="datapath-component p-2 rounded text-center w-24">PC<div class="text-xs font-mono">0x100</div></div>
+                            <div id="fetch-mar" class="datapath-component p-2 rounded text-center w-24">MAR<div class="text-xs font-mono">&nbsp;</div></div>
+                            <div id="fetch-mem" class="datapath-component p-2 rounded text-center w-24">Memory<div class="text-xs font-mono">...</div></div>
+                            <div id="fetch-mdr" class="datapath-component p-2 rounded text-center w-24">MDR<div class="text-xs font-mono">&nbsp;</div></div>
+                            <div id="fetch-ir" class="datapath-component p-2 rounded text-center w-24">IR<div class="text-xs font-mono">&nbsp;</div></div>
+                            <div id="fetch-desc" class="w-full text-center mt-4 h-6 text-blue-700 font-semibold"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Control Section -->
+            <section id="control" class="content-section">
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-3xl font-bold mb-4">The Control Unit & Execution Cycle</h2>
+                    <p class="mb-6">The Control Unit (CU) is the CPU's director. It doesn't process data, but it generates timed control signals that tell the other components what to do. Its entire operation is governed by the Fetch-Decode-Execute cycle, the fundamental rhythm of the CPU.</p>
+
+                    <div class="mb-8">
+                        <h3 class="text-2xl font-bold mb-4">Interactive: The Fetch-Decode-Execute Cycle</h3>
+                        <p class="mb-4">Click on each stage of the cycle to learn more about its role in processing an instruction.</p>
+                        <div class="flex flex-col md:flex-row justify-around items-center gap-4 text-center" id="fde-cycle">
+                            <div class="p-4 w-48 h-32 flex flex-col items-center justify-center border-4 border-transparent rounded-lg cursor-pointer transition bg-stone-100" data-stage="fetch">
+                                <span class="text-xl font-bold">1. Fetch</span>
+                                <p class="text-sm">Get instruction</p>
+                            </div>
+                             <div class="text-2xl font-bold text-stone-400 hidden md:block">&rarr;</div>
+                            <div class="p-4 w-48 h-32 flex flex-col items-center justify-center border-4 border-transparent rounded-lg cursor-pointer transition bg-stone-100" data-stage="decode">
+                                <span class="text-xl font-bold">2. Decode</span>
+                                <p class="text-sm">Understand instruction</p>
+                            </div>
+                             <div class="text-2xl font-bold text-stone-400 hidden md:block">&rarr;</div>
+                            <div class="p-4 w-48 h-32 flex flex-col items-center justify-center border-4 border-transparent rounded-lg cursor-pointer transition bg-stone-100" data-stage="execute">
+                                <span class="text-xl font-bold">3. Execute</span>
+                                <p class="text-sm">Perform operation</p>
+                            </div>
+                        </div>
+                        <div id="fde-display" class="mt-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg min-h-[100px]">
+                            <!-- FDE description appears here -->
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-bold mb-4">Control Unit Implementation</h3>
+                        <p class="mb-4">The logic inside the Control Unit can be designed in two main ways:</p>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="p-4 border rounded-lg">
+                                <h4 class="font-bold text-lg">Hardwired Control</h4>
+                                <p>Control logic is built from fixed combinational logic gates. It's very fast but inflexible—changing the instruction set requires redesigning the hardware. Common in RISC processors.</p>
+                            </div>
+                            <div class="p-4 border rounded-lg">
+                                <h4 class="font-bold text-lg">Microprogrammed Control</h4>
+                                <p>Control signals are stored in a special memory (control store). Each instruction triggers a sequence of microinstructions. This is more flexible, as the microprogram can be updated, but slower. Common in CISC processors.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Datapath Section -->
+            <section id="datapath" class="content-section">
+                 <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-3xl font-bold mb-4">Interactive Datapath Explorer</h2>
+                    <p class="mb-6">The datapath is the collection of all functional units (ALU, registers, memory interfaces) and the buses connecting them. The Control Unit sends signals to the datapath to execute instructions. This simulation traces the flow of data for simple instructions in a single-cycle CPU design. In this model, every instruction completes in one long clock cycle.</p>
+                    
+                    <div class="flex flex-col md:flex-row gap-4 items-center justify-center mb-6 p-4 bg-stone-100 rounded-lg">
+                        <div class="flex-shrink-0">
+                            <label for="instruction-select" class="font-semibold">Select Instruction:</label>
+                            <select id="instruction-select" class="ml-2 p-2 border border-gray-300 rounded-md">
+                                <option value="add">ADD R3, R1, R2</option>
+                                <option value="load">LOAD R1, offset(R2)</option>
+                            </select>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <button id="datapath-step-btn" class="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 w-full md:w-auto">Start Trace</button>
+                        </div>
+                    </div>
+                    
+                    <div id="datapath-info" class="mb-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg min-h-[100px]">
+                        <h4 class="font-bold text-lg">Step Information</h4>
+                        <p id="datapath-step-desc">Select an instruction and click "Start Trace" to begin.</p>
+                    </div>
+
+                    <div id="datapath-diagram" class="relative w-full h-[550px] bg-gray-50 p-4 rounded-lg overflow-hidden">
+                        <!-- Datapath components are positioned absolutely within this container -->
+                        <div id="dp-pc" class="datapath-component absolute top-1/2 left-4 w-24 h-12 text-center -translate-y-1/2 flex items-center justify-center p-1">PC</div>
+                        <div id="dp-imem" class="datapath-component absolute top-1/2 left-36 w-28 h-20 text-center -translate-y-1/2 flex items-center justify-center p-1">Instruction Memory</div>
+                        <div id="dp-regs" class="datapath-component absolute top-1/2 left-[280px] w-32 h-32 text-center -translate-y-1/2 flex items-center justify-center p-1">Register File</div>
+                        <div id="dp-alu" class="datapath-component absolute top-1/2 left-[440px] w-24 h-24 text-center -translate-y-1/2 flex items-center justify-center rounded-full p-1">ALU</div>
+                        <div id="dp-dmem" class="datapath-component absolute top-1/2 left-[580px] w-28 h-20 text-center -translate-y-1/2 flex items-center justify-center p-1">Data Memory</div>
+                        <div id="dp-mux-alu" class="datapath-component absolute top-[320px] left-[390px] w-10 h-16 text-center text-sm flex items-center justify-center p-1 transform rotate-90">MUX</div>
+                        <div id="dp-signex" class="datapath-component absolute top-[400px] left-[280px] w-24 h-12 text-center text-sm flex items-center justify-center p-1">Sign Extend</div>
+                        <div id="dp-mux-wb" class="datapath-component absolute top-1/2 left-[730px] w-10 h-16 text-center text-sm flex items-center justify-center p-1 transform rotate-90">MUX</div>
+                        
+                        <!-- Paths -->
+                        <div id="dp-path-pc-imem" class="datapath-path h-1" style="width: 28px; top: 50%; left: 104px; margin-top: -2px;"></div>
+                        <div id="dp-path-imem-regs" class="datapath-path h-1" style="width: 28px; top: 50%; left: 252px; margin-top: -2px;"></div>
+                        <div id="dp-path-imem-signex" class="datapath-path w-1" style="height: 108px; top: 50%; left: 320px; margin-top: -20px;"></div>
+                        <div id="dp-path-signex-mux" class="datapath-path h-1" style="width: 62px; top: 412px; left: 328px;"></div>
+                        <div id="dp-path-regs-aluA" class="datapath-path h-1" style="width: 28px; top: 45%; left: 412px;"></div>
+                        <div id="dp-path-regs-aluB" class="datapath-path h-1" style="width: 28px; top: 55%; left: 412px;"></div>
+                        <div id="dp-path-mux-aluB" class="datapath-path h-1" style="width: 28px; top: 55%; left: 412px;"></div>
+                        <div id="dp-path-alu-dmem" class="datapath-path h-1" style="width: 28px; top: 50%; left: 552px; margin-top: -2px;"></div>
+                        <div id="dp-path-alu-mux" class="datapath-path h-1" style="width: 88px; top: 40%; left: 552px;"></div>
+                        <div id="dp-path-dmem-mux" class="datapath-path h-1" style="width: 28px; top: 50%; left: 708px; margin-top: -2px;"></div>
+                        <div id="dp-path-mux-regs" class="datapath-path w-1" style="height: 80px; top: 50%; left: 780px; margin-top: -40px;"></div>
+                        <div id="dp-path-mux-regs-h" class="datapath-path h-1" style="width: 368px; top: 40%; left: 412px;"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabs = document.querySelectorAll('.tab-button');
+            const sections = document.querySelectorAll('.content-section');
+            const aluOpFilters = document.getElementById('alu-op-filters');
+            const aluOpDisplay = document.getElementById('alu-op-display');
+            const aluBuilderNext = document.getElementById('alu-builder-next');
+            const aluBuilderPrev = document.getElementById('alu-builder-prev');
+            const aluBuilderDisplay = document.getElementById('alu-builder-display');
+            const fdeCycle = document.getElementById('fde-cycle');
+            const fdeDisplay = document.getElementById('fde-display');
+            const fetchStepBtn = document.getElementById('fetch-step-btn');
+
+            const instructionSelect = document.getElementById('instruction-select');
+            const datapathStepBtn = document.getElementById('datapath-step-btn');
+            const datapathStepDesc = document.getElementById('datapath-step-desc');
+            const datapathDiagram = document.getElementById('datapath-diagram');
+
+            const setActiveTab = (tabId) => {
+                tabs.forEach(button => {
+                    if (button.dataset.tab === tabId) {
+                        button.classList.add('active');
+                    } else {
+                        button.classList.remove('active');
+                    }
+                });
+
+                sections.forEach(section => {
+                    if (section.id === tabId) {
+                        section.classList.add('active');
+                    } else {
+                        section.classList.remove('active');
+                    }
+                });
+            };
+            
+            tabs.forEach(button => {
+                button.addEventListener('click', () => setActiveTab(button.dataset.tab));
+            });
+            
+            setActiveTab('overview');
+
+            const aluOperations = {
+                arithmetic: [
+                    { name: 'ADD', desc: 'Adds two operands.' },
+                    { name: 'SUB', desc: 'Subtracts second operand from first.' },
+                    { name: 'INC', desc: 'Increments operand by one.' },
+                    { name: 'DEC', desc: 'Decrements operand by one.' }
+                ],
+                logical: [
+                    { name: 'AND', desc: 'Bitwise AND of two operands.' },
+                    { name: 'OR', desc: 'Bitwise OR of two operands.' },
+                    { name: 'XOR', desc: 'Bitwise XOR of two operands.' },
+                    { name: 'NOT', desc: 'Bitwise NOT (inversion) of one operand.' }
+                ],
+                shift: [
+                    { name: 'LSL/ASL', desc: 'Logical/Arithmetic Left Shift.' },
+                    { name: 'LSR', desc: 'Logical Right Shift.' },
+                    { name: 'ASR', desc: 'Arithmetic Right Shift.' },
+                    { name: 'ROL', desc: 'Rotate Left.' },
+                    { name: 'ROR', desc: 'Rotate Right.' }
+                ]
+            };
+            
+            const displayAluOps = (opType) => {
+                aluOpDisplay.innerHTML = '';
+                aluOperations[opType].forEach(op => {
+                    const opEl = document.createElement('div');
+                    opEl.className = 'p-4 bg-stone-50 rounded-lg border';
+                    opEl.innerHTML = `<h4 class="font-bold">${op.name}</h4><p class="text-sm">${op.desc}</p>`;
+                    aluOpDisplay.appendChild(opEl);
+                });
+
+                aluOpFilters.querySelectorAll('button').forEach(btn => {
+                    btn.classList.remove('bg-blue-100', 'text-blue-700');
+                    btn.classList.add('bg-gray-100', 'text-gray-700');
+                    if(btn.dataset.op === opType) {
+                        btn.classList.add('bg-blue-100', 'text-blue-700');
+                        btn.classList.remove('bg-gray-100', 'text-gray-700');
+                    }
+                });
+            };
+            
+            aluOpFilters.addEventListener('click', (e) => {
+                if(e.target.tagName === 'BUTTON') {
+                    displayAluOps(e.target.dataset.op);
+                }
+            });
+            
+            displayAluOps('arithmetic');
+
+            const aluBuilderSteps = [
+                {
+                    title: 'Step 1: Basic Logic Gates',
+                    content: `<p>Everything starts with fundamental gates like AND and XOR.</p>
+                              <div class="flex gap-4 mt-4">
+                                <div class="p-4 border rounded-lg text-center"><strong>XOR</strong> Gate<br>S = A &oplus; B</div>
+                                <div class="p-4 border rounded-lg text-center"><strong>AND</strong> Gate<br>C = A &middot; B</div>
+                              </div>`
+                },
+                {
+                    title: 'Step 2: Half-Adder',
+                    content: `<p>Combining one XOR and one AND gate creates a Half-Adder, which can add two single bits (A, B) and produce a Sum (S) and a Carry (C).</p>
+                              <div class="p-4 border-2 border-blue-400 bg-blue-50 rounded-lg text-center mt-4">
+                                <strong>Half-Adder</strong>
+                                <table class="truth-table mx-auto mt-2 text-sm bg-white">
+                                <thead><tr><th>A</th><th>B</th><th>Sum</th><th>Carry</th></tr></thead>
+                                <tbody>
+                                    <tr><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+                                    <tr><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+                                    <tr><td>1</td><td>0</td><td>1</td><td>0</td></tr>
+                                    <tr><td>1</td><td>1</td><td>0</td><td>1</td></tr>
+                                </tbody></table>
+                              </div>`
+                },
+                {
+                    title: 'Step 3: Full-Adder',
+                    content: `<p>A Full-Adder adds three bits: A, B, and a Carry-In (C-IN) from a previous stage. It's built from two Half-Adders and an OR gate. This is the crucial building block for adding multi-bit numbers.</p>
+                               <div class="p-4 border-2 border-green-400 bg-green-50 rounded-lg text-center mt-4">
+                                <strong>Full-Adder</strong>
+                                <table class="truth-table mx-auto mt-2 text-sm bg-white">
+                                <thead><tr><th>A</th><th>B</th><th>C-IN</th><th>Sum</th><th>C-OUT</th></tr></thead>
+                                <tbody>
+                                    <tr><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+                                    <tr><td>0</td><td>1</td><td>1</td><td>0</td><td>1</td></tr>
+                                    <tr><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td></tr>
+                                    <tr><td>1</td><td>1</td><td>1</td><td>1</td><td>1</td></tr>
+                                </tbody></table>
+                               </div>`
+                },
+                {
+                    title: 'Step 4: N-bit Ripple-Carry Adder',
+                    content: `<p>By chaining N Full-Adders together (connecting C-OUT of one to C-IN of the next), we can create an N-bit adder. The carry "ripples" from the least significant bit (LSB) to the most significant bit (MSB).</p>
+                              <div class="flex gap-1 mt-4">
+                                <div class="p-2 border-2 border-green-400 bg-green-50 rounded">FA</div>
+                                <div class="self-center">&rarr;</div>
+                                <div class="p-2 border-2 border-green-400 bg-green-50 rounded">FA</div>
+                                <div class="self-center">&rarr;</div>
+                                <div class="p-2 border-2 border-green-400 bg-green-50 rounded">FA</div>
+                                <div class="self-center">&hellip;</div>
+                                <div class="p-2 border-2 border-green-400 bg-green-50 rounded">FA</div>
+                              </div>`
+                },
+                 {
+                    title: 'Step 5: A Complete 1-bit ALU Slice',
+                    content: `<p>Finally, a MUX (multiplexer) selects the output from various units (Adder, AND logic, OR logic) based on a control signal (Opcode). An N-bit ALU is made by stacking N of these 1-bit slices.</p>
+                              <div class="p-4 border-2 border-purple-400 bg-purple-50 rounded-lg text-center mt-4">
+                                <strong>1-bit ALU Slice</strong>
+                                <p class="text-sm mt-2">Inputs: A, B, C-in, Opcode <br> Outputs: Result, C-out, Flags</p>
+                              </div>`
+                }
+            ];
+
+            let aluBuilderState = 0;
+            const updateAluBuilder = () => {
+                const step = aluBuilderSteps[aluBuilderState];
+                aluBuilderDisplay.innerHTML = `<h4 class="text-xl font-semibold mb-2">${step.title}</h4>${step.content}`;
+            };
+
+            aluBuilderNext.addEventListener('click', () => {
+                aluBuilderState = (aluBuilderState + 1) % aluBuilderSteps.length;
+                updateAluBuilder();
+            });
+
+             aluBuilderPrev.addEventListener('click', () => {
+                aluBuilderState = (aluBuilderState - 1 + aluBuilderSteps.length) % aluBuilderSteps.length;
+                updateAluBuilder();
+            });
+
+            updateAluBuilder();
+            
+            const fdeStages = {
+                fetch: { title: 'Fetch', desc: 'The Control Unit reads the instruction from the memory location pointed to by the Program Counter (PC). The instruction is loaded into the Instruction Register (IR), and the PC is incremented to point to the next instruction.' },
+                decode: { title: 'Decode', desc: 'The Control Unit interprets the opcode in the IR to understand what operation to perform and which operands to use. It prepares to generate the necessary control signals.' },
+                execute: { title: 'Execute', desc: 'The Control Unit sends signals to the datapath. The ALU performs the specified operation on data from registers. For load/store instructions, the ALU calculates a memory address. For branch instructions, it might update the PC.' }
+            };
+
+            const updateFdeDisplay = (stage) => {
+                const data = fdeStages[stage];
+                fdeDisplay.innerHTML = `<h4 class="font-bold text-lg">${data.title}</h4><p>${data.desc}</p>`;
+                fdeCycle.querySelectorAll('div[data-stage]').forEach(el => {
+                    el.classList.remove('bg-blue-100', 'border-blue-500');
+                    el.classList.add('bg-stone-100', 'border-transparent');
+                    if (el.dataset.stage === stage) {
+                        el.classList.add('bg-blue-100', 'border-blue-500');
+                    }
+                });
+            };
+
+            fdeCycle.addEventListener('click', e => {
+                const stageEl = e.target.closest('div[data-stage]');
+                if(stageEl) {
+                    updateFdeDisplay(stageEl.dataset.stage);
+                }
+            });
+
+            updateFdeDisplay('fetch');
+
+            let fetchStep = 0;
+            const fetchSteps = [
+                { el: 'fetch-pc', desc: '1. The PC holds the address of the next instruction.'},
+                { el: 'fetch-mar', desc: '2. The PC\'s address is copied to the MAR.'},
+                { el: 'fetch-mem', desc: '3. The address is sent to memory, which finds the instruction.'},
+                { el: 'fetch-mdr', desc: '4. Memory places the instruction into the MDR.'},
+                { el: 'fetch-ir', desc: '5. The instruction is copied from MDR to the IR for decoding.'},
+            ];
+
+            const resetFetchViz = () => {
+                fetchStep = 0;
+                fetchStepBtn.textContent = 'Start';
+                document.getElementById('fetch-desc').textContent = '';
+                document.getElementById('fetch-mar').querySelector('.font-mono').innerHTML = '&nbsp;';
+                document.getElementById('fetch-mdr').querySelector('.font-mono').innerHTML = '&nbsp;';
+                document.getElementById('fetch-ir').querySelector('.font-mono').innerHTML = '&nbsp;';
+                document.querySelectorAll('.datapath-component').forEach(c => c.classList.remove('active'));
+            };
+
+            fetchStepBtn.addEventListener('click', () => {
+                if (fetchStep > fetchSteps.length) {
+                    resetFetchViz();
+                    return;
+                }
+                if (fetchStep === 0) {
+                    fetchStepBtn.textContent = 'Step';
+                }
+                
+                document.querySelectorAll('.datapath-component').forEach(c => c.classList.remove('active'));
+
+                if(fetchStep < fetchSteps.length) {
+                    const currentStep = fetchSteps[fetchStep];
+                    document.getElementById(currentStep.el).classList.add('active');
+                    document.getElementById('fetch-desc').textContent = currentStep.desc;
+
+                    if (currentStep.el === 'fetch-mar') {
+                        document.getElementById('fetch-mar').querySelector('.font-mono').textContent = '0x100';
+                    } else if (currentStep.el === 'fetch-mdr') {
+                        document.getElementById('fetch-mdr').querySelector('.font-mono').textContent = 'ADD R3,R1,R2';
+                    } else if (currentStep.el === 'fetch-ir') {
+                        document.getElementById('fetch-ir').querySelector('.font-mono').textContent = 'ADD R3,R1,R2';
+                    }
+                } else {
+                    document.getElementById('fetch-desc').textContent = 'Fetch complete! The cycle repeats.';
+                    fetchStepBtn.textContent = 'Reset';
+                }
+                
+                fetchStep++;
+            });
+
+            // Datapath Explorer Logic
+            let datapathState = -1;
+            const addSteps = [
+                { desc: "1. Fetch: Instruction is fetched from memory using PC's address, and PC is updated to PC+4.", active: ['dp-pc', 'dp-imem', 'dp-path-pc-imem'] },
+                { desc: "2. Decode: Instruction is decoded. Register numbers (R1, R2) are sent to the Register File.", active: ['dp-imem', 'dp-regs', 'dp-path-imem-regs'] },
+                { desc: "3. Register Read: The values in R1 and R2 are read from the Register File.", active: ['dp-regs'] },
+                { desc: "4. Execute: The values from R1 and R2 are sent to the ALU. The Control Unit tells the ALU to ADD.", active: ['dp-regs', 'dp-alu', 'dp-path-regs-aluA', 'dp-path-regs-aluB'] },
+                { desc: "5. Write-back: The ALU result is sent back to the Register File to be written into R3.", active: ['dp-alu', 'dp-mux-wb', 'dp-regs', 'dp-path-alu-mux', 'dp-path-mux-regs', 'dp-path-mux-regs-h'] }
+            ];
+            const loadSteps = [
+                { desc: "1. Fetch: Instruction is fetched from memory using PC's address, and PC is updated to PC+4.", active: ['dp-pc', 'dp-imem', 'dp-path-pc-imem'] },
+                { desc: "2. Decode: Instruction is decoded. Base register (R2) is read. The offset is sign-extended.", active: ['dp-imem', 'dp-regs', 'dp-signex', 'dp-path-imem-regs', 'dp-path-imem-signex'] },
+                { desc: "3. Execute: The ALU adds the value from R2 and the sign-extended offset to calculate the memory address.", active: ['dp-regs', 'dp-signex', 'dp-mux-alu', 'dp-alu', 'dp-path-regs-aluA', 'dp-path-signex-mux', 'dp-path-mux-aluB'] },
+                { desc: "4. Memory Access: The calculated address is sent to Data Memory. A memory read is performed.", active: ['dp-alu', 'dp-dmem', 'dp-path-alu-dmem'] },
+                { desc: "5. Write-back: Data from memory is sent back through a MUX and written into the destination register R1.", active: ['dp-dmem', 'dp-mux-wb', 'dp-regs', 'dp-path-dmem-mux', 'dp-path-mux-regs'] }
+            ];
+
+            const resetDatapath = () => {
+                datapathState = -1;
+                datapathStepDesc.parentElement.classList.remove('bg-green-50', 'border-green-500');
+                datapathStepDesc.parentElement.classList.add('bg-blue-50', 'border-blue-500');
+                datapathStepDesc.textContent = 'Select an instruction and click "Start Trace" to begin.';
+                datapathStepBtn.textContent = 'Start Trace';
+                datapathDiagram.querySelectorAll('.datapath-component, .datapath-path').forEach(el => el.classList.remove('active'));
+            };
+
+            datapathStepBtn.addEventListener('click', () => {
+                const selectedInstruction = instructionSelect.value;
+                const steps = selectedInstruction === 'add' ? addSteps : loadSteps;
+                
+                datapathState++;
+                
+                if (datapathState >= steps.length) {
+                    datapathStepDesc.textContent = "Trace complete! Click 'Reset' to start over.";
+                    datapathStepDesc.parentElement.classList.add('bg-green-50', 'border-green-500');
+                    datapathStepDesc.parentElement.classList.remove('bg-blue-50', 'border-blue-500');
+                    datapathStepBtn.textContent = 'Reset';
+                    return;
+                }
+
+                if (datapathState === 0) {
+                     datapathStepBtn.textContent = 'Next Step';
+                }
+                
+                const currentStep = steps[datapathState];
+                datapathStepDesc.textContent = currentStep.desc;
+                
+                datapathDiagram.querySelectorAll('.datapath-component, .datapath-path').forEach(el => el.classList.remove('active'));
+                currentStep.active.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.add('active');
+                });
+            });
+
+            instructionSelect.addEventListener('change', resetDatapath);
+            datapathStepBtn.addEventListener('click', (e) => {
+                if (e.target.textContent === 'Reset') {
+                    resetDatapath();
+                }
+            });
+
+            resetDatapath();
+            resetFetchViz();
+        });
+    </script>
+</body>
+</html>

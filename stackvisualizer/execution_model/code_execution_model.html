@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide to Code Execution: Compilers, Interpreters, and JITs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: "Earthy Neutrals" - #FDFCFB (Background), #3D405B (Text), #1E847F (Primary Accent), #E07A5F (Secondary Accent 1), #F2CC8F (Secondary Accent 2) -->
+    <!-- Application Structure Plan: A single-page application with four main interactive sections navigated by a sticky header: 'Compare Models', 'Deep Dive', 'Case Studies', and 'Performance'. This non-linear, thematic structure was chosen over the report's linear format to empower user-driven exploration. 'Compare' uses a three-column dashboard for quick, high-level comparison with interactive charts and filterable pros/cons. 'Deep Dive' uses a tabbed interface for focused learning on each model. 'Case Studies' provides concrete examples, and 'Performance' visualizes benchmark data. This design prioritizes usability and synthesis by allowing users to either get a quick overview or explore topics in depth, based on their interest. -->
+    <!-- Visualization & Content Choices: Recreated flow diagrams using HTML/CSS (divs, flexbox) to explain processes. Used Chart.js for a radar chart (Goal: Compare models multi-axially), and bar charts (Goal: Compare quantitative performance data). Interactive cards for Pros/Cons with JS filtering allow focused comparison. Interactive HTML/CSS diagrams for compilation stages break down complex processes. These choices avoid forbidden libraries (SVG/Mermaid) while providing rich, interactive visualizations. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFCFB;
+            color: #3D405B;
+        }
+        .nav-link {
+            transition: color 0.3s ease, border-color 0.3s ease;
+        }
+        .nav-link.active {
+            color: #1E847F;
+            border-bottom-color: #1E847F;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .flow-box {
+            border: 1px solid #D1D5DB;
+            background-color: #FFFFFF;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease-in-out;
+        }
+        .flow-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .flow-arrow {
+            font-size: 1.5rem;
+            color: #9CA3AF;
+            margin: 0.5rem 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .stage-item {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .stage-item.active {
+            background-color: #E07A5F;
+            color: white;
+        }
+        .case-study-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .case-study-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl font-bold text-[#1E847F]">Code Execution Models</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#compare" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#1E847F] border-b-2 border-transparent">Compare Models</a>
+                        <a href="#deep-dive" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#1E847F] border-b-2 border-transparent">Deep Dive</a>
+                        <a href="#case-studies" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#1E847F] border-b-2 border-transparent">Case Studies</a>
+                        <a href="#performance" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#1E847F] border-b-2 border-transparent">Performance</a>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                     <select id="mobile-nav" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#1E847F] focus:border-[#1E847F] sm:text-sm rounded-md">
+                        <option value="#compare">Compare Models</option>
+                        <option value="#deep-dive">Deep Dive</option>
+                        <option value="#case-studies">Case Studies</option>
+                        <option value="#performance">Performance</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <section id="hero" class="text-center py-12">
+            <h2 class="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl text-[#3D405B]">From Code to Execution</h2>
+            <p class="mt-6 max-w-3xl mx-auto text-lg text-gray-600">How does your computer understand the programs you write? This interactive guide explores the three core models that turn source code into running applications: Compilers, Interpreters, and Just-In-Time (JIT) Compilers. Compare their strengths, dive into their inner workings, and see how they power your favorite languages.</p>
+        </section>
+
+        <!-- Compare Models Section -->
+        <section id="compare" class="py-16 scroll-mt-16">
+            <div class="text-center mb-12">
+                <h3 class="text-3xl font-bold text-[#3D405B]">A Tale of Three Models</h3>
+                <p class="mt-4 max-w-2xl mx-auto text-gray-600">Each execution model offers a unique set of trade-offs. The chart below provides a high-level comparison across key characteristics. Notice how each model excels in different areas, shaping the languages that use them.</p>
+            </div>
+            <div class="chart-container mb-12">
+                <canvas id="comparisonRadarChart"></canvas>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Compiler Column -->
+                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-[#1E847F]">
+                    <h4 class="text-2xl font-bold mb-4 text-[#1E847F]">Compiler (AOT)</h4>
+                    <p class="text-sm text-gray-600 mb-4">Translates all code into a platform-specific executable file <span class="font-semibold">before</span> the program is run.</p>
+                    <div class="text-xs space-y-2 mb-6">
+                        <h5 class="font-semibold text-gray-700 mb-2">Key Characteristics:</h5>
+                        <p><span class="font-bold">Pros:</span> Maximum runtime speed, extensive optimization, early error detection.</p>
+                        <p><span class="font-bold">Cons:</span> Slow development cycle, platform-dependent output, no runtime adaptation.</p>
+                        <p><span class="font-bold">Best for:</span> Systems programming, game engines, performance-critical applications.</p>
+                    </div>
+                     <div class="flow-box mb-2">Source Code (.c)</div>
+                     <div class="flow-arrow">&#11107;</div>
+                     <div class="flow-box mb-2">Compiler (e.g., GCC)</div>
+                     <div class="flow-arrow">&#11107;</div>
+                     <div class="flow-box bg-[#1E847F] text-white">Native Executable</div>
+                </div>
+                <!-- Interpreter Column -->
+                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-[#E07A5F]">
+                    <h4 class="text-2xl font-bold mb-4 text-[#E07A5F]">Interpreter</h4>
+                    <p class="text-sm text-gray-600 mb-4">Reads and executes code line-by-line <span class="font-semibold">during</span> program execution, often via bytecode.</p>
+                     <div class="text-xs space-y-2 mb-6">
+                        <h5 class="font-semibold text-gray-700 mb-2">Key Characteristics:</h5>
+                        <p><span class="font-bold">Pros:</span> Fast development cycle, high portability, excellent for scripting.</p>
+                        <p><span class="font-bold">Cons:</span> Slower runtime speed, errors found at runtime, limited optimization.</p>
+                        <p><span class="font-bold">Best for:</span> Web scripting, data analysis, rapid prototyping.</p>
+                    </div>
+                     <div class="flow-box mb-2">Source Code (.py)</div>
+                     <div class="flow-arrow">&#11107;</div>
+                     <div class="flow-box mb-2">Bytecode Compiler</div>
+                     <div class="flow-arrow">&#11107;</div>
+                     <div class="flow-box bg-[#E07A5F] text-white">Virtual Machine Execution</div>
+                </div>
+                <!-- JIT Compiler Column -->
+                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-[#F2CC8F]">
+                    <h4 class="text-2xl font-bold mb-4 text-[#c59d5f]">JIT Compiler</h4>
+                    <p class="text-sm text-gray-600 mb-4">A hybrid model that compiles code <span class="font-semibold">at runtime</span>, optimizing frequently used parts.</p>
+                     <div class="text-xs space-y-2 mb-6">
+                        <h5 class="font-semibold text-gray-700 mb-2">Key Characteristics:</h5>
+                        <p><span class="font-bold">Pros:</span> High performance after warm-up, runtime-specific optimizations, portable bytecode.</p>
+                        <p><span class="font-bold">Cons:</span> Startup overhead, higher memory use, complex internals.</p>
+                        <p><span class="font-bold">Best for:</span> Server-side apps, complex desktop/web apps.</p>
+                    </div>
+                     <div class="flow-box mb-2">Source Code (.java)</div>
+                     <div class="flow-arrow">&#11107;</div>
+                     <div class="flow-box mb-2">Bytecode</div>
+                     <div class="flow-arrow">&#11107;</div>
+                     <div class="flow-box bg-[#F2CC8F] text-black">Interpreter + JIT Optimizer</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Deep Dive Section -->
+        <section id="deep-dive" class="py-16 bg-gray-50 rounded-lg scroll-mt-16">
+            <div class="text-center mb-12">
+                <h3 class="text-3xl font-bold text-[#3D405B]">Inside the Machine</h3>
+                <p class="mt-4 max-w-2xl mx-auto text-gray-600">How does each model work internally? Select a tab to explore the step-by-step process, from source code to execution.</p>
+            </div>
+            
+            <div>
+                <div class="mb-4 border-b border-gray-200">
+                    <nav class="-mb-px flex space-x-8 justify-center" aria-label="Tabs">
+                        <button id="tab-compiler" class="deep-dive-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-[#1E847F] border-[#1E847F]">Compiler</button>
+                        <button id="tab-interpreter" class="deep-dive-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300">Interpreter</button>
+                        <button id="tab-jit" class="deep-dive-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300">JIT Compiler</button>
+                    </nav>
+                </div>
+
+                <div id="content-compiler" class="deep-dive-content">
+                    <div class="grid md:grid-cols-2 gap-8 items-center">
+                        <div>
+                            <h4 class="text-2xl font-bold mb-4 text-[#1E847F]">The AOT Compiler Pipeline</h4>
+                            <p class="mb-4 text-gray-600">A compiler transforms code through a series of stages before creating an executable. This "ahead-of-time" work allows for extensive analysis and optimization. Click on a stage to learn more about what happens.</p>
+                            <div id="compiler-stages" class="space-y-2">
+                                <!-- Stages will be injected here by JS -->
+                            </div>
+                        </div>
+                        <div id="compiler-stage-details" class="bg-white p-6 rounded-lg shadow-inner">
+                            <!-- Details will be injected here by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="content-interpreter" class="deep-dive-content hidden">
+                    <div class="grid md:grid-cols-2 gap-8 items-center">
+                        <div>
+                            <h4 class="text-2xl font-bold mb-4 text-[#E07A5F]">Bytecode & The Virtual Machine</h4>
+                            <p class="mb-4 text-gray-600">Many modern interpreters don't execute source code directly. Instead, they use a two-step process: first, compile the source into an intermediate <span class="font-semibold">bytecode</span>, then execute that bytecode on a <span class="font-semibold">Virtual Machine (VM)</span>. This provides a blend of performance and portability.</p>
+                            <p class="text-gray-600">The VM acts like a simulated CPU, processing bytecode instructions one by one. This adds overhead but means the same bytecode can run anywhere a VM is available.</p>
+                        </div>
+                        <div class="p-4 bg-gray-900 rounded-lg text-white font-mono text-sm">
+                            <p class="text-gray-400"># Python code</p>
+                            <p><span class="text-purple-400">def</span> <span class="text-yellow-300">add</span>(a, b):</p>
+                            <p class="pl-4"><span class="text-purple-400">return</span> a + b</p>
+                            <p class="text-gray-400 mt-4"># Is compiled to bytecode...</p>
+                            <p>LOAD_FAST 0 (a)</p>
+                            <p>LOAD_FAST 1 (b)</p>
+                            <p>BINARY_ADD</p>
+                            <p>RETURN_VALUE</p>
+                            <p class="text-gray-400 mt-4"># ...which the Python VM executes.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="content-jit" class="deep-dive-content hidden">
+                     <div class="grid md:grid-cols-2 gap-8 items-center">
+                        <div>
+                            <h4 class="text-2xl font-bold mb-4 text-[#c59d5f]">Adaptive Optimization at Runtime</h4>
+                            <p class="mb-4 text-gray-600">JIT compilers start by interpreting code. As the program runs, a <span class="font-semibold">profiler</span> watches for "hot spots"—frequently executed methods or loops. Once a hot spot is found, the JIT compiler translates it into highly optimized native machine code. Subsequent calls to that code run at native speed.</p>
+                            <p class="text-gray-600">This adaptive process allows for optimizations based on actual runtime behavior, something AOT compilers can't do. If behavior changes, the JIT can even de-optimize and re-compile.</p>
+                        </div>
+                        <div class="p-4 bg-white rounded-lg shadow-lg">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="font-semibold">Execution Flow</span>
+                                <button id="jit-animate-btn" class="px-3 py-1 bg-[#F2CC8F] text-black text-xs font-semibold rounded-full hover:bg-opacity-80">Animate</button>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex items-center space-x-4">
+                                    <div id="jit-path-interpreter" class="flow-box flex-1 border-[#E07A5F] transition-all duration-500">Interpreter</div>
+                                    <div id="jit-path-native" class="flow-box flex-1 border-gray-300 bg-gray-100 text-gray-400 transition-all duration-500">Native Code</div>
+                                </div>
+                                <div class="relative h-10">
+                                     <div id="jit-code-flow" class="absolute top-1/2 left-0 w-8 h-8 rounded-full bg-[#1E847F] -translate-y-1/2 transition-all duration-1000 ease-in-out"></div>
+                                </div>
+                                <div class="text-xs text-center text-gray-500">Code Path</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Case Studies Section -->
+        <section id="case-studies" class="py-16 scroll-mt-16">
+            <div class="text-center mb-12">
+                <h3 class="text-3xl font-bold text-[#3D405B]">Execution in the Wild</h3>
+                <p class="mt-4 max-w-2xl mx-auto text-gray-600">Theories are great, but how do real languages work? This section explores the execution strategies of four popular languages, showing how they blend different models to achieve their goals.</p>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8" id="case-studies-container">
+                 <!-- Case study cards will be injected by JS -->
+            </div>
+            <div id="case-study-details" class="mt-12 bg-white p-8 rounded-lg shadow-xl hidden">
+                 <!-- Details will be injected by JS -->
+            </div>
+        </section>
+
+        <!-- Performance Section -->
+        <section id="performance" class="py-16 bg-gray-50 rounded-lg scroll-mt-16">
+            <div class="text-center mb-12">
+                <h3 class="text-3xl font-bold text-[#3D405B]">Performance and Trade-offs</h3>
+                <p class="mt-4 max-w-2xl mx-auto text-gray-600">Performance isn't just about raw speed. It's a balance of startup time, sustained throughput, and memory usage. These charts visualize the typical trade-offs between the execution models.</p>
+            </div>
+            <div class="grid lg:grid-cols-2 gap-12">
+                <div>
+                    <h4 class="text-xl font-bold text-center mb-2">Relative CPU Performance</h4>
+                    <p class="text-center text-sm text-gray-600 mb-4">(Normalized to C++; lower is faster)</p>
+                    <div class="chart-container h-72 md:h-96">
+                        <canvas id="performanceBarChart"></canvas>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-xl font-bold text-center mb-2">Startup vs. Throughput</h4>
+                    <p class="text-center text-sm text-gray-600 mb-4">(Conceptual model over time)</p>
+                     <div class="chart-container h-72 md:h-96">
+                        <canvas id="throughputLineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-12 max-w-4xl mx-auto text-center text-gray-700 bg-white p-6 rounded-lg shadow">
+                 <h4 class="font-bold text-lg mb-2">Key Takeaways</h4>
+                 <p class="text-sm">Benchmarks are context-dependent. AOT compiled code is often fastest for raw computation. JITs close this gap significantly for long-running apps. Pure interpretation is slowest but offers the fastest development start. Modern systems often use hybrid approaches to get the best of all worlds.</p>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="bg-gray-800 text-white mt-16">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-sm">
+            <p>Interactive Guide to Code Execution Models. Designed to make complex computer science concepts accessible.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            // --- DATA ---
+            const radarData = {
+                labels: ['Runtime Speed', 'Startup Speed', 'Portability', 'Dev Cycle Speed', 'Optimization Potential', 'Memory Efficiency'],
+                datasets: [
+                    {
+                        label: 'Compiler (AOT)',
+                        data: [6, 1, 2, 2, 6, 5],
+                        backgroundColor: 'rgba(30, 132, 127, 0.2)',
+                        borderColor: 'rgba(30, 132, 127, 1)',
+                        pointBackgroundColor: 'rgba(30, 132, 127, 1)',
+                    },
+                    {
+                        label: 'Interpreter',
+                        data: [2, 6, 6, 6, 1, 3],
+                        backgroundColor: 'rgba(224, 122, 95, 0.2)',
+                        borderColor: 'rgba(224, 122, 95, 1)',
+                        pointBackgroundColor: 'rgba(224, 122, 95, 1)',
+                    },
+                    {
+                        label: 'JIT Compiler',
+                        data: [5, 3, 5, 4, 5, 2],
+                        backgroundColor: 'rgba(242, 204, 143, 0.2)',
+                        borderColor: 'rgba(242, 204, 143, 1)',
+                        pointBackgroundColor: 'rgba(242, 204, 143, 1)',
+                    }
+                ]
+            };
+
+            const performanceBarData = {
+                labels: ['Python (CPython)', 'JavaScript (V8)', 'Java (HotSpot)', 'Go', 'C++ (GCC)'],
+                datasets: [{
+                    label: 'Relative slowdown (vs C++)',
+                    data: [29.5, 8.0, 1.4, 1.3, 1.0],
+                    backgroundColor: [
+                        '#8ab0ab', 
+                        '#F2CC8F',
+                        '#E07A5F',
+                        '#3D405B',
+                        '#1E847F',
+                    ],
+                    borderColor: '#ffffff',
+                    borderWidth: 1
+                }]
+            };
+
+            const throughputLineData = {
+                labels: ['Start', 'A few seconds', 'A few minutes', 'Long-running'],
+                datasets: [
+                    {
+                        label: 'Interpreter',
+                        data: [90, 90, 90, 90],
+                        borderColor: '#E07A5F',
+                        backgroundColor: 'transparent',
+                        tension: 0.1
+                    },
+                    {
+                        label: 'Compiler (AOT)',
+                        data: [0, 100, 100, 100],
+                        borderColor: '#1E847F',
+                        backgroundColor: 'transparent',
+                        tension: 0.1
+                    },
+                     {
+                        label: 'JIT Compiler',
+                        data: [0, 60, 95, 98],
+                        borderColor: '#F2CC8F',
+                        backgroundColor: 'transparent',
+                        tension: 0.4
+                    },
+                ]
+            };
+
+            const compilerStagesData = [
+                { name: 'Lexical Analysis', desc: 'The compiler reads the source code and groups characters into "tokens" (keywords, variables, operators). Whitespace and comments are discarded.' },
+                { name: 'Syntax Analysis', desc: 'Tokens are checked against the language\'s grammar rules. The compiler builds an Abstract Syntax Tree (AST) to represent the code\'s structure.' },
+                { name: 'Semantic Analysis', desc: 'The AST is checked for logical correctness. This includes type checking (e.g., you can\'t add a string to an integer) and ensuring variables are declared.' },
+                { name: 'Intermediate Code Gen', desc: 'The AST is translated into a machine-independent Intermediate Representation (IR). This makes optimization easier.' },
+                { name: 'Code Optimization', desc: 'The IR is analyzed and transformed to improve performance. This can include removing unused code or simplifying calculations.' },
+                { name: 'Code Generation', desc: 'The optimized IR is finally translated into platform-specific assembly language.' },
+                { name: 'Linking', desc: 'The compiled code is combined with libraries to create a final executable file that the OS can run.' }
+            ];
+            
+            const caseStudiesData = {
+                c: {
+                    name: 'C (with GCC)',
+                    model: 'Compiler (AOT)',
+                    color: '#1E847F',
+                    icon: '⚙️',
+                    desc: 'C epitomizes the AOT model. GCC compiles source directly to highly efficient, platform-specific machine code, offering maximum performance and low-level control.'
+                },
+                python: {
+                    name: 'Python (with CPython)',
+                    model: 'Interpreter',
+                    color: '#E07A5F',
+                    icon: '🐍',
+                    desc: 'CPython first compiles Python source to bytecode. This bytecode is then executed by the Python Virtual Machine (PVM), prioritizing developer speed and portability.'
+                },
+                java: {
+                    name: 'Java (with JVM)',
+                    model: 'JIT Compiler',
+                    color: '#F2CC8F',
+                    icon: '☕',
+                    desc: 'Java uses a hybrid model. `javac` AOT-compiles source to portable bytecode. The JVM interprets this bytecode and its HotSpot JIT compiler optimizes hot spots to native code at runtime.'
+                },
+                javascript: {
+                    name: 'JavaScript (with V8)',
+                    model: 'JIT Compiler',
+                    color: '#3D405B',
+                    icon: '⚡',
+                    desc: 'Modern JS engines like V8 use sophisticated multi-tiered JIT compilation. Code goes from AST to bytecode (Ignition), then is progressively optimized by different JIT tiers (Sparkplug, Maglev, TurboFan).'
+                }
+            };
+
+
+            // --- CHARTS ---
+
+            new Chart(document.getElementById('comparisonRadarChart'), {
+                type: 'radar',
+                data: radarData,
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(61, 64, 91, 0.2)' },
+                            grid: { color: 'rgba(61, 64, 91, 0.2)' },
+                            pointLabels: { font: { size: 12 } },
+                            ticks: { display: false }
+                        }
+                    },
+                    plugins: { legend: { position: 'top' } }
+                }
+            });
+
+            new Chart(document.getElementById('performanceBarChart'), {
+                type: 'bar',
+                data: performanceBarData,
+                options: {
+                    indexAxis: 'y',
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Slowdown Factor (Logarithmic Scale)', font: { size: 10 } },
+                            type: 'logarithmic',
+                        },
+                        y: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false }, tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed.x !== null) {
+                                    label += context.parsed.x + 'x slower than C++';
+                                }
+                                return label;
+                            }
+                        }
+                    }}
+                }
+            });
+            
+            new Chart(document.getElementById('throughputLineChart'), {
+                type: 'line',
+                data: throughputLineData,
+                 options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 110,
+                            title: { display: true, text: 'Performance (% of Peak)'},
+                            ticks: { callback: value => value + '%' }
+                        },
+                        x: { title: { display: true, text: 'Application Lifetime'} }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: { mode: 'index', intersect: false }
+                    }
+                }
+            });
+
+            // --- DEEP DIVE LOGIC ---
+            const deepDiveTabs = document.querySelectorAll('.deep-dive-tab');
+            const deepDiveContents = document.querySelectorAll('.deep-dive-content');
+
+            deepDiveTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    deepDiveTabs.forEach(t => {
+                        t.classList.remove('text-[#1E847F]', 'border-[#1E847F]');
+                        t.classList.add('text-gray-500', 'border-transparent');
+                    });
+                    tab.classList.add('text-[#1E847F]', 'border-[#1E847F]');
+                    tab.classList.remove('text-gray-500', 'border-transparent');
+                    
+                    const targetId = 'content-' + tab.id.split('-')[1];
+                    deepDiveContents.forEach(content => {
+                        if (content.id === targetId) {
+                            content.classList.remove('hidden');
+                        } else {
+                            content.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+
+            // Compiler stages logic
+            const stagesContainer = document.getElementById('compiler-stages');
+            const stageDetailsContainer = document.getElementById('compiler-stage-details');
+
+            compilerStagesData.forEach((stage, index) => {
+                const stageEl = document.createElement('div');
+                stageEl.className = 'stage-item p-3 rounded-md border border-gray-200';
+                stageEl.textContent = `${index + 1}. ${stage.name}`;
+                stageEl.dataset.index = index;
+                stagesContainer.appendChild(stageEl);
+            });
+
+            const stageItems = document.querySelectorAll('.stage-item');
+            function updateStageDetails(index) {
+                stageItems.forEach(item => item.classList.remove('active'));
+                stageItems[index].classList.add('active');
+
+                const stage = compilerStagesData[index];
+                stageDetailsContainer.innerHTML = `
+                    <h5 class="font-bold text-lg mb-2 text-[#3D405B]">${stage.name}</h5>
+                    <p class="text-gray-700">${stage.desc}</p>
+                `;
+            }
+
+            stagesContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('stage-item')) {
+                    updateStageDetails(e.target.dataset.index);
+                }
+            });
+            updateStageDetails(0);
+
+            // JIT animation logic
+            const jitAnimateBtn = document.getElementById('jit-animate-btn');
+            const jitCodeFlow = document.getElementById('jit-code-flow');
+            const jitPathInterpreter = document.getElementById('jit-path-interpreter');
+            const jitPathNative = document.getElementById('jit-path-native');
+            let jitState = 0; // 0: interpreter, 1: native
+
+            jitAnimateBtn.addEventListener('click', () => {
+                jitAnimateBtn.disabled = true;
+                if (jitState === 0) { // Move to native
+                    jitCodeFlow.style.left = 'calc(100% - 2rem)';
+                    jitPathNative.classList.remove('bg-gray-100', 'text-gray-400');
+                    jitPathNative.classList.add('border-[#1E847F]');
+                    jitPathInterpreter.classList.add('bg-gray-100', 'text-gray-400');
+                    jitState = 1;
+                } else { // Move back to interpreter
+                    jitCodeFlow.style.left = '0';
+                    jitPathInterpreter.classList.remove('bg-gray-100', 'text-gray-400');
+                    jitPathNative.classList.add('bg-gray-100', 'text-gray-400');
+                    jitPathNative.classList.remove('border-[#1E847F]');
+                    jitState = 0;
+                }
+                setTimeout(() => { jitAnimateBtn.disabled = false; }, 1000);
+            });
+
+            // --- CASE STUDIES LOGIC ---
+            const caseStudiesContainer = document.getElementById('case-studies-container');
+            const caseStudyDetailsContainer = document.getElementById('case-study-details');
+            let currentCaseStudy = null;
+
+            Object.keys(caseStudiesData).forEach(key => {
+                const study = caseStudiesData[key];
+                const card = document.createElement('div');
+                card.className = 'case-study-card bg-white p-6 rounded-lg shadow-md cursor-pointer';
+                card.dataset.key = key;
+                card.innerHTML = `
+                    <div class="flex items-center mb-3">
+                        <div class="text-3xl mr-4">${study.icon}</div>
+                        <div>
+                            <h5 class="text-lg font-bold text-[#3D405B]">${study.name}</h5>
+                            <p class="text-xs font-semibold uppercase tracking-wider" style="color:${study.color};">${study.model}</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600">${study.desc}</p>
+                `;
+                caseStudiesContainer.appendChild(card);
+            });
+            
+            caseStudiesContainer.addEventListener('click', (e) => {
+                const card = e.target.closest('.case-study-card');
+                if (card) {
+                    const key = card.dataset.key;
+                    if(currentCaseStudy === key) {
+                         caseStudyDetailsContainer.classList.add('hidden');
+                         currentCaseStudy = null;
+                         card.style.transform = '';
+                         card.style.boxShadow = '';
+                         return;
+                    }
+
+                    document.querySelectorAll('.case-study-card').forEach(c => {
+                        c.style.transform = '';
+                        c.style.boxShadow = '';
+                    });
+                    card.style.transform = 'translateY(-5px)';
+                    card.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+
+                    const study = caseStudiesData[key];
+                    currentCaseStudy = key;
+                    caseStudyDetailsContainer.style.borderColor = study.color;
+                    caseStudyDetailsContainer.innerHTML = `
+                        <div class="border-l-4 p-4" style="border-color: ${study.color};">
+                             <h4 class="text-2xl font-bold mb-2">${study.name} - The Internals</h4>
+                             <p class="font-semibold mb-4" style="color: ${study.color};">${study.model}</p>
+                             <div id="case-study-content" class="text-gray-700 space-y-2"></div>
+                        </div>
+                    `;
+
+                    let contentHtml = '';
+                    switch(key) {
+                        case 'c':
+                            contentHtml = `<p>GCC performs a full Ahead-of-Time compilation. It processes code through stages like preprocessing, compilation to assembly, assembly to object code, and finally linking with libraries to create a self-contained native executable.</p>`;
+                            break;
+                        case 'python':
+                             contentHtml = `<p>The CPython interpreter first compiles `.py` source into `.pyc` bytecode files. This bytecode is then executed step-by-step by the Python Virtual Machine (PVM), a stack-based execution engine written in C. The Global Interpreter Lock (GIL) is a key feature, simplifying memory management but limiting thread parallelism.</p>`;
+                             break;
+                        case 'java':
+                            contentHtml = `<p>Java's strength comes from its JVM. HotSpot uses tiered compilation: code starts in the interpreter, moves to the C1 (client) JIT for quick optimization, and finally to the C2 (server) JIT for aggressive, long-term performance optimization on the hottest code paths, guided by runtime profiling.</p>`;
+                            break;
+                        case 'javascript':
+                            contentHtml = `<p>V8 is a JIT powerhouse. It parses JS, then its Ignition interpreter creates and executes bytecode while gathering feedback. Hot functions are quickly compiled by Sparkplug (baseline JIT) or more thoroughly by Maglev (mid-tier) and finally TurboFan (optimizing JIT), which uses profiling data for speculative optimizations. V8 also uses "Hidden Classes" to optimize dynamic object property access.</p>`;
+                            break;
+                    }
+                    document.getElementById('case-study-content').innerHTML = contentHtml;
+                    caseStudyDetailsContainer.classList.remove('hidden');
+                }
+            });
+
+
+            // --- NAVIGATION ---
+            const sections = document.querySelectorAll('section[id]');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const mobileNav = document.getElementById('mobile-nav');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.getAttribute('id');
+                        navLinks.forEach(link => {
+                            link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+                        });
+                         if(mobileNav.value !== `#${id}`) {
+                            mobileNav.value = `#${id}`;
+                        }
+                    }
+                });
+            }, { rootMargin: '-50% 0px -50% 0px', threshold: 0 });
+
+            sections.forEach(section => observer.observe(section));
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.querySelector(link.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+            
+             mobileNav.addEventListener('change', (e) => {
+                document.querySelector(e.target.value).scrollIntoView({ behavior: 'smooth' });
+            });
+
+        });
+    </script>
+</body>
+</html>

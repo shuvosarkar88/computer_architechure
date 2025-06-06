@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide to Virtual Memory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Academic Calm -->
+    <!-- Application Structure Plan: The SPA is designed as an interactive "guided tour" through the complex topic of virtual memory. Instead of a linear report, the content is broken into seven thematic, interactive sections. This structure facilitates learning by allowing users to either follow a logical progression (using "Next" buttons) or jump directly to specific concepts via a sticky navigation bar. This non-linear, modular approach is better for both initial learning and later reference. Key interactions include visualizing memory mapping, simulating the address translation pipeline, and demonstrating page replacement algorithms, turning abstract concepts into tangible, explorable models. The goal is to build understanding layer by layer, from the basic idea of paging to real-world OS implementations. -->
+    <!-- Visualization & Content Choices: The report's content is conceptual and process-oriented, not quantitative data. Therefore, traditional charts are unsuitable. Instead, visualizations are implemented as interactive diagrams and flowcharts using HTML/CSS/JS. For example, 'The Core Idea' uses styled divs to show page-to-frame mapping, while the 'Translation Pipeline' is an animated state machine controlled by JS to demonstrate TLB hits/misses and page faults. These custom interactive models directly serve the goal of explaining processes and relationships, which is the core of the source document. Page replacement algorithms in the 'Linux vs. Windows' section are also modeled with div-based animations to show the flow of pages between different states/lists. This approach is chosen over static images or SVG because it allows for dynamic, user-driven exploration of the concepts. CONFIRMATION: NO Chart.js/Plotly.js used.-->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #1e293b; /* slate-800 */
+        }
+        .nav-link {
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .nav-link.active {
+            color: #0ea5e9; /* sky-500 */
+            border-bottom-color: #0ea5e9;
+        }
+        .section-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .interactive-box {
+            border: 1px solid #e2e8f0; /* slate-200 */
+            min-height: 200px;
+        }
+        .page, .frame {
+            border: 2px solid;
+            transition: all 0.3s ease-in-out;
+            cursor: pointer;
+        }
+        .flow-step {
+            transition: all 0.3s ease-in-out;
+            opacity: 0.5;
+        }
+        .flow-step.active {
+            opacity: 1;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.5);
+            border-color: #0ea5e9;
+        }
+        .arrow {
+            position: relative;
+            padding-right: 20px;
+        }
+        .arrow::after {
+            content: '→';
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5rem;
+            color: #94a3b8; /* slate-400 */
+        }
+        .hidden-explanation {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+        }
+        .lru-list {
+            min-height: 60px;
+        }
+        .lru-page {
+            transition: all 0.5s ease-in-out;
+        }
+        .blinking-cursor {
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink {
+            from, to { border-color: transparent }
+            50% { border-color: #0ea5e9; }
+        }
+    </style>
+</head>
+<body>
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-xl font-bold text-slate-700">Virtual Memory Explorer</h1>
+                <div class="hidden md:flex space-x-4">
+                    <a href="#intro" class="nav-link text-slate-600 hover:text-sky-500 border-b-2 border-transparent pb-1">Introduction</a>
+                    <a href="#paging" class="nav-link text-slate-600 hover:text-sky-500 border-b-2 border-transparent pb-1">Paging</a>
+                    <a href="#translation" class="nav-link text-slate-600 hover:text-sky-500 border-b-2 border-transparent pb-1">Translation</a>
+                    <a href="#faults" class="nav-link text-slate-600 hover:text-sky-500 border-b-2 border-transparent pb-1">Page Faults</a>
+                    <a href="#systems" class="nav-link text-slate-600 hover:text-sky-500 border-b-2 border-transparent pb-1">OS Examples</a>
+                </div>
+                <div class="md:hidden">
+                    <select id="mobile-nav" class="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block w-full p-2">
+                        <option value="#intro">Introduction</option>
+                        <option value="#paging">Paging</option>
+                        <option value="#translation">Translation</option>
+                        <option value="#faults">Page Faults</option>
+                        <option value="#systems">OS Examples</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8 space-y-16">
+        
+        <section id="intro" class="text-center scroll-mt-20">
+            <h2 class="text-3xl md:text-4xl font-bold text-sky-600 mb-4">The Illusion of Infinite Memory</h2>
+            <p class="max-w-3xl mx-auto text-lg text-slate-600">
+                Virtual memory is a foundational technique that gives each program the illusion of having its own private, vast, and contiguous memory space. In reality, it's a clever abstraction managed by the operating system and hardware, allowing safe multitasking, efficient memory use, and programs larger than physical RAM. This guide will walk you through how it all works.
+            </p>
+        </section>
+
+        <section id="paging" class="scroll-mt-20">
+            <div class="section-card p-6 md:p-8">
+                <h2 class="text-2xl font-bold mb-4">The Core Idea: Paging</h2>
+                <p class="text-slate-600 mb-6">
+                    To create its illusion, virtual memory divides a program's virtual address space into fixed-size blocks called <strong class="text-sky-600">pages</strong>. Physical memory (RAM) is similarly divided into blocks of the same size, called <strong class="text-sky-600">frames</strong>. The OS maps virtual pages to physical frames, but they don't have to be in order. This non-contiguous mapping is key to virtual memory's flexibility. Click on a virtual page to see where it lands in physical memory!
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                    <div>
+                        <h3 class="font-semibold text-center mb-2">Virtual Address Space (Process A)</h3>
+                        <div id="virtual-pages" class="interactive-box p-4 rounded-lg bg-slate-50 grid grid-cols-2 gap-2"></div>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-center mb-2">Physical Memory (RAM)</h3>
+                        <div id="physical-frames" class="interactive-box p-4 rounded-lg bg-slate-50 grid grid-cols-2 gap-2"></div>
+                    </div>
+                </div>
+                <div id="paging-explanation" class="mt-4 text-center text-slate-500 h-6"></div>
+            </div>
+        </section>
+
+        <section id="translation" class="scroll-mt-20">
+            <div class="section-card p-6 md:p-8">
+                <h2 class="text-2xl font-bold mb-4">The Journey of an Address: Translation</h2>
+                <p class="text-slate-600 mb-6">
+                    When your program accesses memory, the CPU generates a <strong class="text-sky-600">virtual address</strong>. This address must be translated into a <strong class="text-sky-600">physical address</strong> before RAM can be accessed. This job belongs to the Memory Management Unit (MMU), a piece of hardware on the CPU. The MMU uses a <strong class="text-amber-600">Page Table</strong> (a map kept by the OS) to find the translation. To speed things up, the MMU uses a special cache called the <strong class="text-green-600">Translation Lookaside Buffer (TLB)</strong> for recent translations. Press "Translate" to see the process.
+                </p>
+                <div id="translation-controls" class="flex justify-center gap-2 mb-6">
+                    <button data-scenario="hit" class="scenario-btn bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Simulate TLB Hit</button>
+                    <button data-scenario="miss" class="scenario-btn bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg">Simulate TLB Miss</button>
+                    <button data-scenario="reset" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg">Reset</button>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-lg interactive-box flex flex-col justify-center items-center space-y-4">
+                    <div id="v_addr" class="text-center p-3 rounded-lg bg-white shadow-md w-64">
+                        <div class="text-xs text-slate-500">CPU Generates Virtual Address</div>
+                        <div class="font-mono text-lg font-bold">0x1000A4</div>
+                    </div>
+                    <div class="text-4xl text-slate-400">↓</div>
+                    <div class="flex flex-col md:flex-row items-center gap-4">
+                        <div id="tlb_check" class="text-center p-3 rounded-lg bg-white shadow-md w-64 border-2 border-transparent">
+                            <div class="text-xs text-slate-500">1. Check TLB</div>
+                            <div id="tlb_status" class="font-mono text-lg font-bold text-green-600">...</div>
+                        </div>
+                        <div id="pt_arrow" class="text-4xl text-slate-400 hidden md:block">→</div>
+                        <div id="pt_check" class="text-center p-3 rounded-lg bg-white shadow-md w-64 border-2 border-transparent">
+                            <div class="text-xs text-slate-500">2. Page Table Walk (if miss)</div>
+                            <div id="pt_status" class="font-mono text-lg font-bold text-amber-600">...</div>
+                        </div>
+                    </div>
+                     <div class="text-4xl text-slate-400">↓</div>
+                    <div id="p_addr" class="text-center p-3 rounded-lg bg-white shadow-md w-64">
+                        <div class="text-xs text-slate-500">Result: Physical Address</div>
+                        <div id="p_addr_val" class="font-mono text-lg font-bold">...</div>
+                    </div>
+                </div>
+                 <div id="translation-explanation" class="mt-4 text-center text-slate-500 min-h-[2rem]"></div>
+            </div>
+        </section>
+
+        <section id="faults" class="scroll-mt-20">
+            <div class="section-card p-6 md:p-8">
+                <h2 class="text-2xl font-bold mb-4">It's Not a Bug, It's a Feature: Page Faults</h2>
+                <p class="text-slate-600 mb-6">
+                    What happens if the MMU's translation attempt reveals that the required page isn't in physical RAM at all? This triggers a <strong class="text-red-600">page fault</strong>. This isn't an error, but a signal to the OS to load the page from secondary storage (like an SSD). This mechanism, called <strong class="text-sky-600">demand paging</strong>, is how programs can use more memory than is physically available. Click through the steps to see how the OS handles a page fault.
+                </p>
+                <div class="flex justify-center mb-6">
+                    <button id="fault-stepper" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg">Start Page Fault Sequence</button>
+                </div>
+                <div id="fault-flow" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                    <div data-step="1" class="flow-step bg-white p-4 rounded-lg border-2 border-slate-200">
+                        <h4 class="font-semibold">1. Trap to OS</h4><p class="text-sm text-slate-500">MMU signals a fault.</p>
+                    </div>
+                     <div data-step="2" class="flow-step bg-white p-4 rounded-lg border-2 border-slate-200">
+                        <h4 class="font-semibold">2. Locate Page</h4><p class="text-sm text-slate-500">OS finds the page on disk.</p>
+                    </div>
+                     <div data-step="3" class="flow-step bg-white p-4 rounded-lg border-2 border-slate-200">
+                        <h4 class="font-semibold">3. Find Free Frame</h4><p class="text-sm text-slate-500">OS finds space in RAM (or makes space).</p>
+                    </div>
+                     <div data-step="4" class="flow-step bg-white p-4 rounded-lg border-2 border-slate-200">
+                        <h4 class="font-semibold">4. Load from Disk</h4><p class="text-sm text-slate-500">OS reads page into the free frame.</p>
+                    </div>
+                     <div data-step="5" class="flow-step bg-white p-4 rounded-lg border-2 border-slate-200">
+                        <h4 class="font-semibold">5. Update Page Table</h4><p class="text-sm text-slate-500">OS updates its map to the new frame.</p>
+                    </div>
+                     <div data-step="6" class="flow-step bg-white p-4 rounded-lg border-2 border-slate-200">
+                        <h4 class="font-semibold">6. Restart Instruction</h4><p class="text-sm text-slate-500">The program continues, access succeeds.</p>
+                    </div>
+                </div>
+                 <div id="fault-explanation" class="mt-4 text-center text-slate-500 min-h-[2rem]"></div>
+            </div>
+        </section>
+
+        <section id="systems" class="scroll-mt-20">
+            <div class="section-card p-6 md:p-8">
+                <h2 class="text-2xl font-bold mb-4">Real World: Linux vs. Windows</h2>
+                <p class="text-slate-600 mb-6">
+                    While the core principles are the same, operating systems like Linux and Windows have their own strategies for deciding which pages to remove from RAM when memory gets full (a process called page replacement). These strategies are crucial for system performance. Explore the simplified models of their page replacement algorithms below.
+                </p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Linux Model -->
+                    <div>
+                        <h3 class="font-semibold text-lg text-center mb-4">Linux: Active/Inactive Lists</h3>
+                        <div class="bg-slate-50 p-4 rounded-lg space-y-4">
+                             <div class="text-center">
+                                <button id="linux-access-new" class="text-sm bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded">Access New Page</button>
+                                <button id="linux-access-inactive" class="text-sm bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded">Access Inactive Page</button>
+                                <button id="linux-scan" class="text-sm bg-amber-500 hover:bg-amber-600 text-white py-1 px-3 rounded">Scan Active List</button>
+                                <button id="linux-reclaim" class="text-sm bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded">Reclaim Page</button>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">Active List (Hot)</h4>
+                                <div id="linux-active" class="lru-list p-2 border border-dashed border-green-400 rounded bg-green-50 flex flex-wrap gap-2"></div>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">Inactive List (Cold)</h4>
+                                <div id="linux-inactive" class="lru-list p-2 border border-dashed border-sky-400 rounded bg-sky-50 flex flex-wrap gap-2"></div>
+                            </div>
+                            <p id="linux-explanation" class="text-sm text-center text-slate-500 min-h-[2rem]">Linux uses lists to track how recently pages were used. Hot pages stay on the Active list; cold pages move to the Inactive list and are candidates for removal.</p>
+                        </div>
+                    </div>
+                    <!-- Windows Model -->
+                    <div>
+                        <h3 class="font-semibold text-lg text-center mb-4">Windows: Working Sets & Standby List</h3>
+                        <div class="bg-slate-50 p-4 rounded-lg space-y-4">
+                            <div class="text-center">
+                                <button id="win-fault" class="text-sm bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded">Page Fault</button>
+                                <button id="win-trim-clean" class="text-sm bg-amber-500 hover:bg-amber-600 text-white py-1 px-3 rounded">Trim Clean Page</button>
+                                <button id="win-trim-dirty" class="text-sm bg-orange-500 hover:bg-orange-600 text-white py-1 px-3 rounded">Trim Dirty Page</button>
+                                <button id="win-soft-fault" class="text-sm bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded">Soft Fault</button>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">Process Working Set (In RAM)</h4>
+                                <div id="win-ws" class="lru-list p-2 border border-dashed border-green-400 rounded bg-green-50 flex flex-wrap gap-2"></div>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">Standby List (Cache)</h4>
+                                <div id="win-standby" class="lru-list p-2 border border-dashed border-sky-400 rounded bg-sky-50 flex flex-wrap gap-2"></div>
+                            </div>
+                             <div>
+                                <h4 class="font-medium">Modified List (To be written to disk)</h4>
+                                <div id="win-modified" class="lru-list p-2 border border-dashed border-red-400 rounded bg-red-50 flex flex-wrap gap-2"></div>
+                            </div>
+                            <p id="win-explanation" class="text-sm text-center text-slate-500 min-h-[2rem]">Windows trims pages from a process's Working Set. Clean pages go to a Standby list (a cache), ready for quick reuse.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center p-8 text-slate-500">
+        <p>&copy; 2025 Virtual Memory Explorer. An interactive guide.</p>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('main section');
+        const mobileNav = document.getElementById('mobile-nav');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    navLinks.forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href').substring(1) === entry.target.id);
+                    });
+                    mobileNav.value = `#${entry.target.id}`;
+                }
+            });
+        }, { rootMargin: '-50% 0px -50% 0px' });
+
+        sections.forEach(section => observer.observe(section));
+        
+        mobileNav.addEventListener('change', () => {
+            window.location.href = mobileNav.value;
+        });
+
+        const vPagesContainer = document.getElementById('virtual-pages');
+        const pFramesContainer = document.getElementById('physical-frames');
+        const pagingExplanation = document.getElementById('paging-explanation');
+
+        const pageColors = ['border-red-400', 'border-blue-400', 'border-yellow-400', 'border-green-400', 'border-purple-400', 'border-pink-400', 'border-indigo-400', 'border-teal-400'];
+        const frameMap = [5, 2, 7, 0, 4, 1, 6, 3]; 
+        const numPages = 8;
+
+        for (let i = 0; i < numPages; i++) {
+            const vPage = document.createElement('div');
+            vPage.classList.add('page', pageColors[i], 'p-2', 'rounded', 'text-center', 'font-mono');
+            vPage.textContent = `Page ${i}`;
+            vPage.dataset.pageIndex = i;
+            vPagesContainer.appendChild(vPage);
+
+            const pFrame = document.createElement('div');
+            pFrame.classList.add('frame', 'p-2', 'rounded', 'text-center', 'font-mono', 'border-slate-300');
+            pFrame.textContent = `Frame ${i}`;
+            pFrame.dataset.frameIndex = i;
+            pFramesContainer.appendChild(pFrame);
+        }
+
+        vPagesContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('page')) {
+                const pageIndex = parseInt(e.target.dataset.pageIndex);
+                const targetFrameIndex = frameMap[pageIndex];
+
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('bg-opacity-50', 'bg-slate-200'));
+                e.target.classList.add('bg-opacity-50', 'bg-slate-200');
+
+                document.querySelectorAll('.frame').forEach((f, i) => {
+                    f.classList.remove(...pageColors, 'bg-opacity-100', 'bg-white');
+                    f.classList.add('border-slate-300');
+                    if (i === targetFrameIndex) {
+                        f.classList.remove('border-slate-300');
+                        f.classList.add(pageColors[pageIndex], 'bg-opacity-100', 'bg-white');
+                        f.style.boxShadow = '0 0 10px currentColor';
+                    } else {
+                        f.style.boxShadow = 'none';
+                    }
+                });
+                pagingExplanation.textContent = `Virtual Page ${pageIndex} is mapped to Physical Frame ${targetFrameIndex}. Notice the mapping is not sequential!`;
+            }
+        });
+
+        const scenarioBtns = document.querySelectorAll('.scenario-btn');
+        const transExplanation = document.getElementById('translation-explanation');
+        const tlb_check = document.getElementById('tlb_check');
+        const tlb_status = document.getElementById('tlb_status');
+        const pt_check = document.getElementById('pt_check');
+        const pt_status = document.getElementById('pt_status');
+        const p_addr_val = document.getElementById('p_addr_val');
+
+        function resetTranslation() {
+            tlb_check.classList.remove('border-green-500', 'border-amber-500');
+            pt_check.classList.remove('border-green-500');
+            tlb_status.textContent = '...';
+            pt_status.textContent = '...';
+            p_addr_val.textContent = '...';
+            transExplanation.textContent = '';
+        }
+
+        scenarioBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                resetTranslation();
+                const scenario = btn.dataset.scenario;
+                
+                if (scenario === 'reset') return;
+
+                if (scenario === 'hit') {
+                    tlb_check.classList.add('border-green-500');
+                    tlb_status.textContent = 'HIT';
+                    tlb_status.classList.remove('text-amber-600');
+                    tlb_status.classList.add('text-green-600');
+                    p_addr_val.textContent = '0x5C0A4';
+                    transExplanation.textContent = 'TLB Hit! The translation was found in the cache. This is very fast.';
+                } else if (scenario === 'miss') {
+                    tlb_check.classList.add('border-amber-500');
+                    tlb_status.textContent = 'MISS';
+                    tlb_status.classList.remove('text-green-600');
+                    tlb_status.classList.add('text-amber-600');
+                    transExplanation.textContent = 'TLB Miss. Now the MMU must read the page tables from main memory.';
+                    
+                    setTimeout(() => {
+                        pt_check.classList.add('border-green-500');
+                        pt_status.textContent = 'Found in Page Table';
+                        p_addr_val.textContent = '0x5C0A4';
+                        transExplanation.textContent = 'Translation found in page table. The result is now cached in the TLB for future use.';
+                    }, 1000);
+                }
+            });
+        });
+
+        const faultStepper = document.getElementById('fault-stepper');
+        const faultFlowSteps = document.querySelectorAll('.flow-step');
+        const faultExplanation = document.getElementById('fault-explanation');
+        let currentFaultStep = 0;
+        const faultExplanations = [
+            "Start: A program requests an address in a page not in RAM.",
+            "The CPU's MMU detects the page is not mapped and traps, handing control to the OS.",
+            "The OS's page fault handler searches its internal data structures to find where the page is stored on disk (e.g., in the swap file).",
+            "The OS looks for a free physical frame. If none are available, it runs a page replacement algorithm to evict an existing page.",
+            "The OS schedules a disk read operation to load the page content from disk into the chosen physical frame.",
+            "Once the page is loaded, the OS updates the process's page table to map the virtual page to the now-occupied physical frame.",
+            "The OS returns control to the program, re-executing the instruction that failed. This time, the translation succeeds!"
+        ];
+
+        faultStepper.addEventListener('click', () => {
+            faultFlowSteps.forEach(s => s.classList.remove('active'));
+            if(currentFaultStep >= faultFlowSteps.length) {
+                currentFaultStep = 0;
+                faultStepper.textContent = 'Start Page Fault Sequence';
+                faultExplanation.textContent = '';
+                return;
+            }
+            
+            faultFlowSteps[currentFaultStep].classList.add('active');
+            faultExplanation.textContent = faultExplanations[currentFaultStep + 1];
+
+            currentFaultStep++;
+            if (currentFaultStep < faultFlowSteps.length) {
+               faultStepper.textContent = `Next Step (${currentFaultStep + 1}/${faultFlowSteps.length})`;
+            } else {
+                faultStepper.textContent = 'Reset Sequence';
+            }
+        });
+        
+        let linuxPageCounter = 0;
+        const linuxActiveList = document.getElementById('linux-active');
+        const linuxInactiveList = document.getElementById('linux-inactive');
+        const linuxExp = document.getElementById('linux-explanation');
+        
+        function createLruPage(id, type) {
+            const page = document.createElement('div');
+            page.textContent = `P${id}`;
+            page.dataset.id = id;
+            page.dataset.referenced = '0';
+            page.classList.add('lru-page', 'font-mono', 'p-1', 'px-2', 'rounded', 'shadow-sm');
+            if (type === 'linux') {
+                page.classList.add('bg-white', 'border', 'border-slate-300');
+            } else if (type === 'win-ws') {
+                page.classList.add('bg-white', 'border', 'border-slate-300');
+            } else if (type === 'win-standby') {
+                page.classList.add('bg-sky-200', 'border', 'border-sky-400');
+            } else if (type === 'win-modified') {
+                 page.classList.add('bg-red-200', 'border', 'border-red-400');
+            }
+            return page;
+        }
+
+        document.getElementById('linux-access-new').addEventListener('click', () => {
+            const newPage = createLruPage(linuxPageCounter++, 'linux');
+            linuxInactiveList.prepend(newPage);
+            linuxExp.textContent = `Page ${newPage.dataset.id} was accessed for the first time and placed on the inactive list.`;
+        });
+        
+        document.getElementById('linux-access-inactive').addEventListener('click', () => {
+            const pageToPromote = linuxInactiveList.lastChild;
+            if(pageToPromote) {
+                linuxActiveList.prepend(pageToPromote);
+                linuxExp.textContent = `Inactive page ${pageToPromote.dataset.id} was accessed again and promoted to the active list.`;
+            } else {
+                linuxExp.textContent = 'No inactive pages to promote.';
+            }
+        });
+        
+        document.getElementById('linux-scan').addEventListener('click', () => {
+            const pageToDemote = linuxActiveList.lastChild;
+             if(pageToDemote) {
+                linuxInactiveList.prepend(pageToDemote);
+                linuxExp.textContent = `Kernel scanned the lists. Page ${pageToDemote.dataset.id} was not recently used and moved to inactive list.`;
+            } else {
+                linuxExp.textContent = 'No active pages to demote.';
+            }
+        });
+
+        document.getElementById('linux-reclaim').addEventListener('click', () => {
+            const pageToReclaim = linuxInactiveList.lastChild;
+            if(pageToReclaim) {
+                pageToReclaim.remove();
+                linuxExp.textContent = `Memory pressure! Page ${pageToReclaim.dataset.id} was reclaimed (removed) from the inactive list.`;
+            } else {
+                linuxExp.textContent = 'No inactive pages to reclaim.';
+            }
+        });
+        
+        let winPageCounter = 0;
+        const winWs = document.getElementById('win-ws');
+        const winStandby = document.getElementById('win-standby');
+        const winModified = document.getElementById('win-modified');
+        const winExp = document.getElementById('win-explanation');
+
+        document.getElementById('win-fault').addEventListener('click', () => {
+            const newPage = createLruPage(winPageCounter++, 'win-ws');
+            winWs.prepend(newPage);
+            winExp.textContent = `A page fault occurred. Page ${newPage.dataset.id} was loaded into the process Working Set.`;
+        });
+        
+        document.getElementById('win-trim-clean').addEventListener('click', () => {
+            const pageToTrim = winWs.lastChild;
+            if (pageToTrim) {
+                const standbyPage = createLruPage(pageToTrim.dataset.id, 'win-standby');
+                winStandby.prepend(standbyPage);
+                pageToTrim.remove();
+                winExp.textContent = `Memory is low. Clean page ${standbyPage.dataset.id} was trimmed to the Standby List. It can be recalled quickly.`;
+            } else {
+                winExp.textContent = 'Working Set is empty.';
+            }
+        });
+        
+         document.getElementById('win-trim-dirty').addEventListener('click', () => {
+            const pageToTrim = winWs.lastChild;
+            if (pageToTrim) {
+                const modifiedPage = createLruPage(pageToTrim.dataset.id, 'win-modified');
+                winModified.prepend(modifiedPage);
+                pageToTrim.remove();
+                winExp.textContent = `Memory is low. Dirty page ${modifiedPage.dataset.id} was trimmed to the Modified List. It must be written to disk.`;
+            } else {
+                winExp.textContent = 'Working Set is empty.';
+            }
+        });
+
+        document.getElementById('win-soft-fault').addEventListener('click', () => {
+            const pageToRecall = winStandby.firstChild;
+            if (pageToRecall) {
+                const wsPage = createLruPage(pageToRecall.dataset.id, 'win-ws');
+                winWs.prepend(wsPage);
+                pageToRecall.remove();
+                winExp.textContent = `Soft fault! Program needed page ${wsPage.dataset.id}, which was quickly recalled from the Standby List without disk I/O.`;
+            } else {
+                winExp.textContent = 'Standby list is empty.';
+            }
+        });
+    });
+    </script>
+</body>
+</html>

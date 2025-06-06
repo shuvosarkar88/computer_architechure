@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Compilation Process: An Interactive Journey</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Slate & Blue -->
+    <!-- Application Structure Plan: The application is structured as an interactive process flow, centered around a visual "pipeline" diagram representing the stages of compilation. This design choice moves away from a linear document, allowing users to non-linearly explore each phase. Clicking a stage in the pipeline dynamically loads its detailed content into a central view. This approach enhances usability by breaking down a complex topic into digestible, self-contained modules, while the persistent pipeline graphic provides constant context and reinforces the overall process. A top navigation bar offers secondary, direct access to key sections, catering to different user navigation preferences. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: The entire compilation process. -> Goal: Organize/Change. -> Viz/Method: Interactive HTML/CSS pipeline diagram. -> Interaction: Click on a stage to load its content. -> Justification: Provides a clear, high-level map of the process, making it intuitive to navigate. -> Library: Tailwind/JS.
+        - Report Info: Lexical Analysis (code to tokens). -> Goal: Inform. -> Viz/Method: Interactive code block. -> Interaction: A "Tokenize" button that reveals the token stream for a sample code snippet. -> Justification: Actively demonstrates the transformation, which is more effective than a static text description. -> Library: JS.
+        - Report Info: Syntax Analysis (AST). -> Goal: Organize. -> Viz/Method: HTML/CSS-based tree diagram. -> Interaction: Hovering over nodes can be linked to code snippets in the future. -> Justification: Visually represents the abstract hierarchical structure of code, which is a core concept. -> Library: Tailwind/JS.
+        - Report Info: Optimization techniques. -> Goal: Compare. -> Viz/Method: Side-by-side "before" and "after" code blocks. -> Interaction: Buttons to switch between different optimization examples. -> Justification: Directly illustrates the effect of optimizations for clear comparison. -> Library: JS.
+        - Report Info: GCC step-by-step example. -> Goal: Change. -> Viz/Method: Interactive terminal simulation. -> Interaction: User clicks through commands (`gcc -E`, `gcc -S`, etc.) to see the resulting output at each stage. -> Justification: Simulates the real-world process, providing a hands-on learning experience. -> Library: JS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'Roboto Mono', monospace; }
+        .pipeline-item::after {
+            content: '→';
+            position: absolute;
+            right: -2.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2rem;
+            color: #94a3b8;
+        }
+        .pipeline-grid > .pipeline-item:last-child::after { content: ''; }
+        @media (max-width: 1023px) {
+            .pipeline-item::after {
+                content: '↓';
+                right: 50%;
+                top: auto;
+                bottom: -2.5rem;
+                transform: translateX(50%);
+            }
+        }
+        .ast-node {
+            position: relative;
+            padding: 0.25rem 0.5rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.25rem;
+            display: inline-block;
+            margin: 1.5rem 0.5rem 0 0.5rem;
+        }
+        .ast-node::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 1px solid #94a3b8;
+            width: 0;
+            height: 1.5rem;
+        }
+        .ast > .ast-node::before { display: none; }
+        .ast-children {
+            display: flex;
+            justify-content: center;
+            position: relative;
+        }
+        .ast-children::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            border-top: 1px solid #94a3b8;
+            height: 0;
+        }
+        .ast-children > .ast-node:first-child:before { left: 50%; border-left: 1px solid #94a3b8; }
+        .ast-children > .ast-node:last-child:before { left: 0; right: 50%; border-right: none; }
+        .ast-children > .ast-node:only-child ~ .ast-children::before { display: none; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .nav-link.active {
+            background-color: #2563eb;
+            color: white;
+        }
+        .pipeline-item.active {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+        }
+        .terminal-output {
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="app" class="min-h-screen">
+        <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-40 border-b border-slate-200">
+            <nav class="container mx-auto px-4 lg:px-6">
+                <div class="flex items-center justify-between h-16">
+                    <h1 class="text-xl md:text-2xl font-bold text-slate-900">From Source to Execution</h1>
+                    <div class="hidden md:flex items-center space-x-2">
+                        <a href="#introduction" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200 transition-colors">Introduction</a>
+                        <a href="#pipeline" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200 transition-colors">The Process</a>
+                        <a href="#architecture" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200 transition-colors">Architecture</a>
+                        <a href="#tools" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200 transition-colors">Tools</a>
+                        <a href="#example" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200 transition-colors">Example</a>
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <main class="container mx-auto p-4 md:p-8">
+            <!-- Introduction Section -->
+            <section id="introduction" class="content-section active">
+                <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
+                    <h2 class="text-2xl font-bold mb-4 text-slate-900">The Alchemist's Craft: Turning Code into Execution</h2>
+                    <p class="text-slate-600 leading-relaxed">The journey of a computer program from human-readable source code to executable machine instructions is a complex and fascinating process. At the heart of this transformation lies the compiler, a sophisticated piece of software that acts as a bridge between the abstract world of programming languages and the concrete reality of computer hardware. This interactive guide will walk you through each step of that journey. Use the visual pipeline below or the top navigation bar to explore the phases of compilation.</p>
+                </div>
+            </section>
+
+            <!-- The Main Pipeline Visualization -->
+            <section id="pipeline">
+                <h2 class="text-3xl font-bold text-center mb-4 text-slate-900">The Compilation Pipeline</h2>
+                <p class="text-center text-slate-500 mb-12 max-w-3xl mx-auto">This is a simplified model of the compilation process. Each stage performs a specific transformation on the code, preparing it for the next step. Click on any stage to dive deeper into what happens under the hood.</p>
+                <div class="pipeline-grid grid grid-cols-1 lg:grid-cols-7 gap-y-16 gap-x-20 items-start justify-center mb-12">
+                    <div id="nav-lexical-analysis" data-section="lexical-analysis" class="pipeline-item relative text-center p-4 bg-white rounded-lg shadow-md border-2 border-transparent hover:border-blue-500 cursor-pointer transition-all duration-300">
+                        <div class="text-5xl mb-2">📜</div>
+                        <h3 class="font-semibold">Lexical Analysis</h3>
+                    </div>
+                    <div id="nav-syntax-analysis" data-section="syntax-analysis" class="pipeline-item relative text-center p-4 bg-white rounded-lg shadow-md border-2 border-transparent hover:border-blue-500 cursor-pointer transition-all duration-300">
+                        <div class="text-5xl mb-2">🌳</div>
+                        <h3 class="font-semibold">Syntax Analysis</h3>
+                    </div>
+                    <div id="nav-semantic-analysis" data-section="semantic-analysis" class="pipeline-item relative text-center p-4 bg-white rounded-lg shadow-md border-2 border-transparent hover:border-blue-500 cursor-pointer transition-all duration-300">
+                        <div class="text-5xl mb-2">💡</div>
+                        <h3 class="font-semibold">Semantic Analysis</h3>
+                    </div>
+                    <div id="nav-ir-generation" data-section="ir-generation" class="pipeline-item relative text-center p-4 bg-white rounded-lg shadow-md border-2 border-transparent hover:border-blue-500 cursor-pointer transition-all duration-300">
+                         <div class="text-5xl mb-2">🌉</div>
+                        <h3 class="font-semibold">IR Generation</h3>
+                    </div>
+                    <div id="nav-optimization" data-section="optimization" class="pipeline-item relative text-center p-4 bg-white rounded-lg shadow-md border-2 border-transparent hover:border-blue-500 cursor-pointer transition-all duration-300">
+                         <div class="text-5xl mb-2">✨</div>
+                        <h3 class="font-semibold">Optimization</h3>
+                    </div>
+                    <div id="nav-code-generation" data-section="code-generation" class="pipeline-item relative text-center p-4 bg-white rounded-lg shadow-md border-2 border-transparent hover:border-blue-500 cursor-pointer transition-all duration-300">
+                         <div class="text-5xl mb-2">⚙️</div>
+                        <h3 class="font-semibold">Code Generation</h3>
+                    </div>
+                    <div id="nav-linking" data-section="linking" class="pipeline-item relative text-center p-4 bg-white rounded-lg shadow-md border-2 border-transparent hover:border-blue-500 cursor-pointer transition-all duration-300">
+                         <div class="text-5xl mb-2">🔗</div>
+                        <h3 class="font-semibold">Linking</h3>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dynamic Content Area -->
+            <div id="content-display" class="bg-white p-6 md:p-8 rounded-lg shadow-lg min-h-[300px]">
+                <section id="lexical-analysis" class="content-section">
+                    <h2 class="text-2xl font-bold mb-2">Lexical Analysis: From Characters to Tokens</h2>
+                    <p class="text-slate-600 mb-6">This is the first phase, where the compiler reads your source code as a stream of raw characters and breaks it down into meaningful units called "tokens". Whitespace and comments are usually discarded. Think of it as identifying the words and punctuation in a sentence before trying to understand its grammar.</p>
+                    <div class="bg-slate-100 p-4 rounded-lg">
+                        <h4 class="font-semibold mb-2">Interactive Example:</h4>
+                        <p class="text-sm text-slate-600 mb-4">Click the button to see how the code is tokenized.</p>
+                        <div class="font-mono bg-slate-800 text-white p-4 rounded-md">int sum = val1 + 10;</div>
+                        <button id="tokenize-btn" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">Tokenize</button>
+                        <div id="token-output" class="mt-4 hidden">
+                            <h5 class="font-semibold mb-2">Token Stream:</h5>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm font-mono">
+                                <div class="p-2 bg-slate-200 rounded">&lt;KEYWORD, "int"&gt;</div>
+                                <div class="p-2 bg-slate-200 rounded">&lt;IDENTIFIER, "sum"&gt;</div>
+                                <div class="p-2 bg-slate-200 rounded">&lt;OPERATOR, "="&gt;</div>
+                                <div class="p-2 bg-slate-200 rounded">&lt;IDENTIFIER, "val1"&gt;</div>
+                                <div class="p-2 bg-slate-200 rounded">&lt;OPERATOR, "+"&gt;</div>
+                                <div class="p-2 bg-slate-200 rounded">&lt;INTEGER_LITERAL, "10"&gt;</div>
+                                <div class="p-2 bg-slate-200 rounded">&lt;SEPARATOR, ";"&gt;</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="syntax-analysis" class="content-section">
+                     <h2 class="text-2xl font-bold mb-2">Syntax Analysis: Building the Structure</h2>
+                    <p class="text-slate-600 mb-6">After tokenization, the parser checks if the tokens form a grammatically valid statement according to the language rules. It builds a tree-like data structure called an Abstract Syntax Tree (AST) that represents the code's structure. This tree captures operator precedence and the relationships between code elements.</p>
+                    <div class="bg-slate-100 p-4 rounded-lg">
+                        <h4 class="font-semibold mb-2">AST for <code>a = b + c * 5;</code></h4>
+                        <p class="text-sm text-slate-600 mb-4">This diagram shows how the expression is structured. Notice multiplication is nested deeper than addition, reflecting its higher precedence.</p>
+                        <div class="ast text-center font-mono text-sm py-4 overflow-x-auto">
+                            <div class="ast-node bg-blue-100">=</div>
+                            <div class="ast-children">
+                                <div class="ast-node bg-green-100">a</div>
+                                <div class="ast-node bg-blue-100">+
+                                    <div class="ast-children">
+                                        <div class="ast-node bg-green-100">b</div>
+                                        <div class="ast-node bg-blue-100">*
+                                            <div class="ast-children">
+                                                <div class="ast-node bg-green-100">c</div>
+                                                <div class="ast-node bg-yellow-100">5</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section id="semantic-analysis" class="content-section">
+                    <h2 class="text-2xl font-bold mb-2">Semantic Analysis: Checking for Meaning</h2>
+                    <p class="text-slate-600 mb-6">Just because code is grammatically correct doesn't mean it makes sense. This phase checks the AST for semantic consistency. Its key jobs are type checking (e.g., you can't add a number to a string) and scope checking (e.g., you can't use a variable where it hasn't been declared).</p>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="bg-red-50 border border-red-200 p-4 rounded-lg">
+                            <h4 class="font-semibold text-red-800 mb-2">Type Error Example</h4>
+                            <code class="font-mono text-sm text-red-900 bg-red-100 p-2 rounded block">age = age + message;</code>
+                            <p class="text-sm text-red-700 mt-2">The compiler would flag this as a semantic error because adding an `int` to a `string` (char*) is not a valid operation.</p>
+                        </div>
+                        <div class="bg-red-50 border border-red-200 p-4 rounded-lg">
+                            <h4 class="font-semibold text-red-800 mb-2">Scope Error Example</h4>
+                            <code class="font-mono text-sm text-red-900 bg-red-100 p-2 rounded block">printf("%d", userId);<br>// In a function where 'userId' was not declared.</code>
+                             <p class="text-sm text-red-700 mt-2">Here, `userId` is used outside of its scope, leading to an "undeclared identifier" semantic error.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="ir-generation" class="content-section">
+                    <h2 class="text-2xl font-bold mb-2">Intermediate Representation (IR) Generation</h2>
+                    <p class="text-slate-600 mb-6">After analysis, many compilers translate the AST into a machine-independent Intermediate Representation (IR). This IR acts as a bridge between the language-specific frontend and the machine-specific backend. A common IR format is Three-Address Code (TAC), where each instruction has at most one operator.</p>
+                     <div class="bg-slate-100 p-4 rounded-lg">
+                        <h4 class="font-semibold mb-2">From Source to TAC</h4>
+                        <div class="grid md:grid-cols-2 gap-4 font-mono text-sm">
+                            <div>
+                                <h5 class="font-sans font-semibold mb-2">Source Code:</h5>
+                                <code class="bg-slate-800 text-white p-3 rounded block">x = (a + b) * (c - d);</code>
+                            </div>
+                            <div>
+                                <h5 class="font-sans font-semibold mb-2">Three-Address Code (TAC):</h5>
+                                <div class="bg-slate-200 p-3 rounded space-y-1">
+                                    <div>t1 = a + b</div>
+                                    <div>t2 = c - d</div>
+                                    <div>t3 = t1 * t2</div>
+                                    <div>x = t3</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section id="optimization" class="content-section">
+                    <h2 class="text-2xl font-bold mb-2">Optimization: Making Code Better</h2>
+                    <p class="text-slate-600 mb-6">This is where the compiler gets clever. It analyzes the IR and applies numerous transformations to make the code run faster or use less memory, without changing its output. Below are a few common techniques.</p>
+                    <div class="bg-slate-100 p-4 rounded-lg">
+                        <div class="flex space-x-2 border-b border-slate-300 mb-4">
+                            <button data-opt="cse" class="opt-btn bg-blue-600 text-white px-3 py-1 rounded-t-md text-sm">Common Subexpression Elimination</button>
+                            <button data-opt="const-fold" class="opt-btn bg-slate-200 text-slate-700 px-3 py-1 rounded-t-md text-sm">Constant Folding</button>
+                            <button data-opt="dce" class="opt-btn bg-slate-200 text-slate-700 px-3 py-1 rounded-t-md text-sm">Dead Code Elimination</button>
+                        </div>
+                        <div id="opt-display" class="font-mono text-sm">
+                            <!-- Content will be injected by JS -->
+                        </div>
+                    </div>
+                </section>
+
+                <section id="code-generation" class="content-section">
+                    <h2 class="text-2xl font-bold mb-2">Code Generation: Speaking the Native Tongue</h2>
+                    <p class="text-slate-600 mb-6">This is the final translation phase. The compiler converts the optimized IR into target-specific assembly or machine code. This phase involves complex tasks like instruction selection (picking the right machine instructions) and register allocation (deciding which data to keep in fast CPU registers).</p>
+                    <div class="bg-slate-100 p-4 rounded-lg">
+                        <h4 class="font-semibold mb-2">From IR to x86 Assembly</h4>
+                        <div class="grid md:grid-cols-2 gap-4 font-mono text-sm">
+                            <div>
+                                <h5 class="font-sans font-semibold mb-2">IR Instruction:</h5>
+                                <code class="bg-slate-200 p-3 rounded block">t1 = a + b</code>
+                            </div>
+                            <div>
+                                <h5 class="font-sans font-semibold mb-2">Conceptual x86 Assembly:</h5>
+                                <div class="bg-slate-800 text-slate-300 p-3 rounded space-y-1">
+                                    <div><span class="text-purple-400">movl</span>&nbsp;&nbsp;&nbsp;[address_of_a], %eax</div>
+                                    <div><span class="text-purple-400">addl</span>&nbsp;&nbsp;&nbsp;[address_of_b], %eax</div>
+                                    <div><span class="text-purple-400">movl</span>&nbsp;&nbsp;&nbsp;%eax, [address_of_t1]</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section id="linking" class="content-section">
+                    <h2 class="text-2xl font-bold mb-2">Linking: Assembling the Final Program</h2>
+                    <p class="text-slate-600 mb-6">The compiler typically produces "object files" from your source code. The linker's job is to combine these object files with code from libraries (like the C standard library) to create a single, final executable file. It resolves symbols (like finding the definition of `printf`) and relocates code to its final memory address.</p>
+                     <div class="grid md:grid-cols-2 gap-4">
+                        <div class="bg-slate-100 p-4 rounded-lg">
+                            <h4 class="font-semibold text-slate-800 mb-2">Static Linking</h4>
+                            <p class="text-sm text-slate-600">All library code used by the program is copied directly into the final executable. This makes the file larger but self-contained.</p>
+                        </div>
+                        <div class="bg-slate-100 p-4 rounded-lg">
+                            <h4 class="font-semibold text-slate-800 mb-2">Dynamic Linking</h4>
+                            <p class="text-sm text-slate-600">The executable only contains references to shared libraries. The operating system connects them at runtime, saving memory and disk space.</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <section id="architecture" class="content-section">
+                    <h2 class="text-2xl font-bold mb-2">Compiler Architecture</h2>
+                    <p class="text-slate-600 mb-6">Modern compilers use a modular design to support multiple languages and target machines efficiently. The two main parts are the Frontend and the Backend, bridged by the Intermediate Representation (IR).</p>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                            <h3 class="font-semibold text-blue-800 text-lg mb-2">Frontend</h3>
+                            <p class="text-sm text-blue-700">Source language dependent. Handles lexical analysis, syntax analysis, semantic analysis, and IR generation. A new language requires a new frontend.</p>
+                        </div>
+                        <div class="bg-green-50 border border-green-200 p-4 rounded-lg">
+                            <h3 class="font-semibold text-green-800 text-lg mb-2">Backend</h3>
+                            <p class="text-sm text-green-700">Target machine dependent. Takes the IR and performs optimization, instruction selection, register allocation, and code generation. A new CPU architecture requires a new backend.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="tools" class="content-section">
+                    <h2 class="text-2xl font-bold mb-2">Compiler Construction Tools</h2>
+                    <p class="text-slate-600 mb-6">Building a compiler is a massive task. Developers use specialized tools to automate parts of the process, ensuring correctness and speeding up development.</p>
+                     <div class="space-y-4">
+                        <div class="bg-slate-100 p-4 rounded-lg">
+                            <h4 class="font-semibold text-slate-800">Lex/Flex & Yacc/Bison</h4>
+                            <p class="text-sm text-slate-600">These are classic tools. Lex/Flex generate lexical analyzers from regular expressions, while Yacc/Bison generate parsers from a formal grammar specification.</p>
+                        </div>
+                        <div class="bg-slate-100 p-4 rounded-lg">
+                            <h4 class="font-semibold text-slate-800">LLVM & Clang</h4>
+                            <p class="text-sm text-slate-600">LLVM is a modern, modular collection of compiler technologies with a powerful IR. Clang is its high-performance frontend for C-family languages, famous for its excellent error messages.</p>
+                        </div>
+                         <div class="bg-slate-100 p-4 rounded-lg">
+                            <h4 class="font-semibold text-slate-800">GCC</h4>
+                            <p class="text-sm text-slate-600">The GNU Compiler Collection is a veteran, highly-optimizing compiler suite that supports a vast number of languages and hardware architectures. It's the standard compiler on most Linux systems.</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <section id="example" class="content-section">
+                    <h2 class="text-2xl font-bold mb-2">Real-World Example with GCC</h2>
+                    <p class="text-slate-600 mb-6">Let's see the theory in action. We'll compile a tiny C program and inspect the output at each step. Click the "Run Next Command" button to progress through the compilation pipeline.</p>
+                    <div class="bg-slate-900 rounded-lg shadow-xl overflow-hidden">
+                        <div class="bg-slate-800 p-3 flex items-center space-x-2">
+                            <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                            <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                        </div>
+                        <div class="p-4 font-mono text-sm text-slate-200">
+                            <div class="flex items-center">
+                                <span class="text-green-400">user@machine:~$</span>
+                                <span id="terminal-command" class="pl-2"></span>
+                            </div>
+                            <div id="terminal-output-display" class="mt-2 text-slate-300 terminal-output">
+                                <!-- JS will inject output here -->
+                            </div>
+                        </div>
+                    </div>
+                     <button id="run-command-btn" class="mt-4 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors">Start ➤</button>
+                </section>
+                
+                 <div id="initial-message" class="text-center text-slate-500 py-16">
+                    <div class="text-6xl mb-4">👆</div>
+                    <p>Select a stage from the pipeline above to begin exploring.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const pipelineItems = document.querySelectorAll('.pipeline-item');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const contentSections = document.querySelectorAll('.content-section');
+            const contentDisplay = document.getElementById('content-display');
+            const initialMessage = document.getElementById('initial-message');
+            let currentSection = 'introduction';
+
+            const showSection = (sectionId) => {
+                if (!sectionId) return;
+                
+                initialMessage.style.display = 'none';
+
+                contentSections.forEach(section => {
+                    section.classList.remove('active');
+                    if (section.id === sectionId) {
+                        section.classList.add('active');
+                    }
+                });
+
+                pipelineItems.forEach(item => {
+                    item.classList.remove('active');
+                    if (item.dataset.section === sectionId) {
+                        item.classList.add('active');
+                    }
+                });
+                
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.hash === `#${sectionId}`) {
+                        link.classList.add('active');
+                    }
+                });
+                
+                currentSection = sectionId;
+            };
+
+            const setupNavigation = () => {
+                pipelineItems.forEach(item => {
+                    item.addEventListener('click', () => showSection(item.dataset.section));
+                });
+
+                navLinks.forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const sectionId = link.hash.substring(1);
+                        showSection(sectionId);
+                        const targetElement = document.getElementById(sectionId) || document.getElementById('content-display');
+                        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                });
+                 showSection(null); // Show only intro message initially
+                 document.querySelector('#introduction').classList.add('active');
+                 document.querySelector('.nav-link[href="#introduction"]').classList.add('active');
+            };
+
+            const setupLexicalAnalysis = () => {
+                const tokenizeBtn = document.getElementById('tokenize-btn');
+                const tokenOutput = document.getElementById('token-output');
+                tokenizeBtn.addEventListener('click', () => {
+                    tokenOutput.style.display = 'block';
+                });
+            };
+
+            const setupOptimization = () => {
+                const optBtns = document.querySelectorAll('.opt-btn');
+                const optDisplay = document.getElementById('opt-display');
+                
+                const optContent = {
+                    'cse': {
+                        title: 'Common Subexpression Elimination',
+                        before: `val1 = (x + y) * z;\nval2 = w / (x + y);`,
+                        after: `temp = x + y;\nval1 = temp * z;\nval2 = w / temp;`
+                    },
+                    'const-fold': {
+                        title: 'Constant Folding',
+                        before: `result = 20 * 60 * 24;`,
+                        after: `result = 172800;`
+                    },
+                    'dce': {
+                        title: 'Dead Code Elimination',
+                        before: `x = 5;\nreturn 10;\nx = 20; // Dead Code`,
+                        after: `x = 5;\nreturn 10;`
+                    }
+                };
+
+                const updateOptDisplay = (opt) => {
+                    const content = optContent[opt];
+                    optDisplay.innerHTML = `
+                        <h4 class="font-sans font-semibold mb-3">${content.title}</h4>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <h5 class="font-sans font-semibold mb-2 text-slate-600">Before:</h5>
+                                <pre class="bg-slate-200 p-3 rounded"><code class="language-c">${content.before}</code></pre>
+                            </div>
+                            <div>
+                                <h5 class="font-sans font-semibold mb-2 text-slate-600">After:</h5>
+                                <pre class="bg-green-100 border border-green-200 text-green-900 p-3 rounded"><code class="language-c">${content.after}</code></pre>
+                            </div>
+                        </div>
+                    `;
+                };
+
+                optBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        optBtns.forEach(b => {
+                            b.classList.remove('bg-blue-600', 'text-white');
+                            b.classList.add('bg-slate-200', 'text-slate-700');
+                        });
+                        btn.classList.add('bg-blue-600', 'text-white');
+                        btn.classList.remove('bg-slate-200', 'text-slate-700');
+                        updateOptDisplay(btn.dataset.opt);
+                    });
+                });
+                
+                updateOptDisplay('cse');
+            };
+            
+            const setupGccExample = () => {
+                const runBtn = document.getElementById('run-command-btn');
+                const commandDisplay = document.getElementById('terminal-command');
+                const outputDisplay = document.getElementById('terminal-output-display');
+                
+                const steps = [
+                    { 
+                        command: 'cat example.c',
+                        buttonText: 'Run Next Command (Preprocess)',
+                        output: `// example.c\nint main() {\n    return 2 + 3;\n}`
+                    },
+                    { 
+                        command: 'gcc -E example.c -o example.i',
+                        buttonText: 'Run Next Command (Compile to Assembly)',
+                        output: `# 1 "example.c"\n# 1 "<built-in>"\n# 1 "<command-line>"\n# 1 "example.c"\n\nint main() {\n    return 2 + 3;\n}`
+                    },
+                    { 
+                        command: 'gcc -S example.i -o example.s',
+                        buttonText: 'Run Next Command (Assemble)',
+                        output: `.file   "example.c"\n.text\n.globl  main\n.type   main, @function\nmain:\n    pushq   %rbp\n    movq    %rsp, %rbp\n    movl    $5, %eax   # Look! 2 + 3 was folded to 5\n    popq    %rbp\n    ret`
+                    },
+                    { 
+                        command: 'gcc -c example.s -o example.o',
+                        buttonText: 'Run Next Command (Link)',
+                        output: 'Object file "example.o" created. (Binary content, not human-readable)'
+                    },
+                    {
+                        command: 'objdump -d example.o',
+                        buttonText: 'Run Next Command (Link)',
+                        output: `Disassembly of section .text:\n\n0000000000000000 <main>:\n   0: 55          push   %rbp\n   1: 48 89 e5    mov    %rsp,%rbp\n   4: b8 05 00 00 mov    $0x5,%eax\n   9: 5d          pop    %rbp\n   a: c3          retq`
+                    },
+                    { 
+                        command: 'gcc example.o -o example_executable',
+                        buttonText: 'Check Exit Code',
+                        output: 'Executable "example_executable" created by linking example.o with C runtime.'
+                    },
+                    {
+                        command: './example_executable; echo $?',
+                        buttonText: 'Restart Example',
+                        output: `5\n(The program ran and returned 5 as its exit code)`
+                    }
+                ];
+                
+                let currentStep = -1;
+
+                runBtn.addEventListener('click', () => {
+                    currentStep = (currentStep + 1) % steps.length;
+                    const step = steps[currentStep];
+                    
+                    runBtn.textContent = step.buttonText;
+                    commandDisplay.textContent = step.command;
+                    outputDisplay.textContent = step.output;
+
+                    if (currentStep === 0) {
+                         runBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                         runBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                    }
+                    if (currentStep === steps.length - 1) {
+                        runBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                        runBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                    }
+                });
+            };
+
+            setupNavigation();
+            setupLexicalAnalysis();
+            setupOptimization();
+            setupGccExample();
+        });
+    </script>
+</body>
+</html>

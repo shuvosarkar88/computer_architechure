@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Digital Logic Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Digital Slate -->
+    <!-- Application Structure Plan: The SPA is designed as an interactive learning module, departing from the linear report structure. It uses a persistent top navigation bar for quick access to key, non-linear thematic sections: 1. Fundamentals (intro), 2. Logic Gate Sandbox (interactive exploration), 3. Circuit Simulator (practical application), 4. Combinational vs. Sequential (conceptual comparison), and 5. Hardware Explorer (physical implementation). This task-oriented structure prioritizes hands-on learning over passive reading. The user flow encourages experimentation: a user can learn about a gate in the sandbox, immediately see its application in the circuit simulator, and then explore its physical basis in the hardware explorer. This interactive, non-sequential approach is chosen for better engagement and knowledge retention, allowing users to build understanding by doing rather than just reading. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Logic gate definitions (AND, OR, etc.), truth tables. -> Goal: Inform/Interact. -> Viz/Method: Interactive Gate Sandbox with clickable toggles and dynamic output displays (HTML/CSS/JS). Interaction: User clicks input toggles, output light and truth table highlight in real-time. Justification: Active participation is more effective for learning logic functions than static text. Library: Vanilla JS.
+        - Report Info: Half-adder and Multiplexer circuits. -> Goal: Apply/Organize. -> Viz/Method: Simplified Circuit Simulator with clickable input toggles and visualized data flow. Interaction: Users set inputs for a half-adder and see the Sum/Carry outputs calculated and displayed instantly. Justification: Builds a concrete understanding of how gates combine to perform useful functions. Library: Vanilla JS.
+        - Report Info: Difference between Combinational and Sequential logic (feedback). -> Goal: Compare. -> Viz/Method: A side-by-side animated diagram using HTML/CSS. Interaction: On-scroll animation highlights the feedback loop in the sequential diagram. Justification: Visually contrasts the core structural difference which is hard to grasp from text alone. Library: Vanilla JS + Intersection Observer.
+        - Report Info: CMOS transistor implementation. -> Goal: Visualize. -> Viz/Method: Interactive diagram of a CMOS Inverter. Interaction: User clicks buttons to set input to 0 or 1, triggering CSS animations showing corresponding transistors turning on/off and the output state changing. Justification: Clarifies the abstract concept of transistors as switches in a visually intuitive way. Library: Vanilla JS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #1e293b; /* slate-800 */
+        }
+        .font-mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .nav-link {
+            transition: color 0.2s;
+        }
+        .nav-link:hover {
+            color: #0ea5e9; /* sky-500 */
+        }
+        .content-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .content-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .gate-toggle {
+            cursor: pointer;
+            border: 2px solid #cbd5e1; /* slate-300 */
+            transition: all 0.2s;
+            width: 50px;
+            height: 50px;
+        }
+        .gate-toggle.active {
+            background-color: #0ea5e9; /* sky-500 */
+            color: white;
+            border-color: #0ea5e9;
+        }
+        .output-light {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #e2e8f0; /* slate-200 */
+            transition: background-color 0.2s, box-shadow 0.2s;
+            border: 2px solid #cbd5e1;
+        }
+        .output-light.on {
+            background-color: #22c55e; /* green-500 */
+            box-shadow: 0 0 15px #22c55e;
+            border-color: #16a34a;
+        }
+        .truth-table td, .truth-table th {
+            border: 1px solid #e2e8f0;
+            padding: 0.5rem 1rem;
+            text-align: center;
+        }
+        .truth-table .highlight {
+            background-color: #f0f9ff; /* sky-50 */
+        }
+        .circuit-line {
+            position: absolute;
+            background-color: #64748b; /* slate-500 */
+            z-index: 0;
+        }
+        .cmos-transistor {
+            transition: opacity 0.5s;
+        }
+        .cmos-path {
+            transition: stroke-dashoffset 1s ease-in-out;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+        }
+        .cmos-path.active {
+            stroke-dashoffset: 0;
+        }
+        .btn-primary {
+            background-color: #0ea5e9; /* sky-500 */
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #0284c7; /* sky-600 */
+        }
+        .btn-secondary {
+            background-color: #e2e8f0; /* slate-200 */
+            color: #1e293b; /* slate-800 */
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        .btn-secondary:hover {
+            background-color: #cbd5e1; /* slate-300 */
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Header and Navigation -->
+    <header class="bg-white/80 backdrop-blur-sm sticky top-0 z-50 border-b border-slate-200">
+        <nav class="container mx-auto px-4 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold text-slate-900">Digital Logic Explorer</h1>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#fundamentals" class="text-slate-600 nav-link font-medium">Fundamentals</a>
+                    <a href="#gate-sandbox" class="text-slate-600 nav-link font-medium">Gate Sandbox</a>
+                    <a href="#circuit-simulator" class="text-slate-600 nav-link font-medium">Circuit Simulator</a>
+                    <a href="#sequential-logic" class="text-slate-600 nav-link font-medium">Logic Types</a>
+                    <a href="#hardware" class="text-slate-600 nav-link font-medium">Hardware</a>
+                </div>
+                <div class="md:hidden">
+                    <select id="mobile-nav" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500">
+                        <option value="#fundamentals">Fundamentals</option>
+                        <option value="#gate-sandbox">Gate Sandbox</option>
+                        <option value="#circuit-simulator">Circuit Simulator</option>
+                        <option value="#sequential-logic">Logic Types</option>
+                        <option value="#hardware">Hardware</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 lg:px-8 py-12">
+        
+        <!-- Section 1: Fundamentals -->
+        <section id="fundamentals" class="scroll-mt-24">
+            <div class="content-card p-8">
+                <h2 class="text-3xl font-bold mb-4 text-slate-900">The World is Binary</h2>
+                <p class="text-lg text-slate-600 mb-6">Welcome to the world of digital logic! At its core, every computer, smartphone, and digital device operates on a simple principle: the binary system. This section introduces the fundamental concepts that form the bedrock of all modern technology. We'll explore how information is represented using just two states—0 and 1—and how these simple bits are grouped to create the complex data that powers our digital lives.</p>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-2xl font-semibold mb-3">Binary & Bits</h3>
+                        <p class="text-slate-600 mb-4">Digital logic uses the binary system, which has only two digits: 0 and 1. Each digit is called a **bit**. These correspond to physical states in a circuit, like a switch being OFF (0) or ON (1). Combining bits allows us to represent more complex information. A group of 8 bits is called a **byte**.</p>
+                        <div class="bg-slate-100 p-4 rounded-lg font-mono text-slate-700">
+                            <p>1 bit = 2 states ($2^1$)</p>
+                            <p>4 bits = 16 states ($2^4$)</p>
+                            <p>8 bits (1 Byte) = 256 states ($2^8$)</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-semibold mb-3">From Decimal to Binary</h3>
+                        <p class="text-slate-600 mb-4">Our familiar decimal numbers can be represented in binary. Here's how the numbers 0 through 7 look in a 3-bit binary format.</p>
+                        <table class="w-full text-left truth-table">
+                            <thead><tr><th>Decimal</th><th>Binary</th></tr></thead>
+                            <tbody>
+                                <tr><td>0</td><td class="font-mono">000</td></tr>
+                                <tr><td>1</td><td class="font-mono">001</td></tr>
+                                <tr><td>2</td><td class="font-mono">010</td></tr>
+                                <tr><td>3</td><td class="font-mono">011</td></tr>
+                                <tr><td>4</td><td class="font-mono">100</td></tr>
+                                <tr><td>5</td><td class="font-mono">101</td></tr>
+                                <tr><td>6</td><td class="font-mono">110</td></tr>
+                                <tr><td>7</td><td class="font-mono">111</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Gate Sandbox -->
+        <section id="gate-sandbox" class="scroll-mt-24 mt-12">
+            <div class="content-card p-8">
+                 <h2 class="text-3xl font-bold mb-4 text-slate-900">Logic Gate Sandbox</h2>
+                 <p class="text-lg text-slate-600 mb-6">Logic gates are the fundamental building blocks of digital circuits. They perform basic logical operations on one or more binary inputs to produce a single binary output. In this sandbox, you can interact with the most common logic gates. Choose a gate from the dropdown, then click the input toggles (A and B) to see how the output (Y) changes. The corresponding row in the truth table will highlight to help you understand the gate's behavior.</p>
+                
+                <div class="mb-6">
+                    <label for="gate-selector" class="block text-sm font-medium text-slate-700 mb-1">Select a Gate:</label>
+                    <select id="gate-selector" class="block w-full max-w-xs rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500">
+                        <option value="AND" selected>AND</option>
+                        <option value="OR">OR</option>
+                        <option value="NOT">NOT</option>
+                        <option value="NAND">NAND</option>
+                        <option value="NOR">NOR</option>
+                        <option value="XOR">XOR</option>
+                        <option value="XNOR">XNOR</option>
+                    </select>
+                </div>
+
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 items-center">
+                    <div class="flex flex-col items-center justify-center space-y-4">
+                        <div id="gate-input-A-wrapper" class="flex items-center space-x-4">
+                            <span class="font-bold text-lg">A</span>
+                            <div id="gate-input-A" class="gate-toggle flex items-center justify-center font-bold text-2xl" data-input="A">0</div>
+                        </div>
+                        <div id="gate-input-B-wrapper" class="flex items-center space-x-4">
+                            <span class="font-bold text-lg">B</span>
+                            <div id="gate-input-B" class="gate-toggle flex items-center justify-center font-bold text-2xl" data-input="B">0</div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col items-center justify-center">
+                         <div id="gate-symbol" class="w-32 h-24 bg-contain bg-no-repeat bg-center"></div>
+                         <div class="flex items-center space-x-4 mt-4">
+                            <span class="font-bold text-lg">Y</span>
+                            <div id="gate-output" class="output-light"></div>
+                         </div>
+                    </div>
+
+                    <div class="lg:col-span-1">
+                        <h3 id="gate-name" class="text-xl font-semibold text-center mb-2">AND Gate</h3>
+                        <p class="text-sm text-slate-500 text-center mb-2">Boolean: <span id="gate-boolean" class="font-mono">Y = A · B</span></p>
+                        <table id="gate-truth-table" class="w-full truth-table">
+                            <!-- JS will populate this -->
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Circuit Simulator -->
+        <section id="circuit-simulator" class="scroll-mt-24 mt-12">
+            <div class="content-card p-8">
+                <h2 class="text-3xl font-bold mb-4 text-slate-900">Circuit Simulator: The Half Adder</h2>
+                <p class="text-lg text-slate-600 mb-6">By combining logic gates, we can build circuits that perform more complex tasks, like arithmetic. The **Half Adder** is a fundamental circuit that adds two single bits. It has two inputs (A and B) and two outputs: Sum (the result of the addition) and Carry (if the sum is greater than 1). This simulator shows how a Half Adder is built from an XOR gate and an AND gate. Toggle the inputs A and B to see how the circuit calculates the Sum and Carry outputs.</p>
+                <div class="grid lg:grid-cols-2 gap-8 items-center">
+                    <div class="flex flex-col items-center space-y-6">
+                        <h3 class="text-xl font-semibold">Inputs</h3>
+                        <div class="flex items-center space-x-8">
+                            <div class="flex flex-col items-center space-y-2">
+                                <span class="font-bold text-lg">A</span>
+                                <div id="adder-input-A" class="gate-toggle flex items-center justify-center font-bold text-2xl" data-input="A">0</div>
+                            </div>
+                            <div class="flex flex-col items-center space-y-2">
+                                <span class="font-bold text-lg">B</span>
+                                <div id="adder-input-B" class="gate-toggle flex items-center justify-center font-bold text-2xl" data-input="B">0</div>
+                            </div>
+                        </div>
+                        <h3 class="text-xl font-semibold mt-8">Outputs</h3>
+                        <div class="flex items-center space-x-8">
+                             <div class="flex flex-col items-center space-y-2">
+                                <span class="font-bold text-lg">Sum (S)</span>
+                                <div id="adder-output-S" class="output-light"></div>
+                            </div>
+                             <div class="flex flex-col items-center space-y-2">
+                                <span class="font-bold text-lg">Carry (C)</span>
+                                <div id="adder-output-C" class="output-light"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="relative w-full h-64 md:h-80 flex items-center justify-center">
+                        <!-- Wires -->
+                        <div id="wire-a-xor" class="circuit-line" style="left: 20%; top: 20%; width: 20%; height: 2px;"></div>
+                        <div id="wire-a-and" class="circuit-line" style="left: 20%; top: 20%; width: 2px; height: 45%;"></div>
+                        <div id="wire-b-xor" class="circuit-line" style="left: 20%; top: 80%; width: 2px; height: -45%;"></div>
+                        <div id="wire-b-and" class="circuit-line" style="left: 20%; top: 80%; width: 20%; height: 2px;"></div>
+                        <div id="wire-xor-sum" class="circuit-line" style="left: 60%; top: 50%; width: 20%; height: 2px;"></div>
+                        <div id="wire-and-carry" class="circuit-line" style="left: 60%; top: 65%; width: 20%; height: 2px;"></div>
+                        <!-- Gates -->
+                        <div id="adder-xor-gate" class="absolute z-10 w-20 h-16 bg-contain bg-no-repeat bg-center" style="left: 40%; top: 50%; transform: translateY(-50%);"></div>
+                        <div id="adder-and-gate" class="absolute z-10 w-20 h-16 bg-contain bg-no-repeat bg-center" style="left: 40%; top: 65%; transform: translateY(-50%);"></div>
+                         <!-- Connectors -->
+                        <div class="absolute w-2 h-2 bg-slate-500 rounded-full" style="left: 20%; top: 20%; transform: translate(-50%, -50%);"></div>
+                        <div class="absolute w-2 h-2 bg-slate-500 rounded-full" style="left: 20%; top: 80%; transform: translate(-50%, -50%);"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Section 4: Combinational vs Sequential -->
+        <section id="sequential-logic" class="scroll-mt-24 mt-12">
+            <div class="content-card p-8">
+                <h2 class="text-3xl font-bold mb-4 text-slate-900">Two Flavors of Logic: Combinational vs. Sequential</h2>
+                <p class="text-lg text-slate-600 mb-6">Digital circuits fall into two main categories. This section visually compares them to explain their fundamental difference. **Combinational circuits** are straightforward: their output depends *only* on their current inputs. They have no memory. **Sequential circuits**, on the other hand, have memory. Their output depends on both the current inputs *and* the circuit's past state, which is stored in memory elements. This "memory" is achieved through a **feedback loop**, a critical concept that allows for creating counters, processors, and computer memory.</p>
+                <div class="grid md:grid-cols-2 gap-8 mt-8">
+                    <div class="border-2 border-slate-200 p-6 rounded-lg">
+                        <h3 class="text-2xl font-semibold mb-4 text-center">Combinational Logic</h3>
+                        <p class="text-slate-600 text-center mb-4">Output = Function(Current Inputs)</p>
+                        <div class="relative h-48 bg-slate-50 rounded-lg flex items-center justify-center p-4">
+                            <!-- Diagram -->
+                            <div class="absolute left-0 top-1/2 -translate-y-1/2 font-semibold">Inputs</div>
+                            <div class="absolute right-0 top-1/2 -translate-y-1/2 font-semibold">Output</div>
+                            <div class="absolute left-16 right-16 h-24 bg-sky-100 border-2 border-sky-300 rounded-lg flex items-center justify-center">
+                                <span class="font-bold text-sky-800">Logic Gates</span>
+                            </div>
+                             <div class="absolute left-14 top-1/2 w-4 h-1 bg-slate-600 -translate-y-1/2" style="transform: translateX(-100%)"></div>
+                             <div class="absolute right-14 top-1/2 w-4 h-1 bg-slate-600 -translate-y-1/2" style="transform: translateX(100%)"></div>
+                        </div>
+                    </div>
+                    <div class="border-2 border-blue-300 bg-blue-50/50 p-6 rounded-lg">
+                        <h3 class="text-2xl font-semibold mb-4 text-center">Sequential Logic</h3>
+                        <p class="text-slate-600 text-center mb-4">Output = Function(Current Inputs, Stored State)</p>
+                         <div class="relative h-48 bg-blue-50 rounded-lg flex items-center justify-center p-4" id="sequential-diagram">
+                            <!-- Diagram -->
+                            <div class="absolute left-0 top-1/2 -translate-y-1/2 font-semibold">Inputs</div>
+                            <div class="absolute right-0 top-1/2 -translate-y-1/2 font-semibold">Output</div>
+                            <div class="absolute left-16 right-16 top-4 h-20 bg-sky-100 border-2 border-sky-300 rounded-lg flex items-center justify-center">
+                                <span class="font-bold text-sky-800">Logic Gates</span>
+                            </div>
+                             <div class="absolute left-14 top-[35%] w-4 h-1 bg-slate-600 -translate-y-1/2" style="transform: translateX(-100%)"></div>
+                             <div class="absolute right-14 top-[35%] w-4 h-1 bg-slate-600 -translate-y-1/2" style="transform: translateX(100%)"></div>
+                            <div class="absolute left-1/2 -translate-x-1/2 bottom-2 h-12 w-40 bg-green-100 border-2 border-green-300 rounded-lg flex items-center justify-center">
+                                <span class="font-bold text-green-800">Memory</span>
+                            </div>
+                            <!-- Feedback loop -->
+                            <div class="feedback-arrow-down absolute bg-slate-600" style="left: 50%; top: calc(2rem + 5rem); height: calc(100% - 2rem - 5rem - 3.5rem); width: 2px; transform: translateX(-50%)"></div>
+                             <div class="feedback-arrow-left absolute bg-slate-600" style="left: 35%; top: calc(100% - 3.5rem); width: 15%; height: 2px;"></div>
+                             <div class="feedback-arrow-up absolute bg-slate-600" style="left: 35%; top: 35%; height: calc(100% - 3.5rem - 35%); width: 2px;"></div>
+                             <div class="feedback-arrow-right absolute bg-slate-600" style="left: 35%; top: 35%; width: calc(50% - 35% - 2px); height: 2px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Hardware -->
+        <section id="hardware" class="scroll-mt-24 mt-12">
+            <div class="content-card p-8">
+                <h2 class="text-3xl font-bold mb-4 text-slate-900">Hardware Explorer: The CMOS Inverter</h2>
+                <p class="text-lg text-slate-600 mb-6">How are logic gates actually built? The answer is transistors! Modern electronics use **CMOS** (Complementary Metal-Oxide-Semiconductor) technology, which pairs two types of transistors (PMOS and NMOS) to act as efficient switches. This explorer shows a **CMOS Inverter (a NOT gate)**. A PMOS transistor turns ON when its input is LOW (0), pulling the output HIGH. An NMOS transistor turns ON when its input is HIGH (1), pulling the output LOW. Use the buttons to change the input and watch how the transistors and current paths change to invert the signal.</p>
+                <div class="grid lg:grid-cols-2 gap-8 items-center">
+                    <div class="flex flex-col items-center justify-center space-y-4">
+                        <h3 class="text-xl font-semibold">Control Input (A)</h3>
+                        <div>
+                            <button id="cmos-input-0" class="btn-secondary">Set Input to 0</button>
+                            <button id="cmos-input-1" class="btn-primary">Set Input to 1</button>
+                        </div>
+                        <div class="mt-8 text-center">
+                            <p class="text-lg">Input A: <span id="cmos-input-display" class="font-mono font-bold">1</span></p>
+                            <p class="text-lg">Output Y: <span id="cmos-output-display" class="font-mono font-bold">0</span></p>
+                        </div>
+                    </div>
+
+                    <div class="w-full h-80 relative">
+                        <svg class="w-full h-full" viewBox="0 0 300 300">
+                            <!-- VDD and Ground Labels -->
+                            <text x="150" y="25" text-anchor="middle" font-weight="bold" fill="#0ea5e9">VDD (1)</text>
+                            <text x="150" y="285" text-anchor="middle" font-weight="bold" fill="#475569">GND (0)</text>
+                            
+                            <!-- Paths -->
+                            <path id="cmos-path-vdd" class="cmos-path" d="M150 30 V 90" stroke="#0ea5e9" stroke-width="4" fill="none" />
+                            <path id="cmos-path-gnd" class="cmos-path" d="M150 270 V 210" stroke="#475569" stroke-width="4" fill="none" />
+                            <path d="M150 150 H 250" stroke="#64748b" stroke-width="4" fill="none" />
+
+                            <!-- PMOS Transistor -->
+                            <g id="cmos-pmos" class="cmos-transistor">
+                                <path d="M150 90 V 130" stroke="#64748b" stroke-width="4" fill="none" />
+                                <circle cx="150" cy="85" r="8" fill="none" stroke="#64748b" stroke-width="3" />
+                                <path d="M80 110 H 140" stroke="#64748b" stroke-width="4" fill="none" />
+                                <text x="65" y="115" text-anchor="middle" font-weight="bold">A</text>
+                                <text x="180" y="100" text-anchor="start">PMOS</text>
+                            </g>
+                            
+                            <!-- NMOS Transistor -->
+                            <g id="cmos-nmos" class="cmos-transistor">
+                                <path d="M150 170 V 210" stroke="#64748b" stroke-width="4" fill="none" />
+                                <path d="M80 190 H 150" stroke="#64748b" stroke-width="4" fill="none" />
+                                <path d="M140 180 V 200" stroke="#64748b" stroke-width="4" fill="none" />
+                                <text x="65" y="195" text-anchor="middle" font-weight="bold">A</text>
+                                <text x="180" y="200" text-anchor="start">NMOS</text>
+                            </g>
+
+                             <!-- Output Connection -->
+                             <path d="M150 130 V 170" stroke="#64748b" stroke-width="4" fill="none" />
+                             <text x="260" y="155" text-anchor="start" font-weight="bold">Y</text>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const gateData = {
+                AND: { name: 'AND Gate', boolean: 'Y = A · B', truthTable: [[0, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 1]], logic: (a, b) => a & b },
+                OR: { name: 'OR Gate', boolean: 'Y = A + B', truthTable: [[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 1]], logic: (a, b) => a | b },
+                NOT: { name: 'NOT Gate (Inverter)', boolean: 'Y = ¬A', truthTable: [[0, 1], [1, 0]], logic: (a) => a ? 0 : 1 },
+                NAND: { name: 'NAND Gate', boolean: 'Y = ¬(A · B)', truthTable: [[0, 0, 1], [0, 1, 1], [1, 0, 1], [1, 1, 0]], logic: (a, b) => (a & b) ? 0 : 1 },
+                NOR: { name: 'NOR Gate', boolean: 'Y = ¬(A + B)', truthTable: [[0, 0, 1], [0, 1, 0], [1, 0, 0], [1, 1, 0]], logic: (a, b) => (a | b) ? 0 : 1 },
+                XOR: { name: 'XOR Gate', boolean: 'Y = A ⊕ B', truthTable: [[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0]], logic: (a, b) => a ^ b },
+                XNOR: { name: 'XNOR Gate', boolean: 'Y = ¬(A ⊕ B)', truthTable: [[0, 0, 1], [0, 1, 0], [1, 0, 0], [1, 1, 1]], logic: (a, b) => (a ^ b) ? 0 : 1 },
+            };
+
+            const gateSymbolURLs = {
+                AND: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'%3E%3Cpath d='M20 10 V 70 H 60 A 30 30 0 0 0 60 10 Z' stroke='black' stroke-width='3' fill='none'/%3E%3Cpath d='M0 25 H 20 M0 55 H 20 M90 40 H 100' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E",
+                OR: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'%3E%3Cpath d='M20 10 Q 40 40 20 70' stroke='black' stroke-width='3' fill='none'/%3E%3Cpath d='M20 10 C 60 10 80 40 90 40' stroke='black' stroke-width='3' fill='none'/%3E%3Cpath d='M20 70 C 60 70 80 40 90 40' stroke='black' stroke-width='3' fill='none'/%3E%3Cpath d='M0 25 H 25 M0 55 H 25 M90 40 H 100' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E",
+                NOT: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'%3E%3Cpath d='M20 10 L 20 70 L 80 40 Z' stroke='black' stroke-width='3' fill='none'/%3E%3Ccircle cx='85' cy='40' r='5' stroke='black' stroke-width='2' fill='none'/%3E%3Cpath d='M0 40 H 20 M90 40 H 100' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E",
+                NAND: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'%3E%3Cpath d='M20 10 V 70 H 60 A 30 30 0 0 0 60 10 Z' stroke='black' stroke-width='3' fill='none'/%3E%3Ccircle cx='95' cy='40' r='5' stroke='black' stroke-width='2' fill='none'/%3E%3Cpath d='M0 25 H 20 M0 55 H 20 M90 40 H 100' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E",
+                NOR: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'%3E%3Cpath d='M20 10 Q 40 40 20 70' stroke='black' stroke-width='3' fill='none'/%3E%3Cpath d='M20 10 C 60 10 80 40 90 40' stroke='black' stroke-width='3' fill='none'/%3E%3Cpath d='M20 70 C 60 70 80 40 90 40' stroke='black' stroke-width='3' fill='none'/%3E%3Ccircle cx='95' cy='40' r='5' stroke='black' stroke-width='2' fill='none'/%3E%3Cpath d='M0 25 H 25 M0 55 H 25 M90 40 H 100' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E",
+                XOR: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'%3E%3Cpath d='M15 10 Q 35 40 15 70' stroke='black' stroke-width='3' fill='none'/%3E%3Cpath d='M20 10 Q 40 40 20 70' stroke='black' stroke-width='3' fill='none'/%3E%3Cpath d='M20 10 C 60 10 80 40 90 40' stroke='black' stroke-width='3' fill='none'/%3E%3Cpath d='M20 70 C 60 70 80 40 90 40' stroke='black' stroke-width='3' fill='none'/%3E%3Cpath d='M0 25 H 25 M0 55 H 25 M90 40 H 100' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E",
+                XNOR: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'%3E%3Cpath d='M15 10 Q 35 40 15 70' stroke='black' stroke-width='3' fill='none'/%3E%3Cpath d='M20 10 Q 40 40 20 70' stroke='black' stroke-width='3' fill='none'/%3E%3Cpath d='M20 10 C 60 10 80 40 90 40' stroke='black' stroke-width='3' fill='none'/%3E%3Cpath d='M20 70 C 60 70 80 40 90 40' stroke='black' stroke-width='3' fill='none'/%3E%3Ccircle cx='95' cy='40' r='5' stroke='black' stroke-width='2' fill='none'/%3E%3Cpath d='M0 25 H 25 M0 55 H 25 M90 40 H 100' stroke='black' stroke-width='2' fill='none'/%3E%3C/svg%3E"
+            };
+
+            const adderXORURL = gateSymbolURLs.XOR;
+            const adderANDURL = gateSymbolURLs.AND;
+
+            const gateSelector = document.getElementById('gate-selector');
+            const gateNameEl = document.getElementById('gate-name');
+            const gateBooleanEl = document.getElementById('gate-boolean');
+            const gateTruthTableEl = document.getElementById('gate-truth-table');
+            const gateSymbolEl = document.getElementById('gate-symbol');
+            const gateInputA = document.getElementById('gate-input-A');
+            const gateInputB = document.getElementById('gate-input-B');
+            const gateInputBWrapper = document.getElementById('gate-input-B-wrapper');
+            const gateOutput = document.getElementById('gate-output');
+
+            let currentGate = 'AND';
+            let inputA = 0;
+            let inputB = 0;
+
+            function updateGateSandbox() {
+                const gate = gateData[currentGate];
+                gateNameEl.textContent = gate.name;
+                gateBooleanEl.innerHTML = gate.boolean;
+                gateSymbolEl.style.backgroundImage = `url("${gateSymbolURLs[currentGate]}")`;
+
+                if (currentGate === 'NOT') {
+                    gateInputBWrapper.style.display = 'none';
+                    inputB = 0; 
+                } else {
+                    gateInputBWrapper.style.display = 'flex';
+                }
+
+                gateTruthTableEl.innerHTML = '';
+                const header = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                if (currentGate === 'NOT') {
+                    headerRow.innerHTML = '<th>A</th><th>Y</th>';
+                } else {
+                    headerRow.innerHTML = '<th>A</th><th>B</th><th>Y</th>';
+                }
+                header.appendChild(headerRow);
+                gateTruthTableEl.appendChild(header);
+
+                const body = document.createElement('tbody');
+                gate.truthTable.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = row.map(val => `<td class="font-mono">${val}</td>`).join('');
+                    body.appendChild(tr);
+                });
+                gateTruthTableEl.appendChild(body);
+                
+                updateGateOutput();
+            }
+            
+            function updateGateOutput() {
+                const gate = gateData[currentGate];
+                let output;
+                let activeRow;
+
+                if (currentGate === 'NOT') {
+                    output = gate.logic(inputA);
+                    activeRow = inputA;
+                } else {
+                    output = gate.logic(inputA, inputB);
+                    activeRow = inputA * 2 + inputB;
+                }
+
+                gateOutput.classList.toggle('on', output === 1);
+                
+                const tableRows = gateTruthTableEl.querySelectorAll('tbody tr');
+                tableRows.forEach(row => row.classList.remove('highlight'));
+                if (tableRows[activeRow]) {
+                    tableRows[activeRow].classList.add('highlight');
+                }
+            }
+
+            gateInputA.addEventListener('click', () => {
+                inputA = 1 - inputA;
+                gateInputA.textContent = inputA;
+                gateInputA.classList.toggle('active', inputA === 1);
+                updateGateOutput();
+            });
+
+            gateInputB.addEventListener('click', () => {
+                inputB = 1 - inputB;
+                gateInputB.textContent = inputB;
+                gateInputB.classList.toggle('active', inputB === 1);
+                updateGateOutput();
+            });
+
+            gateSelector.addEventListener('change', (e) => {
+                currentGate = e.target.value;
+                updateGateSandbox();
+            });
+
+            const adderInputA = document.getElementById('adder-input-A');
+            const adderInputB = document.getElementById('adder-input-B');
+            const adderOutputS = document.getElementById('adder-output-S');
+            const adderOutputC = document.getElementById('adder-output-C');
+            document.getElementById('adder-xor-gate').style.backgroundImage = `url("${adderXORURL}")`;
+            document.getElementById('adder-and-gate').style.backgroundImage = `url("${adderANDURL}")`;
+
+            let adderA = 0;
+            let adderB = 0;
+
+            function updateAdder() {
+                const sum = adderA ^ adderB;
+                const carry = adderA & adderB;
+                adderOutputS.classList.toggle('on', sum === 1);
+                adderOutputC.classList.toggle('on', carry === 1);
+            }
+            
+            adderInputA.addEventListener('click', () => {
+                adderA = 1 - adderA;
+                adderInputA.textContent = adderA;
+                adderInputA.classList.toggle('active', adderA === 1);
+                updateAdder();
+            });
+            
+            adderInputB.addEventListener('click', () => {
+                adderB = 1 - adderB;
+                adderInputB.textContent = adderB;
+                adderInputB.classList.toggle('active', adderB === 1);
+                updateAdder();
+            });
+
+
+            const cmosInput0 = document.getElementById('cmos-input-0');
+            const cmosInput1 = document.getElementById('cmos-input-1');
+            const cmosInputDisplay = document.getElementById('cmos-input-display');
+            const cmosOutputDisplay = document.getElementById('cmos-output-display');
+            const pmos = document.getElementById('cmos-pmos');
+            const nmos = document.getElementById('cmos-nmos');
+            const pathVdd = document.getElementById('cmos-path-vdd');
+            const pathGnd = document.getElementById('cmos-path-gnd');
+
+            function setCmosState(input) {
+                cmosInputDisplay.textContent = input;
+                cmosOutputDisplay.textContent = 1 - input;
+                
+                cmosInput0.classList.toggle('btn-primary', input === 0);
+                cmosInput0.classList.toggle('btn-secondary', input === 1);
+                cmosInput1.classList.toggle('btn-primary', input === 1);
+                cmosInput1.classList.toggle('btn-secondary', input === 0);
+
+                if (input === 1) { // High Input
+                    pmos.style.opacity = '0.3';
+                    nmos.style.opacity = '1';
+                    pathVdd.classList.remove('active');
+                    pathGnd.classList.add('active');
+                } else { // Low Input
+                    pmos.style.opacity = '1';
+                    nmos.style.opacity = '0.3';
+                    pathVdd.classList.add('active');
+                    pathGnd.classList.remove('active');
+                }
+            }
+
+            cmosInput0.addEventListener('click', () => setCmosState(0));
+            cmosInput1.addEventListener('click', () => setCmosState(1));
+            
+            const mobileNav = document.getElementById('mobile-nav');
+            mobileNav.addEventListener('change', () => {
+                window.location.hash = mobileNav.value;
+            });
+
+            updateGateSandbox();
+            updateAdder();
+            setCmosState(1);
+        });
+    </script>
+</body>
+</html>

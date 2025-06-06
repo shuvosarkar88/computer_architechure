@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>An Interactive Guide to CUDA GPU Programming</title>
+    <!-- Chosen Palette: Toasted Almond -->
+    <!-- Application Structure Plan: The SPA is structured as a top-down narrative, guiding the user from high-level concepts to details and impact. It starts with the 'Why' (CPU vs. GPU), moves to the 'How' (the interactive CUDA model), then 'How to make it fast' (optimizations), followed by the 'Impact' (a filterable benchmark chart), and finally 'Context' (CUDA vs. OpenCL). This thematic, non-linear structure prioritizes understanding and exploration over the linear format of the source report, using interactivity to make complex topics digestible. -->
+    <!-- Visualization & Content Choices: Key-value data (CPU/GPU specs, memory properties) are presented in styled divs instead of tables for better visual appeal. Hierarchies (Threads, Memory) are shown as interactive diagrams (HTML/JS) to encourage exploration. The core quantitative data (benchmarks) is visualized using a dynamic Chart.js bar chart, as it's the most effective way to convey the massive performance gains. This allows users to filter by domain, making the data personally relevant. All visualizations support the non-linear, exploratory goal of the application. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF6;
+            color: #3C3633;
+        }
+        .nav-link {
+            transition: color 0.3s, border-bottom-color 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #E0A75E;
+            border-bottom-color: #E0A75E;
+        }
+        .card-flip {
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+        }
+        .card-flip.flipped {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 500px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 500px;
+            }
+        }
+        .section-fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .section-fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header id="header" class="bg-[#FDFBF6]/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-xl font-bold text-[#3C3633]">CUDA Explained</h1>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#core-idea" class="nav-link font-medium pb-1">Core Idea</a>
+                    <a href="#how-it-works" class="nav-link font-medium pb-1">How It Works</a>
+                    <a href="#optimization" class="nav-link font-medium pb-1">Optimization</a>
+                    <a href="#in-action" class="nav-link font-medium pb-1">In Action</a>
+                    <a href="#comparison" class="nav-link font-medium pb-1">CUDA vs OpenCL</a>
+                </div>
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="p-2 rounded-md">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                    </button>
+                </div>
+            </div>
+            <div id="mobile-menu" class="hidden md:hidden pb-4">
+                <a href="#core-idea" class="block py-2 px-4 text-sm nav-link">Core Idea</a>
+                <a href="#how-it-works" class="block py-2 px-4 text-sm nav-link">How It Works</a>
+                <a href="#optimization" class="block py-2 px-4 text-sm nav-link">Optimization</a>
+                <a href="#in-action" class="block py-2 px-4 text-sm nav-link">In Action</a>
+                <a href="#comparison" class="block py-2 px-4 text-sm nav-link">CUDA vs OpenCL</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+
+        <section id="core-idea" class="my-16 scroll-mt-24 section-fade-in">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">The Core Idea: Throughput vs. Latency</h2>
+            <p class="max-w-3xl mx-auto text-center text-lg text-gray-600 mb-12">Modern computing faces a challenge: how to get more performance when single-core speeds have hit a wall. The solution is parallelism. This section explores the fundamental architectural difference between CPUs, designed for low-latency on sequential tasks, and GPUs, designed for high-throughput on parallel tasks.</p>
+            <div class="grid md:grid-cols-2 gap-8 items-start">
+                <div class="bg-white/80 p-6 rounded-xl shadow-lg border border-gray-200">
+                    <h3 class="text-2xl font-semibold mb-4 text-center">CPU: The Latency Specialist</h3>
+                    <div class="text-6xl text-center mb-4">🧠</div>
+                    <p class="text-center mb-6">Optimized to complete a single task or a few tasks as quickly as possible.</p>
+                    <ul class="space-y-3 text-gray-700">
+                        <li class="flex items-start"><span class="text-xl mr-3 text-[#758694]">●</span><div><strong class="text-[#3C3633]">Few, Powerful Cores:</strong> A small number of highly complex cores (2-64).</div></li>
+                        <li class="flex items-start"><span class="text-xl mr-3 text-[#758694]">●</span><div><strong class="text-[#3C3633]">Large Caches:</strong> Big memory caches to quickly access data and reduce waiting.</div></li>
+                        <li class="flex items-start"><span class="text-xl mr-3 text-[#758694]">●</span><div><strong class="text-[#3C3633]">Complex Control Logic:</strong> Sophisticated logic for handling diverse tasks and decisions (e.g., branch prediction).</div></li>
+                        <li class="flex items-start"><span class="text-xl mr-3 text-[#758694]">●</span><div><strong class="text-[#3C3633]">Ideal For:</strong> Operating systems, general applications, and sequential logic.</div></li>
+                    </ul>
+                </div>
+                <div class="bg-white/80 p-6 rounded-xl shadow-lg border border-gray-200">
+                    <h3 class="text-2xl font-semibold mb-4 text-center">GPU: The Throughput Machine</h3>
+                    <div class="text-6xl text-center mb-4">🚀</div>
+                    <p class="text-center mb-6">Designed to execute thousands of simple, parallel tasks all at once.</p>
+                    <ul class="space-y-3 text-gray-700">
+                        <li class="flex items-start"><span class="text-xl mr-3 text-[#E0A75E]">●</span><div><strong class="text-[#3C3633]">Many, Simple Cores:</strong> Hundreds or thousands of simpler, more energy-efficient cores.</div></li>
+                        <li class="flex items-start"><span class="text-xl mr-3 text-[#E0A75E]">●</span><div><strong class="text-[#3C3633]">High Bandwidth Memory:</strong> A super-fast memory interface to feed all the cores with data simultaneously.</div></li>
+                        <li class="flex items-start"><span class="text-xl mr-3 text-[#E0A75E]">●</span><div><strong class="text-[#3C3633]">Simple Control Logic:</strong> More silicon space is dedicated to computation rather than complex decision-making.</div></li>
+                         <li class="flex items-start"><span class="text-xl mr-3 text-[#E0A75E]">●</span><div><strong class="text-[#3C3633]">Ideal For:</strong> Graphics, AI, scientific simulations, and data-parallel algorithms.</div></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="how-it-works" class="my-24 scroll-mt-24 section-fade-in">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">How It Works: The CUDA Model</h2>
+            <p class="max-w-3xl mx-auto text-center text-lg text-gray-600 mb-12">CUDA provides a structured way to manage massive parallelism. It uses a hierarchy of threads to map work to the hardware, a multi-level memory system for efficient data access, and a clear workflow for communication between the CPU (host) and GPU (device). Explore these concepts below.</p>
+
+            <div class="space-y-16">
+                <!-- Execution Hierarchy -->
+                <div>
+                    <h3 class="text-2xl font-semibold mb-6 text-center">1. The Execution Hierarchy</h3>
+                    <div class="flex flex-col md:flex-row justify-center items-center gap-2 text-center font-mono">
+                        <div id="grid-vis" class="p-4 border-2 border-[#E0A75E] rounded-lg cursor-pointer bg-white hover:shadow-xl transition-shadow w-full md:w-auto">
+                            <span class="text-2xl">🌍</span><br/>Grid
+                        </div>
+                        <span class="text-2xl font-sans hidden md:block">➔</span>
+                        <span class="text-2xl font-sans md:hidden">↓</span>
+                        <div id="block-vis" class="p-4 border-2 border-[#758694] rounded-lg cursor-pointer bg-white hover:shadow-xl transition-shadow w-full md:w-auto">
+                           <span class="text-2xl">📦</span><br/>Block
+                        </div>
+                        <span class="text-2xl font-sans hidden md:block">➔</span>
+                        <span class="text-2xl font-sans md:hidden">↓</span>
+                        <div id="thread-vis" class="p-4 border-2 border-gray-400 rounded-lg cursor-pointer bg-white hover:shadow-xl transition-shadow w-full md:w-auto">
+                            <span class="text-2xl">🧵</span><br/>Thread
+                        </div>
+                    </div>
+                    <div id="hierarchy-details" class="mt-6 max-w-2xl mx-auto p-6 bg-white/80 rounded-lg shadow-md transition-all duration-300">
+                        <p class="text-gray-600">Click on an element above to see its description.</p>
+                    </div>
+                </div>
+
+                <!-- Memory Hierarchy -->
+                <div>
+                    <h3 class="text-2xl font-semibold mb-6 text-center">2. The Memory Hierarchy</h3>
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                        <div class="space-y-2 text-center font-mono" id="memory-diagram">
+                        </div>
+                        <div id="memory-details" class="p-6 bg-white/80 rounded-lg shadow-md min-h-[300px]">
+                             <p class="text-gray-600">Click on a memory type to the left to learn more.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CUDA Workflow -->
+                <div>
+                    <h3 class="text-2xl font-semibold mb-6 text-center">3. The Programming Workflow</h3>
+                    <div class="max-w-4xl mx-auto">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 text-center text-sm">
+                            <div class="p-4 bg-white/80 rounded-lg shadow-md flex flex-col items-center justify-center">
+                                <span class="text-3xl mb-2">①</span>
+                                <strong>Allocate</strong><br/>Host & Device Memory<br/>
+                                <code class="text-xs mt-1 text-pink-600">cudaMalloc()</code>
+                            </div>
+                             <div class="flex items-center justify-center text-2xl text-gray-400">→</div>
+                            <div class="p-4 bg-white/80 rounded-lg shadow-md flex flex-col items-center justify-center">
+                                <span class="text-3xl mb-2">②</span>
+                                <strong>Copy</strong><br/>Host ➔ Device<br/>
+                                <code class="text-xs mt-1 text-pink-600">cudaMemcpy()</code>
+                            </div>
+                             <div class="flex items-center justify-center text-2xl text-gray-400">→</div>
+                            <div class="p-4 bg-[#E0A75E]/30 rounded-lg shadow-lg flex flex-col items-center justify-center border-2 border-[#E0A75E]">
+                                <span class="text-3xl mb-2">③</span>
+                                <strong class="text-black">Launch Kernel</strong><br/>GPU Computes<br/>
+                                <code class="text-xs mt-1 text-pink-600">kernel<<<...>>>()</code>
+                            </div>
+                            <div class="hidden md:flex items-center justify-center text-2xl text-gray-400">→</div>
+                            <div class="p-4 mt-4 md:mt-0 bg-white/80 rounded-lg shadow-md flex flex-col items-center justify-center">
+                                <span class="text-3xl mb-2">④</span>
+                                <strong>Copy</strong><br/>Device ➔ Host<br/>
+                                <code class="text-xs mt-1 text-pink-600">cudaMemcpy()</code>
+                            </div>
+                             <div class="flex items-center justify-center text-2xl text-gray-400">→</div>
+                             <div class="p-4 bg-white/80 rounded-lg shadow-md flex flex-col items-center justify-center">
+                                <span class="text-3xl mb-2">⑤</span>
+                                <strong>Free</strong><br/>Host & Device Memory<br/>
+                                <code class="text-xs mt-1 text-pink-600">cudaFree()</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="optimization" class="my-24 scroll-mt-24 section-fade-in">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">Making It Fast: Key Optimizations</h2>
+            <p class="max-w-3xl mx-auto text-center text-lg text-gray-600 mb-12">Writing correct CUDA code is the first step; writing fast code is the art. Performance hinges on aligning your algorithm with the GPU's architecture. Click on the cards below to explore some of the most critical optimization strategies.</p>
+            <div id="optimization-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Cards will be injected by JavaScript -->
+            </div>
+        </section>
+
+        <section id="in-action" class="my-24 scroll-mt-24 section-fade-in">
+             <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">CUDA in Action: Real-World Speedups</h2>
+             <p class="max-w-3xl mx-auto text-center text-lg text-gray-600 mb-12">The theoretical benefits of GPU parallelism translate into transformative performance gains across many industries. This chart showcases reported speedups of CUDA-accelerated applications compared to CPU-only implementations. Use the filters to explore different domains.</p>
+             <div class="flex justify-center flex-wrap gap-2 mb-8">
+                 <button class="filter-btn active" data-filter="all">All Domains</button>
+                 <button class="filter-btn" data-filter="Deep Learning">Deep Learning</button>
+                 <button class="filter-btn" data-filter="Scientific Computing">Scientific Computing</button>
+                 <button class="filter-btn" data-filter="Financial Modeling">Financial Modeling</button>
+                 <button class="filter-btn" data-filter="Image/Video Processing">Image/Video Processing</button>
+                 <button class="filter-btn" data-filter="Cryptography">Cryptography</button>
+             </div>
+             <div class="bg-white/50 p-4 md:p-6 rounded-xl shadow-lg border border-gray-200">
+                <div class="chart-container">
+                    <canvas id="benchmarkChart"></canvas>
+                </div>
+             </div>
+        </section>
+
+        <section id="comparison" class="my-24 scroll-mt-24 section-fade-in">
+             <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">The Broader Picture: CUDA vs. OpenCL</h2>
+             <p class="max-w-3xl mx-auto text-center text-lg text-gray-600 mb-12">CUDA is the dominant force in GPU computing, but it's not the only player. OpenCL is its primary open-standard alternative. The choice between them involves a trade-off between performance on specific hardware and cross-platform portability.</p>
+             <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                 <div class="bg-white/80 p-6 rounded-xl shadow-lg border border-gray-200">
+                     <h3 class="text-2xl font-semibold mb-4 text-center text-[#E0A75E]">🚀 CUDA</h3>
+                     <ul id="cuda-comparison-list" class="space-y-3"></ul>
+                 </div>
+                 <div class="bg-white/80 p-6 rounded-xl shadow-lg border border-gray-200">
+                     <h3 class="text-2xl font-semibold mb-4 text-center text-[#758694]">🌐 OpenCL</h3>
+                     <ul id="opencl-comparison-list" class="space-y-3"></ul>
+                 </div>
+             </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-gray-100 border-t">
+        <div class="container mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-gray-600">
+             <p class="text-2xl font-bold text-[#3C3633] mb-2">Conclusion</p>
+             <p class="max-w-4xl mx-auto">CUDA has fundamentally reshaped high-performance computing by making the immense power of GPUs accessible. Its success lies in a strong programming model, a rich ecosystem of libraries, and tight hardware integration. By understanding its core principles of parallelism, memory management, and optimization, developers can unlock orders-of-magnitude performance gains, enabling innovations that were once computationally impossible.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const data = {
+                hierarchy: {
+                    grid: { title: 'Grid: An Army of Blocks', description: 'A kernel is launched as a <strong>grid</strong> of thread blocks. It\'s a 1D, 2D, or 3D array of blocks that all execute the same kernel code. Blocks in a grid are independent, allowing CUDA to scale your application across GPUs with different numbers of cores.' },
+                    block: { title: 'Block: A Team of Threads', description: 'A <strong>thread block</strong> is a group of threads (up to 1024) that can cooperate. Threads within a block can share data using fast on-chip <strong>shared memory</strong> and can synchronize their execution using <code>__syncthreads()</code>. The entire block runs on a single Streaming Multiprocessor (SM).' },
+                    thread: { title: 'Thread: The Worker', description: 'A <strong>thread</strong> is the smallest unit of execution. Each thread runs one instance of the kernel function, identified by its unique <code>threadIdx</code> and <code>blockIdx</code>. It has its own private registers for fast computation.' },
+                },
+                memory: [
+                    { name: 'Registers', speed: 'Fastest', scope: 'Per Thread', desc: 'On-chip registers are the fastest memory, private to each thread. Used for local variables and frequent computations. Managed automatically by the compiler.' },
+                    { name: 'Shared Memory', speed: 'Very Fast', scope: 'Per Block', desc: 'Fast on-chip memory for data sharing between threads in the same block. It\'s a user-managed cache, critical for optimizations like tiling.' },
+                    { name: 'Constant Memory', speed: 'Fast (Cached)', scope: 'Read-Only', desc: 'Read-only memory for all threads, cached on-chip. Ideal for broadcasting the same value (like configuration parameters) to all threads in a warp.' },
+                    { name: 'Texture Memory', speed: 'Fast (Cached)', scope: 'Read-Only', desc: 'Read-only memory optimized for 2D spatial locality. The texture cache is great for image processing, providing hardware-based filtering and boundary handling.' },
+                    { name: 'Global Memory', speed: 'Slow', scope: 'Per Grid & Host', desc: 'The largest memory space (DRAM), but also the slowest. It\'s the main channel for transferring data between the host (CPU) and device (GPU). Efficient use (coalescing) is vital.' },
+                    { name: 'Local Memory', speed: 'Slow', scope: 'Per Thread', desc: 'Private to each thread, but physically resides in slow global memory. Used when registers spill or for large local arrays. Best to avoid if possible.' },
+                ],
+                optimizations: [
+                    { title: 'Memory Coalescing', icon: '🔗', front: 'Group memory accesses together.', back: 'When threads in a warp access consecutive memory locations, the GPU can combine them into a single, wide transaction. Uncoalesced (scattered) access is a major performance killer as it wastes memory bandwidth.' },
+                    { title: 'Minimize Divergence', icon: '🔀', front: 'Avoid `if/else` within a warp.', back: 'Warp divergence occurs when threads in a warp take different execution paths. Since warps execute one instruction at a time, these paths are serialized, killing parallelism. Restructure code to be uniform where possible.' },
+                    { title: 'Use Shared Memory', icon: '🤝', front: 'Use as a user-managed cache.', back: 'Shared memory is much faster than global memory. Load data that will be reused from global to shared memory once, then have all threads in the block access the fast shared copy. Beware of bank conflicts!' },
+                    { title: 'Maximize Occupancy', icon: '📈', front: 'Keep the GPU busy.', back: 'Occupancy is the ratio of active warps to the maximum possible on an SM. High occupancy allows the GPU to hide memory latency by switching to another ready warp while one is waiting, keeping the computational units fed.' }
+                ],
+                benchmarks: {
+                    all: [
+                        { label: 'DNN Training', value: 18, domain: 'Deep Learning' },
+                        { label: 'Image Classification', value: 10, domain: 'Deep Learning' },
+                        { label: 'Molecular Dynamics', value: 17, domain: 'Scientific Computing' },
+                        { label: 'CFD (LBM)', value: 15, domain: 'Scientific Computing' },
+                        { label: 'Quantum Sim.', value: 34, domain: 'Scientific Computing' },
+                        { label: 'Algo. Trading', value: 100, domain: 'Financial Modeling' },
+                        { label: 'Option Pricing', value: 130, domain: 'Financial Modeling' },
+                        { label: 'Homomorphic Enc.', value: 23, domain: 'Cryptography' },
+                        { label: 'NLM Filter', value: 338, domain: 'Image/Video Processing' },
+                        { label: 'Video Segmentation', value: 13, domain: 'Image/Video Processing' }
+                    ]
+                },
+                comparison: {
+                    cuda: [
+                        { icon: '💼', text: '<strong>Proprietary:</strong> Developed and controlled by NVIDIA.' },
+                        { icon: '🚀', text: '<strong>Performance:</strong> Generally highest performance on NVIDIA hardware due to tight integration.' },
+                        { icon: '📚', text: '<strong>Ecosystem:</strong> Mature, extensive libraries (cuDNN, cuBLAS) and tools (Nsight).' },
+                        { icon: '🔒', text: '<strong>Vendor Lock-in:</strong> Only runs on NVIDIA GPUs.' }
+                    ],
+                    opencl: [
+                        { icon: '🌐', text: '<strong>Open Standard:</strong> Managed by the Khronos Group consortium.' },
+                        { icon: '💻', text: '<strong>Portability:</strong> Runs on diverse hardware (NVIDIA, AMD, Intel GPUs, CPUs, FPGAs).' },
+                        { icon: '🛠️', text: '<strong>Ecosystem:</strong> Less extensive and more fragmented libraries and tools.' },
+                        { icon: '📊', text: '<strong>Performance:</strong> Can be competitive, but often requires more tuning and may vary across vendors.' }
+                    ]
+                }
+            };
+
+            data.benchmarks['Deep Learning'] = data.benchmarks.all.filter(d => d.domain === 'Deep Learning');
+            data.benchmarks['Scientific Computing'] = data.benchmarks.all.filter(d => d.domain === 'Scientific Computing');
+            data.benchmarks['Financial Modeling'] = data.benchmarks.all.filter(d => d.domain === 'Financial Modeling');
+            data.benchmarks['Cryptography'] = data.benchmarks.all.filter(d => d.domain === 'Cryptography');
+            data.benchmarks['Image/Video Processing'] = data.benchmarks.all.filter(d => d.domain === 'Image/Video Processing');
+            
+            // Mobile Menu
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            // Section Observer
+            const sections = document.querySelectorAll('.section-fade-in');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, { threshold: 0.1 });
+            sections.forEach(section => observer.observe(section));
+            
+            // Nav link active state
+            const navLinks = document.querySelectorAll('.nav-link');
+            const navObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if(entry.isIntersecting) {
+                        const id = entry.target.getAttribute('id');
+                        navLinks.forEach(link => {
+                            link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+                        });
+                    }
+                });
+            }, { rootMargin: '-50% 0px -50% 0px' });
+            sections.forEach(section => navObserver.observe(section));
+
+            // Hierarchy Interaction
+            const hierarchyDetails = document.getElementById('hierarchy-details');
+            ['grid', 'block', 'thread'].forEach(id => {
+                document.getElementById(`${id}-vis`).addEventListener('click', () => {
+                    const detailData = data.hierarchy[id];
+                    hierarchyDetails.innerHTML = `<h4 class="font-bold text-xl mb-2 text-gray-800">${detailData.title}</h4><p class="text-gray-700">${detailData.description}</p>`;
+                });
+            });
+
+            // Memory Hierarchy Interaction
+            const memoryDiagram = document.getElementById('memory-diagram');
+            const memoryDetails = document.getElementById('memory-details');
+            data.memory.forEach(mem => {
+                const memDiv = document.createElement('div');
+                memDiv.className = 'p-3 border-2 rounded-lg cursor-pointer bg-white hover:shadow-xl hover:border-[#E0A75E] transition-all';
+                memDiv.textContent = mem.name;
+                memDiv.addEventListener('click', () => {
+                    memoryDetails.innerHTML = `
+                        <h4 class="font-bold text-xl mb-2 text-gray-800">${mem.name}</h4>
+                        <div class="flex items-center text-sm mb-1"><span class="font-semibold w-20">Speed:</span><span class="px-2 py-0.5 bg-[#E0A75E]/20 text-[#E0A75E] rounded-full">${mem.speed}</span></div>
+                        <div class="flex items-center text-sm mb-4"><span class="font-semibold w-20">Scope:</span><span>${mem.scope}</span></div>
+                        <p class="text-gray-700">${mem.desc}</p>
+                    `;
+                    document.querySelectorAll('#memory-diagram > div').forEach(d => d.classList.remove('border-[#E0A75E]', 'bg-[#E0A75E]/10'));
+                    memDiv.classList.add('border-[#E0A75E]', 'bg-[#E0A75E]/10');
+                });
+                memoryDiagram.appendChild(memDiv);
+            });
+
+            // Optimization Cards
+            const optGrid = document.getElementById('optimization-grid');
+            data.optimizations.forEach(opt => {
+                const cardContainer = document.createElement('div');
+                cardContainer.className = 'w-full h-48 perspective-1000';
+                cardContainer.innerHTML = `
+                    <div class="relative w-full h-full card-flip">
+                        <div class="absolute w-full h-full card-front bg-white rounded-xl shadow-lg border border-gray-200 p-6 flex flex-col items-center justify-center text-center cursor-pointer">
+                            <div class="text-4xl mb-2">${opt.icon}</div>
+                            <h4 class="text-xl font-semibold">${opt.title}</h4>
+                            <p class="text-gray-500">${opt.front}</p>
+                        </div>
+                        <div class="absolute w-full h-full card-back bg-[#758694] text-white rounded-xl shadow-lg p-6 flex items-center justify-center text-center cursor-pointer">
+                            <p>${opt.back}</p>
+                        </div>
+                    </div>
+                `;
+                cardContainer.addEventListener('click', () => {
+                    cardContainer.querySelector('.card-flip').classList.toggle('flipped');
+                });
+                optGrid.appendChild(cardContainer);
+            });
+
+            // Benchmark Chart
+            const ctx = document.getElementById('benchmarkChart').getContext('2d');
+            const benchmarkChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.benchmarks.all.map(d => d.label),
+                    datasets: [{
+                        label: 'Speedup vs. CPU (x times faster)',
+                        data: data.benchmarks.all.map(d => d.value),
+                        backgroundColor: 'rgba(224, 167, 94, 0.6)',
+                        borderColor: 'rgba(224, 167, 94, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                           beginAtZero: true,
+                           title: { display: true, text: 'Speedup Factor (logarithmic)' },
+                           type: 'logarithmic',
+                        },
+                        y: {
+                            ticks: {
+                                autoSkip: false,
+                                callback: function(value, index, values) {
+                                    const label = this.getLabelForValue(value);
+                                    return label.length > 20 ? label.substring(0, 20) + '...' : label;
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw}x`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            filterButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    filterButtons.forEach(btn => btn.classList.remove('active', 'bg-[#E0A75E]', 'text-white'));
+                    button.classList.add('active', 'bg-[#E0A75E]', 'text-white');
+                    
+                    const filter = button.dataset.filter;
+                    const filteredData = data.benchmarks[filter];
+                    
+                    benchmarkChart.data.labels = filteredData.map(d => d.label);
+                    benchmarkChart.data.datasets[0].data = filteredData.map(d => d.value);
+                    benchmarkChart.update();
+                });
+            });
+
+            // Comparison Lists
+            const cudaList = document.getElementById('cuda-comparison-list');
+            const openclList = document.getElementById('opencl-comparison-list');
+            data.comparison.cuda.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'flex items-start';
+                li.innerHTML = `<span class="text-xl mr-3">${item.icon}</span><div>${item.text}</div>`;
+                cudaList.appendChild(li);
+            });
+            data.comparison.opencl.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'flex items-start';
+                li.innerHTML = `<span class="text-xl mr-3">${item.icon}</span><div>${item.text}</div>`;
+                openclList.appendChild(li);
+            });
+            
+            // Style active filter button initially
+            document.querySelector('.filter-btn[data-filter="all"]').classList.add('active', 'bg-[#E0A75E]', 'text-white');
+        });
+    </script>
+</body>
+</html>

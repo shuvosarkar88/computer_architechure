@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Chosen Palette: Slate & Sky Blue -->
+    <!-- Application Structure Plan: A single-page, scrollable application with a sticky navigation bar for easy access to key topics. The structure prioritizes a logical learning flow over mirroring the report's linear order. It starts with 'What & Why' for foundational context, moves to 'Core Concepts' (Registers, Memory, Instructions) with interactive tabs for focused learning, then 'Code in Action' for practical high-level to low-level translation examples, followed by a 'Architecture Showdown' (x86 vs. ARM) for comparison, and concludes with 'Toolchain'. This thematic, interactive approach is chosen to make a dense topic digestible and engaging, allowing users to explore components non-linearly after an initial read-through. The dynamic stack frame visualization is the centerpiece, designed to make an abstract concept tangible. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Register types and naming conventions -> Goal: Organize & Inform -> Viz/Method: Interactive HTML/CSS diagram with hover effects to show register hierarchies (RAX -> EAX -> AX -> AL/AH). Justification: Visually demonstrates the layered nature of x86 registers more effectively than text. Method: HTML divs, CSS, JS event listeners.
+        - Report Info: Stack frame operations (PUSH, POP, CALL, RET) -> Goal: Demonstrate a process -> Viz/Method: Dynamic HTML/CSS stack visualization controlled by buttons. Justification: Makes the abstract LIFO process and pointer movements (RSP/RBP) concrete and easy to understand. Method: HTML divs, CSS, JS DOM manipulation.
+        - Report Info: C to Assembly translation -> Goal: Compare & Explain -> Viz/Method: Side-by-side code blocks with hover-to-highlight interaction. Justification: Directly links high-level constructs to their low-level counterparts, clarifying the translation process. Method: HTML <pre>/<code>, CSS, JS event listeners.
+        - Report Info: x86 vs. ARM differences -> Goal: Compare -> Viz/Method: Two-column feature comparison table and a Chart.js bar chart for GPR count. Justification: The table provides a quick, scannable reference for key differences, while the chart offers an immediate visual impact of the register disparity. Library/Method: HTML table, Chart.js/Canvas.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <title>Interactive Guide to Assembly Language</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .font-mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .nav-link {
+            transition: color 0.2s, border-bottom-color 0.2s;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #0ea5e9;
+            border-bottom-color: #0ea5e9;
+        }
+        .tab-button {
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .tab-button.active {
+            background-color: #0ea5e9;
+            color: white;
+        }
+        .code-highlight {
+            transition: background-color 0.2s;
+        }
+        .highlight-c {
+            background-color: #dbeafe !important;
+            border-left: 2px solid #3b82f6;
+        }
+        .highlight-asm {
+            background-color: #e0f2fe !important;
+            border-left: 2px solid #0ea5e9;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <header class="bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-50">
+        <nav class="container mx-auto px-4 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <h1 class="text-2xl font-bold text-slate-900">Assembly Explained</h1>
+                <div class="hidden md:flex space-x-8">
+                    <a href="#what-is-it" class="nav-link border-b-2 border-transparent pb-1">The Basics</a>
+                    <a href="#core-concepts" class="nav-link border-b-2 border-transparent pb-1">Core Concepts</a>
+                    <a href="#code-in-action" class="nav-link border-b-2 border-transparent pb-1">Code in Action</a>
+                    <a href="#architectures" class="nav-link border-b-2 border-transparent pb-1">Architectures</a>
+                    <a href="#toolchain" class="nav-link border-b-2 border-transparent pb-1">Toolchain</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 lg:px-8 py-12">
+        
+        <section id="what-is-it" class="text-center mb-20">
+            <h2 class="text-4xl font-bold text-slate-900 mb-4">The Bedrock of Computation</h2>
+            <p class="max-w-3xl mx-auto text-lg text-slate-600">Assembly language is the crucial bridge between human-readable code and the raw binary instructions your processor understands. While high-level languages offer abstraction, Assembly gives you ultimate control over the hardware. This guide makes its fundamental concepts tangible and easy to explore.</p>
+        </section>
+
+        <section id="core-concepts" class="mb-20">
+            <h2 class="text-3xl font-bold text-center mb-10">Core Concepts</h2>
+            <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                <div class="flex justify-center border-b mb-6">
+                    <button class="tab-button active py-2 px-4 rounded-t-lg font-semibold" onclick="showTab('tab-registers')">Registers</button>
+                    <button class="tab-button py-2 px-4 rounded-t-lg font-semibold" onclick="showTab('tab-memory')">Memory & Stack</button>
+                    <button class="tab-button py-2 px-4 rounded-t-lg font-semibold" onclick="showTab('tab-instructions')">Instructions</button>
+                </div>
+
+                <div id="tab-registers" class="tab-content fade-in">
+                    <p class="mb-6 text-slate-600">Registers are the CPU's high-speed local memory, acting as the primary workspace for all data manipulation. Understanding their roles is key to assembly programming. The visualization below shows the hierarchy of a 64-bit x86 general-purpose register. Hover over the components to see how they relate.</p>
+                    <div id="register-diagram" class="bg-slate-50 p-6 rounded-lg text-center font-mono">
+                        <div class="border-2 border-sky-500 p-2 rounded-md inline-block" data-reg="rax">
+                            <span class="font-bold text-lg">RAX (64-bit)</span>
+                            <div class="border-2 border-sky-400 p-2 rounded-md mt-2" data-reg="eax">
+                                <span class="font-bold">EAX (32-bit)</span>
+                                <div class="border-2 border-sky-300 p-2 rounded-md mt-2" data-reg="ax">
+                                    <span class="font-bold">AX (16-bit)</span>
+                                    <div class="flex justify-center mt-2 space-x-2">
+                                        <div class="border-2 border-sky-200 p-2 rounded-md" data-reg="ah"><span class="font-bold">AH</span> (8)</div>
+                                        <div class="border-2 border-sky-200 p-2 rounded-md" data-reg="al"><span class="font-bold">AL</span> (8)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="register-info" class="mt-4 p-4 bg-slate-100 rounded-lg min-h-[50px] text-center font-semibold text-slate-700">Hover over a register part to see its description.</div>
+                </div>
+
+                <div id="tab-memory" class="tab-content hidden fade-in">
+                     <p class="mb-6 text-slate-600">The stack is a LIFO (Last-In, First-Out) memory region crucial for managing function calls, local variables, and temporary data. The `CALL` instruction pushes a return address, and functions create a "stack frame" for their private workspace. Use the buttons below to see how a stack frame is built and dismantled.</p>
+                    <div class="flex flex-col md:flex-row gap-8 items-start">
+                        <div class="w-full md:w-1/2">
+                           <div class="flex flex-wrap gap-2 mb-4">
+                               <button class="bg-sky-500 text-white py-2 px-4 rounded-lg hover:bg-sky-600 transition" onclick="stackAction('call')">1. Caller makes a CALL</button>
+                               <button class="bg-sky-500 text-white py-2 px-4 rounded-lg hover:bg-sky-600 transition" onclick="stackAction('prologue')">2. Function Prologue</button>
+                               <button class="bg-sky-500 text-white py-2 px-4 rounded-lg hover:bg-sky-600 transition" onclick="stackAction('locals')">3. Allocate Locals</button>
+                               <button class="bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition" onclick="stackAction('epilogue')">4. Function Epilogue</button>
+                               <button class="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition" onclick="stackAction('reset')">Reset</button>
+                           </div>
+                           <div id="stack-explanation" class="mt-4 p-4 bg-slate-100 rounded-lg min-h-[100px] text-slate-700">Click the buttons in sequence to simulate a function call.</div>
+                        </div>
+                        <div class="w-full md:w-1/2 bg-slate-50 p-4 rounded-lg border">
+                            <h4 class="font-bold text-center mb-2">Stack Memory (Grows Down)</h4>
+                            <div id="stack-visualizer" class="relative w-full h-96 bg-white rounded flex flex-col-reverse justify-start border overflow-hidden">
+                                 <div class="absolute right-2 top-2 text-xs font-mono text-slate-400">High Address &uarr;</div>
+                                 <div class="absolute right-2 bottom-2 text-xs font-mono text-slate-400">&darr; Low Address</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-instructions" class="tab-content hidden fade-in">
+                    <p class="mb-6 text-slate-600">Instructions are the fundamental commands the CPU executes. They fall into several categories. Below is a summary of common instruction types and the two primary syntaxes you'll encounter for x86: Intel and AT&T.</p>
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">Common Instruction Categories</h4>
+                            <ul class="space-y-2 list-disc list-inside">
+                                <li><strong>Data Movement (MOV, LEA):</strong> Copy data between registers and memory.</li>
+                                <li><strong>Arithmetic (ADD, SUB, MUL, DIV):</strong> Perform mathematical calculations.</li>
+                                <li><strong>Logical (AND, OR, XOR, NOT):</strong> Perform bitwise operations.</li>
+                                <li><strong>Control Flow (JMP, JZ, CALL, RET):</strong> Change the order of execution.</li>
+                                <li><strong>Comparison (CMP, TEST):</strong> Set flags for conditional jumps.</li>
+                            </ul>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <h4 class="font-bold text-lg mb-2">Syntax: Intel vs. AT&T</h4>
+                             <table class="w-full text-left text-sm font-mono">
+                                <thead class="bg-slate-100">
+                                    <tr>
+                                        <th class="p-2">Feature</th>
+                                        <th class="p-2">Intel</th>
+                                        <th class="p-2">AT&T</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b"><td class="p-2 font-sans font-medium">Order</td><td class="p-2">dest, src</td><td class="p-2">src, dest</td></tr>
+                                    <tr class="border-b"><td class="p-2 font-sans font-medium">Registers</td><td class="p-2">rax</td><td class="p-2">%rax</td></tr>
+                                    <tr class="border-b"><td class="p-2 font-sans font-medium">Constants</td><td class="p-2">10</td><td class="p-2">$10</td></tr>
+                                    <tr class="border-b"><td class="p-2 font-sans font-medium">Memory</td><td class="p-2">[rax]</td><td class="p-2">(%rax)</td></tr>
+                                    <tr class="border-b"><td class="p-2 font-sans font-medium">Size</td><td class="p-2">mov al, ...</td><td class="p-2">movb ...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <section id="code-in-action" class="mb-20">
+            <h2 class="text-3xl font-bold text-center mb-10">From High-Level to Assembly</h2>
+            <p class="text-center max-w-3xl mx-auto mb-10 text-slate-600">How do familiar constructs like `if`, `while`, and functions translate into Assembly? Compilers deconstruct them into simple comparisons and jumps. Hover over a line of C code in the examples below to see its corresponding Assembly instructions highlighted.</p>
+            
+            <div class="grid md:grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-xl shadow-lg p-6" id="if-else-example">
+                    <h3 class="font-bold text-xl mb-4">If-Else Statement</h3>
+                    <div class="grid grid-cols-2 gap-4 font-mono text-sm">
+                        <div>
+                            <h4 class="font-semibold mb-2 text-slate-700 font-sans">C Code</h4>
+                            <pre class="bg-slate-50 p-3 rounded-lg overflow-x-auto"><code class="language-c"><span data-asm-target="cmp-i-j" class="code-highlight block">if (i > j) {</span>
+<span data-asm-target="if-true" class="code-highlight block">  result = 1;</span>
+<span data-asm-target="cmp-i-j" class="code-highlight block">} else {</span>
+<span data-asm-target="if-false" class="code-highlight block">  result = 4;</span>
+<span data-asm-target="cmp-i-j" class="code-highlight block">}</span>
+</code></pre>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold mb-2 text-slate-700 font-sans">x86 Assembly (Intel Syntax)</h4>
+                            <pre class="bg-slate-50 p-3 rounded-lg overflow-x-auto"><code class="language-asm"><span data-asm-id="cmp-i-j" class="code-highlight block">  cmp eax, ebx  ; Compare i (eax) and j (ebx)</span>
+<span data-asm-id="cmp-i-j" class="code-highlight block">  jle else_branch ; Jump if Less/Equal</span>
+<span data-asm-id="if-true" class="code-highlight block">  mov ecx, 1      ; True: result = 1</span>
+<span data-asm-id="if-true" class="code-highlight block">  jmp end_if</span>
+<span data-asm-id="if-false" class="code-highlight block">else_branch:</span>
+<span data-asm-id="if-false" class="code-highlight block">  mov ecx, 4      ; False: result = 4</span>
+<span data-asm-id="cmp-i-j" class="code-highlight block">end_if:</span>
+</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6" id="while-loop-example">
+                    <h3 class="font-bold text-xl mb-4">While Loop</h3>
+                    <div class="grid grid-cols-2 gap-4 font-mono text-sm">
+                        <div>
+                             <h4 class="font-semibold mb-2 text-slate-700 font-sans">C Code</h4>
+                            <pre class="bg-slate-50 p-3 rounded-lg overflow-x-auto"><code class="language-c"><span data-asm-target="while-cond" class="code-highlight block">while (i > 0) {</span>
+<span data-asm-target="while-body" class="code-highlight block">  sum += i;</span>
+<span data-asm-target="while-body" class="code-highlight block">  i--;</span>
+<span data-asm-target="while-cond" class="code-highlight block">}</span>
+</code></pre>
+                        </div>
+                        <div>
+                             <h4 class="font-semibold mb-2 text-slate-700 font-sans">x86 Assembly (Intel Syntax)</h4>
+                            <pre class="bg-slate-50 p-3 rounded-lg overflow-x-auto"><code class="language-asm"><span data-asm-id="while-cond" class="code-highlight block">loop_start:</span>
+<span data-asm-id="while-cond" class="code-highlight block">  cmp ecx, 0    ; Compare i (ecx) with 0</span>
+<span data-asm-id="while-cond" class="code-highlight block">  jle loop_end  ; Jump if i <= 0</span>
+<span data-asm-id="while-body" class="code-highlight block">  add eax, ecx  ; sum (eax) += i</span>
+<span data-asm-id="while-body" class="code-highlight block">  dec ecx       ; i--</span>
+<span data-asm-id="while-body" class="code-highlight block">  jmp loop_start</span>
+<span data-asm-id="while-cond" class="code-highlight block">loop_end:</span>
+</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="architectures" class="mb-20">
+            <h2 class="text-3xl font-bold text-center mb-10">Architecture Showdown: x86 vs. ARM</h2>
+            <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                <p class="text-center max-w-3xl mx-auto mb-10 text-slate-600">The two dominant processor architectures, x86 (CISC) and ARM (RISC), have fundamentally different design philosophies. This impacts their instruction sets, performance characteristics, and power usage, leading them to excel in different domains.</p>
+                <div class="grid lg:grid-cols-2 gap-8">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b-2 border-slate-200">
+                                    <th class="p-3 text-lg">Feature</th>
+                                    <th class="p-3 text-lg font-bold text-blue-600">x86 (CISC)</th>
+                                    <th class="p-3 text-lg font-bold text-green-600">ARM (RISC)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b"><td class="p-3 font-semibold">Philosophy</td><td class="p-3">Complex Instruction Set</td><td class="p-3">Reduced Instruction Set</td></tr>
+                                <tr class="border-b"><td class="p-3 font-semibold">Instructions</td><td class="p-3">Many complex, variable-length instructions</td><td class="p-3">Fewer simple, fixed-length instructions</td></tr>
+                                <tr class="border-b"><td class="p-3 font-semibold">Memory Access</td><td class="p-3">Instructions can operate directly on memory</td><td class="p-3">Strict "Load/Store" model; ops on registers only</td></tr>
+                                <tr class="border-b"><td class="p-3 font-semibold">Power Usage</td><td class="p-3">Generally higher, built for performance</td><td class="p-3">Generally lower, built for efficiency</td></tr>
+                                <tr class="border-b"><td class="p-3 font-semibold">Primary Domain</td><td class="p-3">Desktops, Servers</td><td class="p-3">Mobile, Embedded</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-center mb-2">General-Purpose Registers (GPRs)</h3>
+                        <div class="chart-container">
+                             <canvas id="arch-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="toolchain" class="text-center">
+             <h2 class="text-3xl font-bold text-center mb-4">The Programmer's Toolchain</h2>
+             <p class="max-w-3xl mx-auto text-lg text-slate-600 mb-10">Creating a runnable program from assembly source code involves a few key tools that work in sequence.</p>
+             <div class="grid md:grid-cols-3 gap-8">
+                 <div class="bg-white rounded-xl shadow p-6">
+                     <h3 class="text-xl font-bold mb-2">1. Assembler</h3>
+                     <p class="text-slate-600">Translates your human-readable assembly code (.asm) into machine-readable object code (.o/.obj). Popular examples include NASM (Intel syntax) and GAS (AT&T syntax).</p>
+                 </div>
+                 <div class="bg-white rounded-xl shadow p-6">
+                     <h3 class="text-xl font-bold mb-2">2. Linker</h3>
+                     <p class="text-slate-600">Combines one or more object files, resolves addresses, links library functions, and creates a single final executable file that the operating system can run.</p>
+                 </div>
+                 <div class="bg-white rounded-xl shadow p-6">
+                     <h3 class="text-xl font-bold mb-2">3. Debugger</h3>
+                     <p class="text-slate-600">Allows you to run your program step-by-step, inspecting register values and memory contents to find and fix errors. GDB (GNU Debugger) is a powerful standard tool.</p>
+                 </div>
+             </div>
+        </section>
+
+    </main>
+    
+    <footer class="text-center py-8 mt-12 border-t">
+        <p class="text-slate-500">An interactive guide to the fundamentals of assembly language.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const tabs = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            window.showTab = (tabId) => {
+                tabs.forEach(tab => tab.classList.remove('active'));
+                tabContents.forEach(content => content.classList.add('hidden'));
+
+                document.querySelector(`button[onclick="showTab('${tabId}')"]`).classList.add('active');
+                document.getElementById(tabId).classList.remove('hidden');
+            };
+
+            const registerDiagram = document.getElementById('register-diagram');
+            const registerInfo = document.getElementById('register-info');
+            const registerMap = {
+                rax: 'RAX (64-bit): Return value, accumulator.',
+                eax: 'EAX (32-bit): Lower 32 bits of RAX. Used for general purpose arithmetic.',
+                ax:  'AX (16-bit): Lower 16 bits of EAX. Comprises AH and AL.',
+                ah:  'AH (8-bit): High byte (bits 8-15) of AX.',
+                al:  'AL (8-bit): Low byte (bits 0-7) of AX.'
+            };
+            registerDiagram.querySelectorAll('[data-reg]').forEach(el => {
+                el.addEventListener('mouseover', (e) => {
+                    e.stopPropagation();
+                    const reg = e.currentTarget.getAttribute('data-reg');
+                    registerInfo.textContent = registerMap[reg];
+                });
+            });
+             registerDiagram.addEventListener('mouseout', () => {
+                 registerInfo.textContent = 'Hover over a register part to see its description.';
+             });
+
+            const archChartCtx = document.getElementById('arch-chart').getContext('2d');
+            new Chart(archChartCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['x86-64', 'ARM (AArch64)'],
+                    datasets: [{
+                        label: 'Number of General-Purpose Registers',
+                        data: [16, 31],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.7)',
+                            'rgba(16, 185, 129, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(16, 185, 129, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                           display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.parsed.y} GPRs`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Register Count'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            const stackVisualizer = document.getElementById('stack-visualizer');
+            const stackExplanation = document.getElementById('stack-explanation');
+            let stackState = 0;
+            const stackActions = {
+                call: {
+                    html: `<div id="ret-addr" class="bg-purple-200 text-purple-800 p-2 text-center font-mono text-sm border-b border-purple-300">Return Address</div>`,
+                    text: 'The `CALL` instruction pushes the address of the next instruction onto the stack so the program knows where to return.'
+                },
+                prologue: {
+                    html: `<div id="old-rbp" class="bg-orange-200 text-orange-800 p-2 text-center font-mono text-sm border-b border-orange-300">Old RBP</div>`,
+                    text: 'The function prologue begins. The caller\'s Base Pointer (RBP) is saved to the stack to preserve it.'
+                },
+                locals: {
+                    html: `<div id="local-vars" class="bg-green-200 text-green-800 p-4 text-center font-mono text-sm border-b border-green-300">Local Variables</div>`,
+                    text: 'Space for local variables is allocated on the stack by moving the Stack Pointer (RSP) down.'
+                },
+                epilogue: {
+                    text: 'The epilogue cleans up. Local variables are deallocated and the caller\'s RBP is restored.'
+                }
+            };
+            
+            let rsp, rbp;
+
+            function updatePointers() {
+                 if(rsp) rsp.remove();
+                 if(rbp) rbp.remove();
+                
+                 const topElement = stackVisualizer.firstChild;
+                 if (topElement) {
+                    rsp = document.createElement('div');
+                    rsp.className = 'absolute left-2 text-red-500 font-mono text-xs font-bold transition-all duration-300';
+                    rsp.innerHTML = '&larr; RSP';
+                    rsp.style.top = `${topElement.offsetTop + topElement.offsetHeight / 2 - 8}px`;
+                    stackVisualizer.appendChild(rsp);
+                 }
+
+                 const rbpElement = document.getElementById('old-rbp');
+                 if (rbpElement) {
+                     rbp = document.createElement('div');
+                     rbp.className = 'absolute left-2 text-blue-500 font-mono text-xs font-bold transition-all duration-300';
+                     rbp.innerHTML = '&larr; RBP';
+                     rbp.style.top = `${rbpElement.offsetTop + rbpElement.offsetHeight / 2 - 8}px`;
+                     stackVisualizer.appendChild(rbp);
+                 }
+            }
+
+            window.stackAction = (action) => {
+                if(action === 'reset'){
+                    stackVisualizer.innerHTML = `
+                         <div class="absolute right-2 top-2 text-xs font-mono text-slate-400">High Address &uarr;</div>
+                         <div class="absolute right-2 bottom-2 text-xs font-mono text-slate-400">&darr; Low Address</div>
+                    `;
+                    stackState = 0;
+                    stackExplanation.textContent = 'Stack reset. Click the buttons to start again.';
+                } else if (action === 'call' && stackState === 0) {
+                    stackVisualizer.insertAdjacentHTML('afterbegin', stackActions.call.html);
+                    stackExplanation.textContent = stackActions.call.text;
+                    stackState = 1;
+                } else if (action === 'prologue' && stackState === 1) {
+                    stackVisualizer.insertAdjacentHTML('afterbegin', stackActions.prologue.html);
+                    stackExplanation.textContent = stackActions.prologue.text;
+                    stackState = 2;
+                } else if (action === 'locals' && stackState === 2) {
+                    stackVisualizer.insertAdjacentHTML('afterbegin', stackActions.locals.html);
+                    stackExplanation.textContent = stackActions.locals.text;
+                    stackState = 3;
+                } else if (action === 'epilogue' && stackState === 3) {
+                    stackVisualizer.querySelector('#local-vars')?.remove();
+                    stackVisualizer.querySelector('#old-rbp')?.remove();
+                    stackExplanation.textContent = stackActions.epilogue.text;
+                    stackState = 1;
+                }
+                updatePointers();
+            };
+
+            const ifElseExample = document.getElementById('if-else-example');
+            setupHighlighting(ifElseExample);
+            
+            const whileLoopExample = document.getElementById('while-loop-example');
+            setupHighlighting(whileLoopExample);
+
+            function setupHighlighting(container) {
+                 const cCodeSpans = container.querySelectorAll('.language-c span[data-asm-target]');
+                 cCodeSpans.forEach(span => {
+                    span.addEventListener('mouseover', () => {
+                        const targetId = span.getAttribute('data-asm-target');
+                        container.querySelectorAll(`[data-asm-id="${targetId}"]`).forEach(asmSpan => {
+                             asmSpan.classList.add('highlight-asm');
+                        });
+                        span.classList.add('highlight-c');
+                    });
+                     span.addEventListener('mouseout', () => {
+                        const targetId = span.getAttribute('data-asm-target');
+                        container.querySelectorAll(`[data-asm-id="${targetId}"]`).forEach(asmSpan => {
+                             asmSpan.classList.remove('highlight-asm');
+                        });
+                        span.classList.remove('highlight-c');
+                    });
+                });
+            }
+            
+            const sections = document.querySelectorAll('main section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if(link.getAttribute('href').substring(1) === entry.target.id) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, { rootMargin: '-20% 0px -80% 0px', threshold: 0 });
+
+            sections.forEach(section => observer.observe(section));
+            
+            navLinks.forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+
+        });
+    </script>
+</body>
+</html>

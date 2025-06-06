@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux Kernel Architecture: An Infographic</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: A single-page, top-to-bottom scrolling infographic. The narrative flow starts with a high-level overview of the kernel's role, moves to its core design philosophy (modular monolithic), then dives into key subsystems using a multi-column grid for visual variety. It concludes by visualizing key kernel processes. This linear, guided structure is chosen to make an extremely dense technical topic approachable and easy to follow for users who want to get a comprehensive yet quick understanding. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Kernel's position -> Goal: Organize -> Viz: HTML/CSS Layered Diagram -> Justification: Clearly shows the hierarchy from hardware to user space without complex graphics. (HTML/CSS)
+        - Report Info: Monolithic vs. Modular -> Goal: Compare -> Viz: Side-by-side cards -> Justification: Simple, direct comparison of the hybrid architecture's pros and cons. (HTML/CSS)
+        - Report Info: Filesystem types -> Goal: Compare -> Viz: Radar Chart -> Justification: Excellent for multi-attribute comparison of ext4, XFS, and Btrfs on qualitative axes. (Chart.js)
+        - Report Info: Memory Allocators -> Goal: Compare -> Viz: Bar Chart -> Justification: Best for direct comparison of SLOB/SLAB/SLUB across metrics like performance and overhead. (Chart.js)
+        - Report Info: VFS Objects -> Goal: Organize/Relationship -> Viz: HTML/CSS Flowchart -> Justification: A simple, styled HTML structure is clearer and more controllable for showing the VFS object relationships than a complex library. (HTML/CSS)
+        - Report Info: Context Switch/Interrupt Handling -> Goal: Organize/Process -> Viz: HTML/CSS Step-by-step Diagram -> Justification: Breaks down complex, sequential kernel processes into easily digestible visual steps. (HTML/CSS)
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #001219;
+            color: #e9d8a6;
+        }
+        .card {
+            background-color: #003f50;
+            border: 1px solid #0a9396;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        h1, h2, h3 {
+            color: #94d2bd;
+        }
+        .accent-text {
+            color: #ee9b00;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto p-4 md:p-8">
+
+        <header class="text-center py-12">
+            <h1 class="text-4xl md:text-6xl font-extrabold mb-4">The Linux Kernel Architecture</h1>
+            <p class="text-lg md:text-xl max-w-3xl mx-auto text-blue-200">A visual deep dive into the core of the Linux operating system, from hardware abstraction to process management.</p>
+        </header>
+        
+        <section class="my-16">
+            <h2 class="text-3xl font-bold text-center mb-8">The Kernel's Place in the System</h2>
+            <div class="max-w-4xl mx-auto p-8 rounded-lg card">
+                 <div class="flex flex-col space-y-4 text-center">
+                    <div class="p-4 bg-gray-100 text-gray-800 rounded-lg shadow">
+                        <h3 class="font-bold text-lg">User Space</h3>
+                        <p class="text-sm">Applications, Libraries, Shell</p>
+                    </div>
+                    <div class="font-mono text-cyan-400 text-2xl animate-pulse">&darr;</div>
+                    <div class="p-4 bg-teal-800 rounded-lg shadow-inner border-2 border-teal-500">
+                        <h3 class="font-bold text-lg text-teal-200">System Call Interface (SCI)</h3>
+                        <p class="text-sm">The Gateway to Kernel Privileges</p>
+                    </div>
+                     <div class="font-mono text-cyan-400 text-2xl animate-pulse">&darr;</div>
+                    <div class="p-6 bg-blue-900 rounded-lg shadow">
+                        <h3 class="font-bold text-2xl">Kernel Space</h3>
+                        <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <span class="bg-blue-800 p-2 rounded">Process Mgmt</span>
+                            <span class="bg-blue-800 p-2 rounded">Memory Mgmt</span>
+                            <span class="bg-blue-800 p-2 rounded">File Systems</span>
+                            <span class="bg-blue-800 p-2 rounded">Device Drivers</span>
+                        </div>
+                    </div>
+                    <div class="font-mono text-cyan-400 text-2xl animate-pulse">&darr;</div>
+                    <div class="p-4 bg-gray-500 text-white rounded-lg shadow">
+                        <h3 class="font-bold text-lg">Hardware</h3>
+                        <p class="text-sm">CPU, RAM, Disks, Network Cards</p>
+                    </div>
+                </div>
+                <p class="mt-6 text-center text-blue-200">The kernel operates in a privileged space, acting as a secure intermediary between user applications and the physical hardware, managing resources and enforcing security.</p>
+            </div>
+        </section>
+
+        <section class="my-16">
+             <h2 class="text-3xl font-bold text-center mb-8">Core Design: The Best of Both Worlds</h2>
+             <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                 <div class="card rounded-lg p-6">
+                     <h3 class="text-2xl font-bold mb-3"><span class="accent-text">🧱 Monolithic</span> Core</h3>
+                     <p class="mb-4 text-blue-200">Core services run in a single address space, enabling high-speed communication via direct function calls.</p>
+                     <p class="font-semibold text-green-300">+ High Performance</p>
+                     <p class="font-semibold text-green-300">+ Efficient internal communication</p>
+                 </div>
+                 <div class="card rounded-lg p-6">
+                     <h3 class="text-2xl font-bold mb-3"><span class="accent-text">🧩 Modular</span> by Design</h3>
+                     <p class="mb-4 text-blue-200">Loadable Kernel Modules (LKMs) allow functionality like drivers to be added or removed dynamically.</p>
+                     <p class="font-semibold text-green-300">+ High Flexibility & Extensibility</p>
+                     <p class="font-semibold text-green-300">+ Smaller base kernel size</p>
+                 </div>
+             </div>
+        </section>
+        
+        <section class="my-16">
+            <h2 class="text-3xl font-bold text-center mb-12">Kernel Subsystem Explorer</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                <div class="card rounded-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4">Process Management</h3>
+                    <p class="mb-6 text-blue-200">The kernel creates, schedules, and manages all processes and threads. The `task_struct` is the master data structure containing all information about a task.</p>
+                     <div class="chart-container">
+                        <canvas id="taskStructChart"></canvas>
+                    </div>
+                    <p class="mt-4 text-center text-sm text-blue-300">Composition of a `task_struct`.</p>
+                </div>
+                
+                <div class="card rounded-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4">Memory Management</h3>
+                    <p class="mb-6 text-blue-200">For its own needs, the kernel uses specialized allocators. SLUB is the modern default, optimizing for performance and low overhead on multi-core systems.</p>
+                     <div class="chart-container">
+                        <canvas id="allocatorChart"></canvas>
+                    </div>
+                     <p class="mt-4 text-center text-sm text-blue-300">Relative comparison of kernel memory allocators.</p>
+                </div>
+
+                <div class="lg:col-span-2 card rounded-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4 text-center">The File System Layer</h3>
+                     <div class="grid md:grid-cols-2 gap-8 items-center">
+                        <div>
+                            <p class="mb-4 text-blue-200">The Virtual File System (VFS) provides a unified interface to diverse storage systems. This allows applications to use the same system calls (`open`, `read`, `write`) for any filesystem.</p>
+                            <div class="p-4 border border-cyan-700 rounded-lg">
+                                <h4 class="font-bold text-lg mb-2 accent-text">VFS Object Relationship</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="bg-blue-900 p-2 rounded">Process File Descriptor</div>
+                                    <div class="pl-4 font-mono text-cyan-400">&darr;</div>
+                                    <div class="bg-blue-900 p-2 rounded">`struct file` (Open file context)</div>
+                                    <div class="pl-4 font-mono text-cyan-400">&darr;</div>
+                                    <div class="bg-blue-900 p-2 rounded">`struct dentry` (Links name to inode)</div>
+                                    <div class="pl-4 font-mono text-cyan-400">&darr;</div>
+                                    <div class="bg-blue-900 p-2 rounded">`struct inode` (File metadata & data blocks)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chart-container h-96">
+                            <canvas id="fsChart"></canvas>
+                            <p class="mt-4 text-center text-sm text-blue-300">Comparison of common Linux filesystems.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card rounded-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4">Device Drivers</h3>
+                    <p class="mb-6 text-blue-200">Drivers are the translators between the abstract kernel interfaces and specific hardware. They are categorized by the type of interface they present.</p>
+                    <div class="flex justify-around text-center">
+                        <div>
+                            <p class="text-5xl">⌨️</p>
+                            <p class="mt-2 font-bold">Character</p>
+                            <p class="text-xs text-blue-300">(Serial, TTYs)</p>
+                        </div>
+                         <div>
+                            <p class="text-5xl">💾</p>
+                            <p class="mt-2 font-bold">Block</p>
+                            <p class="text-xs text-blue-300">(Disks, SSDs)</p>
+                        </div>
+                         <div>
+                            <p class="text-5xl">🌐</p>
+                            <p class="mt-2 font-bold">Network</p>
+                            <p class="text-xs text-blue-300">(Ethernet, Wi-Fi)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card rounded-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4">Inter-Process Communication (IPC)</h3>
+                    <p class="mb-6 text-blue-200">The kernel provides multiple mechanisms for processes to communicate, each with different trade-offs in speed and complexity.</p>
+                     <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-teal-300 uppercase bg-blue-800">
+                                <tr>
+                                    <th scope="col" class="px-4 py-2">Mechanism</th>
+                                    <th scope="col" class="px-4 py-2">Speed</th>
+                                    <th scope="col" class="px-4 py-2">Use Case</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-blue-800">
+                                    <th scope="row" class="px-4 py-2 font-medium whitespace-nowrap">Pipes</th>
+                                    <td class="px-4 py-2">Medium</td>
+                                    <td class="px-4 py-2">Related processes</td>
+                                </tr>
+                                <tr class="border-b border-blue-800">
+                                    <th scope="row" class="px-4 py-2 font-medium whitespace-nowrap">Message Queues</th>
+                                    <td class="px-4 py-2">Medium</td>
+                                    <td class="px-4 py-2">Structured messages</td>
+                                </tr>
+                                 <tr>
+                                    <th scope="row" class="px-4 py-2 font-medium whitespace-nowrap">Shared Memory</th>
+                                    <td class="px-4 py-2 accent-text font-bold">Fastest</td>
+                                    <td class="px-4 py-2">High-performance IPC</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="my-16">
+            <h2 class="text-3xl font-bold text-center mb-12">Key Processes Visualized</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="card rounded-lg p-6">
+                    <h3 class="text-xl font-bold mb-4">Context Switch Flow</h3>
+                    <p class="text-sm mb-4 text-blue-200">How the kernel switches the CPU from one process to another.</p>
+                    <ol class="relative border-l border-cyan-700 space-y-6">
+                        <li class="ml-4"><span class="absolute flex items-center justify-center w-6 h-6 bg-cyan-700 rounded-full -left-3 ring-4 ring-blue-900">1</span><p class="text-sm ml-2">Event triggers scheduler (timer, I/O block).</p></li>
+                        <li class="ml-4"><span class="absolute flex items-center justify-center w-6 h-6 bg-cyan-700 rounded-full -left-3 ring-4 ring-blue-900">2</span><p class="text-sm ml-2">`schedule()` selects next process to run.</p></li>
+                        <li class="ml-4"><span class="absolute flex items-center justify-center w-6 h-6 bg-cyan-700 rounded-full -left-3 ring-4 ring-blue-900">3</span><p class="text-sm ml-2">Save state of old process (registers, stack).</p></li>
+                        <li class="ml-4"><span class="absolute flex items-center justify-center w-6 h-6 bg-cyan-700 rounded-full -left-3 ring-4 ring-blue-900">4</span><p class="text-sm ml-2">Switch address space (load new page tables).</p></li>
+                        <li class="ml-4"><span class="absolute flex items-center justify-center w-6 h-6 bg-cyan-700 rounded-full -left-3 ring-4 ring-blue-900">5</span><p class="text-sm ml-2">Restore state of new process.</p></li>
+                    </ol>
+                </div>
+                 <div class="card rounded-lg p-6">
+                    <h3 class="text-xl font-bold mb-4">Interrupt Handling</h3>
+                    <p class="text-sm mb-4 text-blue-200">How hardware events are handled efficiently.</p>
+                    <div class="space-y-4">
+                        <div class="p-4 rounded-lg border-2 border-orange-500">
+                            <h4 class="font-bold accent-text">Top Half (Fast)</h4>
+                            <p class="text-sm">Runs immediately. Acknowledges interrupt, performs critical work, schedules bottom half.</p>
+                        </div>
+                        <div class="text-center font-mono text-cyan-400">&darr; Deferred Work &darr;</div>
+                        <div class="p-4 rounded-lg border border-cyan-700">
+                            <h4 class="font-bold text-teal-300">Bottom Half (Slower)</h4>
+                             <p class="text-sm">Runs later. Performs longer processing tasks (e.g., packet processing) with interrupts enabled.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        const colorPalette = {
+            blue: '#0a9396',
+            teal: '#94d2bd',
+            yellow: '#e9d8a6',
+            orange: '#ee9b00',
+            red: '#ae2012',
+            bgTransparent: 'rgba(0, 0, 0, 0.1)'
+        };
+
+        function wrapLabel(str, max_width) {
+            if (str.length <= max_width) return str;
+            const words = str.split(' ');
+            let lines = [];
+            let current_line = '';
+            for (let i = 0; i < words.length; i++) {
+                const word = words[i];
+                if ((current_line + ' ' + word).length > max_width && current_line.length > 0) {
+                    lines.push(current_line);
+                    current_line = word;
+                } else {
+                    current_line += (current_line.length > 0 ? ' ' : '') + word;
+                }
+            }
+            lines.push(current_line);
+            return lines;
+        }
+
+        const commonChartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: colorPalette.yellow
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: function(tooltipItems) {
+                            const item = tooltipItems[0];
+                            let label = item.chart.data.labels[item.dataIndex];
+                            if (Array.isArray(label)) {
+                              return label.join(' ');
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        };
+
+        const taskStructCtx = document.getElementById('taskStructChart');
+        if (taskStructCtx) {
+            new Chart(taskStructCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Scheduling', 'Memory', 'Credentials', 'Filesystem', 'Signals', 'Other'],
+                    datasets: [{
+                        label: 'task_struct Composition',
+                        data: [30, 25, 15, 15, 10, 5],
+                        backgroundColor: [
+                            colorPalette.blue,
+                            colorPalette.teal,
+                            colorPalette.yellow,
+                            colorPalette.orange,
+                            colorPalette.red,
+                            '#ca6702'
+                        ],
+                        borderColor: '#003f50',
+                        borderWidth: 4
+                    }]
+                },
+                options: { ...commonChartOptions }
+            });
+        }
+        
+        const allocatorCtx = document.getElementById('allocatorChart');
+        if(allocatorCtx) {
+             new Chart(allocatorCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['SLOB', 'SLAB', wrapLabel('SLUB (Default)', 16)],
+                    datasets: [
+                        {
+                            label: 'Performance',
+                            data: [3, 7, 9],
+                            backgroundColor: colorPalette.blue,
+                        },
+                        {
+                            label: 'Memory Overhead',
+                            data: [2, 8, 4],
+                            backgroundColor: colorPalette.orange,
+                        }
+                    ]
+                },
+                options: {
+                    ...commonChartOptions,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(148, 210, 189, 0.2)' },
+                            ticks: { color: colorPalette.yellow }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: colorPalette.yellow }
+                        }
+                    }
+                }
+            });
+        }
+
+        const fsCtx = document.getElementById('fsChart');
+        if (fsCtx) {
+            new Chart(fsCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Stability', 'Large File Perf.', 'Advanced Features', 'Maturity', 'Corruption Resistance'],
+                    datasets: [
+                        {
+                            label: 'ext4',
+                            data: [9, 6, 4, 10, 7],
+                            fill: true,
+                            backgroundColor: 'rgba(10, 147, 150, 0.4)',
+                            borderColor: colorPalette.blue,
+                            pointBackgroundColor: colorPalette.blue,
+                        }, {
+                            label: 'XFS',
+                            data: [8, 9, 5, 9, 8],
+                            fill: true,
+                            backgroundColor: 'rgba(238, 155, 0, 0.4)',
+                            borderColor: colorPalette.orange,
+                            pointBackgroundColor: colorPalette.orange,
+                        }, {
+                            label: 'Btrfs',
+                            data: [7, 7, 9, 6, 9],
+                             fill: true,
+                            backgroundColor: 'rgba(148, 210, 189, 0.4)',
+                            borderColor: colorPalette.teal,
+                            pointBackgroundColor: colorPalette.teal,
+                        }
+                    ]
+                },
+                options: {
+                    ...commonChartOptions,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(148, 210, 189, 0.2)' },
+                            grid: { color: 'rgba(148, 210, 189, 0.2)' },
+                            pointLabels: {
+                                color: colorPalette.yellow,
+                                font: { size: 10 }
+                            },
+                            ticks: {
+                                color: colorPalette.yellow,
+                                backdropColor: 'rgba(0, 0, 0, 0.5)',
+                                stepSize: 2
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

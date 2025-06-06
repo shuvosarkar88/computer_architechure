@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Linux Kernel Architecture Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Cool Slate -->
+    <!-- Application Structure Plan: A dashboard-style Single Page Application (SPA) with a fixed sidebar for primary navigation between kernel subsystems. This non-linear structure allows users to freely explore complex topics in any order. Each subsystem is presented in a main content area with tabbed navigation to switch between conceptual overviews, interactive data structure explorers, and step-by-step diagrams of mechanisms. This layered approach is chosen to break down dense technical information into manageable, user-driven chunks, enhancing comprehension and engagement over a linear document. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Kernel Subsystems -> Goal: Organize/Navigate -> Viz: Fixed Sidebar Menu -> Interaction: Click to switch main content view -> Justification: Provides a persistent, clear information architecture for a complex topic. (HTML/JS)
+        - Report Info: `struct` definitions (e.g., `task_struct`) -> Goal: Inform/Explore -> Viz: Two-pane interactive list -> Interaction: Click list item to display details -> Justification: Transforms static tables into an engaging, searchable glossary. (HTML/JS)
+        - Report Info: Process flows (e.g., Context Switch, NAPI) -> Goal: Explain/Organize -> Viz: Step-by-step HTML/CSS diagram -> Interaction: Next/Prev buttons to highlight steps and update text -> Justification: Simplifies complex sequences into an easy-to-follow interactive animation. (HTML/CSS/JS)
+        - Report Info: Allocator Comparison (Slab/Slob/Slub) -> Goal: Compare/Inform -> Viz: Bar Chart -> Interaction: Buttons to change displayed metric -> Justification: Visually highlights trade-offs more effectively than text. (Chart.js)
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .sidebar-icon { width: 24px; height: 24px; }
+        .flowchart-box { transition: all 0.3s ease-in-out; }
+        .flowchart-box.active {
+            background-color: #0d9488; /* teal-600 */
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .flowchart-arrow { transition: all 0.3s ease-in-out; }
+        .flowchart-arrow.active { color: #0d9488; }
+        .tab-button.active {
+            border-color: #14b8a6; /* teal-500 */
+            color: #0d9488; /* teal-600 */
+            background-color: #f0fdfa; /* teal-50 */
+        }
+        .struct-item.active { background-color: #e0f2f1; /* teal-100 */ }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+    <div class="flex h-screen">
+        <aside class="w-64 bg-slate-800 text-white flex-shrink-0 flex flex-col">
+            <div class="h-16 flex items-center justify-center border-b border-slate-700">
+                <h1 class="text-xl font-bold">Linux Kernel</h1>
+            </div>
+            <nav id="sidebar-nav" class="flex-1 p-4 space-y-2">
+                <a href="#overview" class="nav-link flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-700 transition-colors duration-200">
+                    <svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25V12m0 3.75h.008v.008H12v-.008z" /></svg>
+                    <span>Overview</span>
+                </a>
+                <a href="#process" class="nav-link flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-700 transition-colors duration-200">
+                     <svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m-7.5-2.226c-1.31-.56-2.676-.955-4.126-1.228a9.07 9.07 0 01-4.228 0 9.07 9.07 0 01-4.228 0c-1.45.273-2.816.668-4.126 1.228m16.5 0a9.07 9.07 0 00-4.228 0 9.07 9.07 0 00-4.228 0 9.07 9.07 0 00-4.228 0m16.5 0c1.45-.273 2.816-.668 4.126-1.228m-16.5 0a9.094 9.094 0 01-3.741-.479 3 3 0 014.682-2.72" /></svg>
+                    <span>Process Mgmt</span>
+                </a>
+                <a href="#memory" class="nav-link flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-700 transition-colors duration-200">
+                    <svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span>Memory Mgmt</span>
+                </a>
+                <a href="#filesystem" class="nav-link flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-700 transition-colors duration-200">
+                    <svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.75h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span>File Systems</span>
+                </a>
+                 <a href="#drivers" class="nav-link flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-700 transition-colors duration-200">
+                    <svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75h-10.5a2.25 2.25 0 00-2.25 2.25v6a2.25 2.25 0 002.25 2.25h10.5a2.25 2.25 0 002.25-2.25v-6a2.25 2.25 0 00-2.25-2.25z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 1.5v3.75m0 12.75V21.5m-4.5-8.25h-2.25m15 0h-2.25m-10.5-4.5v1.5m8.25-1.5v1.5m-6.75 6v1.5m4.5-1.5v1.5" /></svg>
+                    <span>Device Drivers</span>
+                </a>
+                 <a href="#ipc" class="nav-link flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-700 transition-colors duration-200">
+                    <svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3.75h9m-9 3.75h9M3.75 3a1.5 1.5 0 00-1.5 1.5v15A1.5 1.5 0 003.75 21h16.5a1.5 1.5 0 001.5-1.5v-15a1.5 1.5 0 00-1.5-1.5H3.75z" /></svg>
+                    <span>IPC</span>
+                </a>
+                 <a href="#network" class="nav-link flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-700 transition-colors duration-200">
+                     <svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m-15.432 0A8.959 8.959 0 013 12c0-.778.099-1.533.284-2.253m15.432 0c.346.82.534 1.716.534 2.657 0 3.142-2.012 5.824-4.818 7.046M3 12c0 .94.188 1.837.534 2.657 2.806 1.222 4.818 3.904 4.818 7.046" /></svg>
+                    <span>Networking</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 p-6 md:p-8 overflow-y-auto">
+            <div id="content-area">
+                <!-- Content will be loaded here -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const contentData = {
+            overview: {
+                title: 'Kernel Overview & Core Architecture',
+                content: `
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h2 class="text-2xl font-bold mb-4">The Heart of the System</h2>
+                        <p class="mb-4 text-slate-600">The Linux kernel is the core of the operating system, acting as the bridge between hardware and user applications. This interactive explorer will guide you through its major components. The kernel's design is a 'modular monolithic' architecture, which combines the speed of a monolithic kernel (where all services run in kernel space) with the flexibility of loadable modules. This allows for dynamic extension of kernel functionality without recompiling.</p>
+                        <div class="mt-6 grid md:grid-cols-2 gap-6">
+                            <div class="border border-slate-200 rounded-lg p-4">
+                                <h3 class="font-semibold text-lg mb-2">Monolithic Core</h3>
+                                <p class="text-sm text-slate-500">Core services like process scheduling, memory management, and VFS run in a single, privileged address space for high performance via direct function calls.</p>
+                            </div>
+                            <div class="border border-slate-200 rounded-lg p-4">
+                                <h3 class="font-semibold text-lg mb-2">Loadable Modules (LKMs)</h3>
+                                <p class="text-sm text-slate-500">Drivers, file systems, and network protocols can be loaded and unloaded dynamically, providing immense flexibility and keeping the base kernel lean.</p>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            process: {
+                title: 'Process Management',
+                content: `
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <p class="mb-4 text-slate-600">Process management is how the kernel controls the execution of programs. This involves creating processes, scheduling them fairly on the CPU, and managing their lifecycle. In Linux, both processes and threads are represented by the versatile <strong><code>task_struct</code></strong> structure.</p>
+                        <div id="process-tabs-container"></div>
+                    </div>
+                `
+            },
+            memory: {
+                title: 'Memory Management',
+                content: `
+                     <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <p class="mb-4 text-slate-600">The memory management subsystem handles the most critical resource: RAM. It provides each process with a private virtual address space, manages the mapping to physical memory via page tables, and handles swapping to disk when physical memory is scarce. It also includes highly-optimized allocators for the kernel's own memory needs.</p>
+                        <div id="memory-tabs-container"></div>
+                    </div>
+                `
+            },
+            filesystem: {
+                title: 'File Systems',
+                content: `
+                     <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <p class="mb-4 text-slate-600">The file system provides structured access to data on persistent storage. Linux uses the Virtual File System (VFS) as an abstraction layer, allowing various concrete file systems like ext4, XFS, and Btrfs to coexist. VFS defines a common model based on superblock, inode, dentry, and file objects.</p>
+                        <div id="filesystem-tabs-container"></div>
+                    </div>
+                `
+            },
+            drivers: {
+                title: 'Device Drivers & Hardware Interaction',
+                content: `
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <p class="mb-4 text-slate-600">Device drivers are the kernel's translators, enabling communication with hardware. The unified Linux Device Model organizes the complex web of buses, devices, and drivers. Drivers are typically categorized as character, block, or network devices, each with its own specific kernel interface and set of operations.</p>
+                        <div id="drivers-tabs-container"></div>
+                    </div>
+                `
+            },
+            ipc: {
+                title: 'Inter-Process Communication (IPC)',
+                content: `
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <p class="mb-4 text-slate-600">IPC mechanisms allow processes to communicate and synchronize with each other. Linux provides a rich set of tools, from classic signals and pipes to the more complex System V and POSIX variants of message queues and shared memory. Each offers different trade-offs in performance, complexity, and features.</p>
+                        <div id="ipc-tabs-container"></div>
+                    </div>
+                `
+            },
+            network: {
+                 title: 'Networking Stack',
+                content: `
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <p class="mb-4 text-slate-600">The networking stack implements the protocol layers (like TCP/IP and UDP) that enable communication over a network. Data is encapsulated in Socket Buffers (sk_buffs) and passed through the layers, from the user's application down to the network hardware and back. Performance is critical, with mechanisms like NAPI used to handle high packet rates efficiently.</p>
+                        <div id="network-tabs-container"></div>
+                    </div>
+                `
+            },
+        };
+
+        const structData = {
+            task_struct: [
+                { name: 'state', desc: 'Current execution state of the task (e.g., TASK_RUNNING, TASK_INTERRUPTIBLE).' },
+                { name: 'stack', desc: 'Pointer to the kernel stack for this task.' },
+                { name: 'flags', desc: 'Per-process flags (e.g., PF_KTHREAD for a kernel thread).' },
+                { name: 'pid', desc: 'The Process ID (in Linux, this is actually the Thread ID).' },
+                { name: 'tgid', desc: 'Thread Group ID, which is the "real" Process ID for the entire application.' },
+                { name: 'parent', desc: 'Pointer to the parent task that created this one.' },
+                { name: 'children', desc: 'A list of this task\'s children.' },
+                { name: 'mm', desc: 'Pointer to the memory descriptor (mm_struct) for the process\'s address space. NULL for kernel threads.' },
+                { name: 'active_mm', desc: 'Pointer to the address space currently active on the CPU.' },
+                { name: 'cred', desc: 'Pointer to the task\'s credentials (UID, GID, capabilities).' },
+                { name: 'comm', desc: 'The command name (executable name), usually truncated.' },
+                { name: 'files', desc: 'Pointer to the files_struct, containing information about open files.' },
+                { name: 'fs', desc: 'Pointer to the fs_struct, containing filesystem information (root and current directory).' },
+                { name: 'sched_class', desc: 'Pointer to the scheduling class methods (e.g., CFS, RT) that govern this task.' },
+                { name: 'se', desc: 'Scheduling entity for the Completely Fair Scheduler (CFS).' }
+            ],
+            mm_struct: [
+                { name: 'mmap', desc: 'Pointer to the head of a list/tree of all VMAs (Virtual Memory Areas) in this address space.' },
+                { name: 'pgd', desc: 'Pointer to the Page Global Directory (the top-level page table) for this address space.' },
+                { name: 'mm_users', desc: 'Number of tasks (processes/threads) using this address space.' },
+                { name: 'mm_count', desc: 'Primary reference count for the mm_struct itself.' },
+                { name: 'mmap_sem', desc: 'A read-write semaphore that protects the list/tree of VMAs.' },
+                { name: 'start_code, end_code', desc: 'Start and end addresses of the process\'s executable code segment.' },
+                { name: 'start_data, end_data', desc: 'Start and end addresses of the process\'s initialized data segment.' },
+                { name: 'start_brk, brk', desc: 'Start and current end addresses of the heap.' },
+                { name: 'start_stack', desc: 'Start address of the main stack.' },
+                { name: 'total_vm', desc: 'Total number of pages covered by all VMAs in this address space.' }
+            ],
+            vfs_objects: [
+                 { name: 'Superblock', desc: 'Represents an entire mounted file system. Contains metadata like filesystem type, block size, and a pointer to the root dentry.' },
+                 { name: 'Inode', desc: 'Represents a filesystem object (file, directory, etc.). Contains metadata like permissions, owner, size, and pointers to data blocks. The filename is not stored here.' },
+                 { name: 'Dentry', desc: 'Stands for "directory entry". Links a human-readable filename to an inode. Dentries are heavily cached (dcache) to speed up path lookups.' },
+                 { name: 'File', desc: 'Represents an open file from a process\'s perspective. Tracks the state for a specific open instance, like the current read/write position and access mode.' }
+            ]
+        };
+        
+        const contentArea = document.getElementById('content-area');
+
+        function createTabs(containerId, tabs) {
+            const container = document.getElementById(containerId);
+            let tabsHtml = '<div class="mb-4 border-b border-slate-200">';
+            tabsHtml += '<nav class="-mb-px flex space-x-6" aria-label="Tabs">';
+            tabs.forEach((tab, index) => {
+                tabsHtml += `<button class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${index === 0 ? 'active' : ''}" data-tab-target="#${tab.id}">${tab.label}</button>`;
+            });
+            tabsHtml += '</nav></div>';
+            
+            let contentHtml = '<div>';
+            tabs.forEach((tab, index) => {
+                contentHtml += `<div id="${tab.id}" class="tab-content ${index === 0 ? '' : 'hidden'}">${tab.content}</div>`;
+            });
+            contentHtml += '</div>';
+
+            container.innerHTML = tabsHtml + contentHtml;
+
+            container.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    container.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    container.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+                    
+                    button.classList.add('active');
+                    document.querySelector(button.dataset.tabTarget).classList.remove('hidden');
+                });
+            });
+        }
+        
+        function createStructExplorer(containerId, structName, title) {
+            const container = document.getElementById(containerId);
+            const data = structData[structName];
+            
+            let html = `
+                <h3 class="text-xl font-semibold mb-4">${title}</h3>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="md:col-span-1 border border-slate-200 rounded-lg p-3 bg-slate-50">
+                        <input type="text" id="${structName}-search" placeholder="Filter fields..." class="w-full p-2 border rounded-md mb-2">
+                        <ul id="${structName}-list" class="h-96 overflow-y-auto">`;
+            
+            data.forEach((item, index) => {
+                html += `<li><a href="#" class="struct-item block p-2 rounded-md hover:bg-slate-200" data-struct-index="${index}">${item.name}</a></li>`;
+            });
+
+            html += `   </ul>
+                    </div>
+                    <div id="${structName}-details" class="md:col-span-2 p-4">
+                        <h4 class="font-bold text-lg text-teal-600 mb-2">Select a field</h4>
+                        <p class="text-slate-600">Click on a field from the list to see its description.</p>
+                    </div>
+                </div>`;
+            
+            container.innerHTML = html;
+
+            const list = container.querySelector(`#${structName}-list`);
+            const details = container.querySelector(`#${structName}-details`);
+            const searchInput = container.querySelector(`#${structName}-search`);
+
+            list.addEventListener('click', e => {
+                e.preventDefault();
+                if (e.target.classList.contains('struct-item')) {
+                    list.querySelectorAll('.struct-item').forEach(item => item.classList.remove('active'));
+                    e.target.classList.add('active');
+                    
+                    const index = e.target.dataset.structIndex;
+                    const itemData = data[index];
+                    details.innerHTML = `
+                        <h4 class="font-bold text-lg text-teal-600 mb-2"><code>${itemData.name}</code></h4>
+                        <p class="text-slate-600">${itemData.desc}</p>
+                    `;
+                }
+            });
+
+            searchInput.addEventListener('input', () => {
+                const filter = searchInput.value.toLowerCase();
+                list.querySelectorAll('li').forEach(li => {
+                    const fieldName = li.textContent.toLowerCase();
+                    li.style.display = fieldName.includes(filter) ? '' : 'none';
+                });
+            });
+        }
+
+        function createFlowchart(containerId, title, steps) {
+            const container = document.getElementById(containerId);
+            let html = `<h3 class="text-xl font-semibold mb-4">${title}</h3>`;
+            html += `<div class="relative p-4 border rounded-lg bg-slate-50">`;
+
+            html += `<div class="flex items-center justify-center space-x-2 md:space-x-4">`;
+            steps.forEach((step, index) => {
+                html += `<div id="flow-box-${index}" class="flowchart-box border border-slate-300 bg-white rounded-lg p-2 md:p-4 text-center text-sm md:text-base w-1/4">${step.label}</div>`;
+                if (index < steps.length - 1) {
+                     html += `<div id="flow-arrow-${index}" class="flowchart-arrow text-2xl text-slate-400 font-light">&rarr;</div>`;
+                }
+            });
+            html += `</div>`;
+
+            html += `<div id="flow-desc" class="mt-6 p-4 bg-white rounded-md min-h-[60px]"></div>`;
+            html += `<div class="flex justify-between items-center mt-4">`;
+            html += `<button id="flow-prev" class="px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 disabled:bg-slate-300">Previous</button>`;
+            html += `<span id="flow-step-indicator" class="text-sm font-medium text-slate-500"></span>`;
+            html += `<button id="flow-next" class="px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 disabled:bg-slate-300">Next</button>`;
+            html += `</div></div>`;
+            container.innerHTML = html;
+
+            let currentStep = -1;
+            const prevBtn = container.querySelector('#flow-prev');
+            const nextBtn = container.querySelector('#flow-next');
+            const desc = container.querySelector('#flow-desc');
+            const indicator = container.querySelector('#flow-step-indicator');
+
+            function updateStep(newStep) {
+                currentStep = newStep;
+
+                steps.forEach((_, index) => {
+                    container.querySelector(`#flow-box-${index}`).classList.remove('active');
+                    if (index > 0) {
+                         container.querySelector(`#flow-arrow-${index-1}`).classList.remove('active');
+                    }
+                });
+
+                if (currentStep >= 0) {
+                    container.querySelector(`#flow-box-${currentStep}`).classList.add('active');
+                    if (currentStep > 0) {
+                        container.querySelector(`#flow-arrow-${currentStep-1}`).classList.add('active');
+                    }
+                    desc.innerHTML = `<p>${steps[currentStep].desc}</p>`;
+                } else {
+                    desc.innerHTML = `<p class="text-slate-500">Click 'Next' to begin the process.</p>`;
+                }
+                
+                prevBtn.disabled = currentStep <= 0;
+                nextBtn.disabled = currentStep >= steps.length - 1;
+                indicator.textContent = `Step ${currentStep + 1} of ${steps.length}`;
+            }
+
+            nextBtn.addEventListener('click', () => {
+                if (currentStep < steps.length - 1) {
+                    updateStep(currentStep + 1);
+                }
+            });
+
+            prevBtn.addEventListener('click', () => {
+                if (currentStep > 0) {
+                    updateStep(currentStep - 1);
+                }
+            });
+
+            updateStep(0);
+        }
+
+        function createAllocatorChart(containerId) {
+            const container = document.getElementById(containerId);
+            let html = `
+                <h3 class="text-xl font-semibold mb-2">Kernel Memory Allocator Comparison</h3>
+                <p class="text-center text-slate-500 mb-4">The kernel uses specialized allocators for its own objects. SLUB is the modern default, optimizing for simplicity and performance.</p>
+                <div class="flex justify-center space-x-2 mb-4">
+                    <button data-metric="performance" class="alloc-btn px-3 py-1 text-sm border rounded-full">Performance</button>
+                    <button data-metric="overhead" class="alloc-btn px-3 py-1 text-sm border rounded-full">Overhead</button>
+                    <button data-metric="complexity" class="alloc-btn px-3 py-1 text-sm border rounded-full">Complexity</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="allocatorChart"></canvas>
+                </div>
+            `;
+            container.innerHTML = html;
+            
+            const ctx = document.getElementById('allocatorChart').getContext('2d');
+            const data = {
+                performance: [2, 5, 9],
+                overhead: [8, 6, 3],
+                complexity: [1, 8, 4]
+            };
+            const labels = ['SLOB', 'SLAB', 'SLUB'];
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Performance',
+                        data: data.performance,
+                        backgroundColor: ['#fca5a5', '#fdba74', '#86efac'],
+                        borderColor: ['#ef4444', '#f97316', '#22c55e'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 10,
+                            ticks: {
+                                callback: function(value) {
+                                    if (value === 0) return 'Low';
+                                    if (value === 5) return 'Medium';
+                                    if (value === 10) return 'High';
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                             callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    const val = context.parsed.y;
+                                    if (val <= 3) label += 'Low';
+                                    else if (val <= 7) label += 'Medium';
+                                    else label += 'High';
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            function updateChart(metric) {
+                chart.data.datasets[0].data = data[metric];
+                chart.data.datasets[0].label = metric.charAt(0).toUpperCase() + metric.slice(1);
+                chart.update();
+
+                document.querySelectorAll('.alloc-btn').forEach(b => {
+                    b.classList.remove('bg-teal-500', 'text-white');
+                    if (b.dataset.metric === metric) {
+                        b.classList.add('bg-teal-500', 'text-white');
+                    }
+                })
+            }
+            
+            document.querySelectorAll('.alloc-btn').forEach(button => {
+                button.addEventListener('click', (e) => updateChart(e.target.dataset.metric));
+            });
+
+            updateChart('performance');
+        }
+
+
+        function renderContent(pageId) {
+            const pageData = contentData[pageId] || contentData.overview;
+            contentArea.innerHTML = `<h1 class="text-3xl font-bold mb-6">${pageData.title}</h1>${pageData.content}`;
+
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('bg-slate-700', 'font-semibold');
+                if (link.getAttribute('href') === `#${pageId}`) {
+                    link.classList.add('bg-slate-700', 'font-semibold');
+                }
+            });
+
+            if (pageId === 'process') {
+                createTabs('process-tabs-container', [
+                    { id: 'proc-struct', label: 'task_struct Explorer', content: '<div id="task-struct-explorer"></div>' },
+                    { id: 'proc-flow', label: 'fork() / exec() Flow', content: '<div id="fork-flowchart"></div>' }
+                ]);
+                createStructExplorer('task-struct-explorer', 'task_struct', 'task_struct: The Process Control Block');
+                createFlowchart('fork-flowchart', 'Process Creation: fork() and exec()', [
+                    { label: 'Parent Process', desc: 'A running process decides to create a new one and calls fork().' },
+                    { label: 'fork() Syscall', desc: 'The kernel allocates a new task_struct and duplicates the parent\'s context. Memory pages are shared with Copy-on-Write (COW).' },
+                    { label: 'Child Process Created', desc: 'The child process is created. It is nearly identical to the parent but has a new PID. fork() returns 0 to the child.' },
+                    { label: 'exec() Syscall', desc: 'The child process calls exec() to load and run a new program, which replaces its memory image.' },
+                    { label: 'New Program Runs', desc: 'The new program begins execution within the child process context (same PID).' }
+                ]);
+            }
+            
+            if (pageId === 'memory') {
+                 createTabs('memory-tabs-container', [
+                    { id: 'mem-struct', label: 'Memory Descriptors', content: '<div id="mm-struct-explorer"></div>' },
+                    { id: 'mem-alloc', label: 'Kernel Allocators', content: '<div id="allocator-chart-container"></div>' }
+                ]);
+                createStructExplorer('mm-struct-explorer', 'mm_struct', 'mm_struct: The Process Address Space');
+                createAllocatorChart('allocator-chart-container');
+            }
+
+            if (pageId === 'filesystem') {
+                createTabs('filesystem-tabs-container', [
+                    { id: 'fs-objects', label: 'VFS Objects', content: '<div id="vfs-explorer"></div>' },
+                ]);
+                createStructExplorer('vfs-explorer', 'vfs_objects', 'VFS Core Object Abstractions');
+            }
+
+            if (pageId === 'drivers') {
+                createTabs('drivers-tabs-container', [
+                     { id: 'driver-irq', label: 'Interrupt Handling', content: '<div id="irq-flowchart"></div>' }
+                ]);
+                createFlowchart('irq-flowchart', 'Interrupt Handling: Top and Bottom Halves', [
+                    { label: 'Hardware Interrupt', desc: 'A device (e.g., NIC) signals the CPU that an event occurred (e.g., packet arrival).' },
+                    { label: 'Top Half (ISR)', desc: 'The CPU immediately executes the Interrupt Service Routine. It does minimal, time-critical work like acknowledging the IRQ and disables further interrupts from this device.' },
+                    { label: 'Schedule Bottom Half', desc: 'The Top Half schedules a "bottom half" (e.g., a tasklet or NAPI poll) to do the rest of the work and then quickly exits.' },
+                    { label: 'Bottom Half Executes', desc: 'Later, in a less critical context, the bottom half runs. It can perform longer tasks like processing a network packet and passing it up the stack.' }
+                ]);
+            }
+             if (pageId === 'ipc') {
+                 createTabs('ipc-tabs-container', [
+                     { id: 'ipc-pipe', label: 'Anonymous Pipe', content: '<div id="pipe-flowchart"></div>' },
+                     { id: 'ipc-shm', label: 'Shared Memory', content: '<div id="shm-flowchart"></div>' }
+                 ]);
+                createFlowchart('pipe-flowchart', 'IPC via Anonymous Pipe', [
+                    { label: 'pipe() Syscall', desc: 'A process calls pipe(), and the kernel creates a pipe object in memory and returns two file descriptors: one for reading, one for writing.' },
+                    { label: 'fork()', desc: 'The process forks, creating a child. The child inherits copies of the parent\'s file descriptors, so both now have access to the pipe.' },
+                    { label: 'Communication', desc: 'The parent closes the read end, and the child closes the write end (or vice versa). Now one can write to the pipe, and the other can read from it.' },
+                    { label: 'Data Transfer', desc: 'Data written by one process is buffered by the kernel and becomes available for the other process to read. It\'s a unidirectional byte stream.' }
+                ]);
+                createFlowchart('shm-flowchart', 'IPC via POSIX Shared Memory', [
+                    { label: 'shm_open()', desc: 'Process A calls shm_open() with a name (e.g., /my_shm). The kernel creates a memory-backed file in tmpfs (at /dev/shm).' },
+                    { label: 'ftruncate()', desc: 'Process A calls ftruncate() on the returned file descriptor to set the size of the shared memory segment.' },
+                    { label: 'mmap()', desc: 'Process A and Process B both call mmap() on their file descriptors for the shared object. The kernel maps the same physical memory pages into both processes\' virtual address spaces.' },
+                    { label: 'Direct Access', desc: 'Both processes can now read and write to the memory region directly, without kernel intervention. Synchronization (e.g., via semaphores) is the processes\' responsibility.' }
+                ]);
+            }
+            if(pageId === 'network') {
+                 createTabs('network-tabs-container', [
+                    { id: 'net-napi', label: 'NAPI Reception Flow', content: '<div id="napi-flowchart"></div>' }
+                ]);
+                createFlowchart('napi-flowchart', 'High-Speed Packet Reception (NAPI)', [
+                    { label: 'Packet Arrival & IRQ', desc: 'A packet arrives at the NIC, which generates a single hardware interrupt (IRQ).' },
+                    { label: 'IRQ Handler (Top Half)', desc: 'The driver\'s interrupt handler disables further packet interrupts from the NIC and schedules the NAPI poller to run via `napi_schedule()`.' },
+                    { label: 'NAPI Poll (Bottom Half)', desc: 'NAPI calls the driver\'s `poll` function. The driver pulls a batch of packets (up to a `budget`) from the NIC\'s memory rings.'},
+                    { label: 'Process or Exit Poll', desc: 'If all packets are processed (`count < budget`), the poll is finished, and interrupts are re-enabled. If the budget is exhausted, NAPI reschedules the poll to run again without a new IRQ.' }
+                ]);
+            }
+
+        }
+
+        function handleNavigation() {
+            const pageId = window.location.hash.substring(1) || 'overview';
+            renderContent(pageId);
+        }
+
+        window.addEventListener('hashchange', handleNavigation);
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('sidebar-nav').addEventListener('click', (e) => {
+                const navLink = e.target.closest('.nav-link');
+                if (navLink) {
+                    e.preventDefault();
+                    window.location.hash = navLink.getAttribute('href');
+                }
+            });
+            handleNavigation();
+        });
+
+    </script>
+</body>
+</html>

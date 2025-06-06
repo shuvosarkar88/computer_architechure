@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Explorer: The CPU Memory Hierarchy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: The SPA is designed with a non-linear, thematic structure to facilitate exploration over linear reading. A top navigation bar switches between four main sections: 1) A visual, interactive pyramid 'Overview' for a quick grasp of the hierarchy's layers and trade-offs. 2) A 'Deep Dive' section with tabs for detailed exploration of each component (Registers, Cache, RAM, Virtual Memory), breaking down complexity. 3) A 'How It Works' section with animated diagrams to explain dynamic processes like a memory request's journey and cache mapping techniques, making abstract concepts tangible. 4) A 'Modern CPUs' section with interactive charts to compare real-world cache implementations from AMD and Intel. This structure was chosen to cater to different learning styles, allowing users to start with a high-level summary and progressively drill down into details or focus on specific processes, which is more effective for understanding complex, interconnected systems than a static report. -->
+    <!-- Visualization & Content Choices: The application translates the source report's information into interactive components. 1) Hierarchy Overview: Info from Table 1 is transformed into an interactive pyramid (HTML/CSS) to visually compare levels; Goal: Compare/Inform; Interaction: Click layers to show stats. 2) Latency Chart: Data from Table 1 is visualized in a logarithmic bar chart (Chart.js) to emphasize the extreme performance gaps; Goal: Compare/Impact; Interaction: Static view. 3) Deep Dive: Report text is condensed into tabbed sections for focused reading; Goal: Inform; Interaction: Click tabs. 4) Memory Request Flow: The journey of a memory request is shown as an animated flowchart (HTML/CSS/JS) to illustrate the process; Goal: Explain Process; Interaction: Button triggers step-by-step animation. 5) Cache Mapping: An interactive diagram (HTML/CSS/JS) demonstrates Direct, Set-Associative, and Fully Associative mapping, clarifying their mechanics and trade-offs; Goal: Explain/Compare; Interaction: Buttons change mapping logic shown. 6) CPU Comparison: Data from Table 3 is presented as a dynamic grouped bar chart (Chart.js) comparing AMD and Intel cache sizes; Goal: Compare; Interaction: Radio buttons update chart data. All visualizations use Canvas, adhering to the no-SVG/Mermaid constraint. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #FDFBF8; color: #4a4a4a; }
+        .nav-button { transition: all 0.3s ease; }
+        .nav-button.active { color: #D97706; border-bottom-color: #D97706; }
+        .nav-button:not(.active):hover { color: #F59E0B; border-bottom-color: #FCD34D; }
+        .tab-button.active { background-color: #FBBF24; color: #422006; }
+        .tab-button:not(.active) { background-color: #FEF3C7; color: #92400E; }
+        .tab-button:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+        .pyramid-level { clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%); transition: all 0.3s ease; cursor: pointer; }
+        .pyramid-level:hover { transform: scale(1.05); }
+        .chart-container { position: relative; width: 100%; max-width: 800px; margin-left: auto; margin-right: auto; height: 350px; max-height: 450px; }
+        @media (min-width: 768px) { .chart-container { height: 400px; } }
+        .flow-box { transition: all 0.5s ease-in-out; }
+        .flow-arrow { transition: all 0.5s ease-in-out; }
+        .highlight-flow { background-color: #FBBF24 !important; color: #422006; transform: scale(1.05); border-color: #D97706; }
+        .highlight-arrow { color: #D97706 !important; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-20 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-xl md:text-2xl font-bold text-amber-800">CPU Memory Hierarchy Explorer</h1>
+                <nav class="hidden md:flex space-x-4">
+                    <button data-target="overview" class="nav-button active text-sm font-semibold border-b-2 border-transparent pb-1">Overview</button>
+                    <button data-target="deep-dive" class="nav-button text-sm font-semibold border-b-2 border-transparent pb-1">Deep Dive</button>
+                    <button data-target="how-it-works" class="nav-button text-sm font-semibold border-b-2 border-transparent pb-1">How It Works</button>
+                    <button data-target="comparison" class="nav-button text-sm font-semibold border-b-2 border-transparent pb-1">Modern CPUs</button>
+                </nav>
+            </div>
+        </div>
+    </header>
+    
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+
+        <section id="overview" class="space-y-12 fade-in">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold text-amber-900">The Memory Hierarchy Pyramid</h2>
+                <p class="mt-2 max-w-3xl mx-auto text-lg text-amber-700">A tiered system balancing speed, cost, and capacity. Click each level to see its characteristics. The goal is to create the illusion of a single, large, and fast memory.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div class="relative w-full max-w-md mx-auto h-96 flex flex-col items-center justify-end">
+                    <div id="pyramid-registers" data-level="registers" class="pyramid-level w-1/3 h-1/6 bg-amber-500 text-white flex items-center justify-center font-bold text-sm z-10">Registers</div>
+                    <div id="pyramid-l1" data-level="l1" class="pyramid-level w-1/2 h-1/6 bg-amber-400 text-white flex items-center justify-center font-bold text-sm -mt-2 z-[9]">L1 Cache</div>
+                    <div id="pyramid-l2" data-level="l2" class="pyramid-level w-2/3 h-1/6 bg-orange-400 text-white flex items-center justify-center font-bold -mt-2 z-[8]">L2 Cache</div>
+                    <div id="pyramid-l3" data-level="l3" class="pyramid-level w-5/6 h-1/6 bg-orange-500 text-white flex items-center justify-center font-bold -mt-2 z-[7]">L3 Cache</div>
+                    <div id="pyramid-ram" data-level="ram" class="pyramid-level w-full h-1/6 bg-red-500 text-white flex items-center justify-center font-bold -mt-2 z-[6]">RAM</div>
+                    <div id="pyramid-vmem" data-level="vmem" class="pyramid-level w-[116%] h-1/6 bg-red-600 text-white flex items-center justify-center font-bold -mt-2 z-[5]">Virtual Memory</div>
+                </div>
+                <div id="pyramid-info" class="p-6 bg-white rounded-xl shadow-lg border border-amber-100 min-h-[24rem]">
+                    
+                </div>
+            </div>
+            <div class="space-y-8">
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold text-amber-900">Latency: A Game of Magnitudes</h2>
+                    <p class="mt-2 max-w-3xl mx-auto text-lg text-amber-700">This chart uses a logarithmic scale to visualize the immense time difference between accessing each memory level. A cache miss isn't just a small delay—it's a leap into a different timescale.</p>
+                </div>
+                <div class="p-4 bg-white rounded-xl shadow-lg border border-amber-100">
+                    <div class="chart-container">
+                        <canvas id="latencyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="deep-dive" class="hidden space-y-8 fade-in">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold text-amber-900">A Deeper Look at Each Level</h2>
+                <p class="mt-2 max-w-3xl mx-auto text-lg text-amber-700">Select a component to understand its specific role, technology, and interaction with the CPU.</p>
+            </div>
+            <div>
+                <div class="flex justify-center flex-wrap gap-2 md:gap-4 mb-6" id="deep-dive-tabs">
+                    <button class="tab-button active px-4 py-2 rounded-lg font-semibold shadow-sm" data-tab="registers">CPU Registers</button>
+                    <button class="tab-button px-4 py-2 rounded-lg font-semibold shadow-sm" data-tab="cache">Cache (L1-L3)</button>
+                    <button class="tab-button px-4 py-2 rounded-lg font-semibold shadow-sm" data-tab="ram">Main Memory (RAM)</button>
+                    <button class="tab-button px-4 py-2 rounded-lg font-semibold shadow-sm" data-tab="vmem">Virtual Memory</button>
+                </div>
+                <div id="deep-dive-content" class="p-6 bg-white rounded-xl shadow-lg border border-amber-100">
+                </div>
+            </div>
+        </section>
+
+        <section id="how-it-works" class="hidden space-y-12 fade-in">
+             <div class="text-center">
+                <h2 class="text-3xl font-bold text-amber-900">Understanding the Mechanisms</h2>
+                <p class="mt-2 max-w-3xl mx-auto text-lg text-amber-700">Explore the dynamic processes that govern data flow and memory management.</p>
+            </div>
+
+            <div class="p-6 bg-white rounded-xl shadow-lg border border-amber-100">
+                <h3 class="text-2xl font-bold text-amber-900 text-center">Journey of a Memory Request</h3>
+                <p class="mt-2 text-center text-amber-700 mb-6">When the CPU needs data, it checks the fastest memory levels first. A 'miss' forces it to check the next, slower level. Click the button to simulate this process.</p>
+                <div class="flex justify-center mb-6">
+                    <button id="simulate-request-btn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">Simulate Request</button>
+                </div>
+                <div id="request-flow-diagram" class="flex flex-col items-center space-y-2 text-center text-sm font-medium">
+                    <div id="flow-cpu" class="flow-box w-32 p-3 bg-amber-100 border-2 border-amber-200 rounded-lg shadow">CPU Request</div>
+                    <div id="arrow-1" class="flow-arrow text-3xl text-amber-300">↓</div>
+                    <div id="flow-l1" class="flow-box w-48 p-3 bg-amber-100 border-2 border-amber-200 rounded-lg shadow">Check L1 Cache</div>
+                    <div id="arrow-2" class="flow-arrow text-3xl text-amber-300">↓ <span class="text-xs">(on miss)</span></div>
+                    <div id="flow-l2" class="flow-box w-48 p-3 bg-amber-100 border-2 border-amber-200 rounded-lg shadow">Check L2 Cache</div>
+                    <div id="arrow-3" class="flow-arrow text-3xl text-amber-300">↓ <span class="text-xs">(on miss)</span></div>
+                    <div id="flow-l3" class="flow-box w-48 p-3 bg-amber-100 border-2 border-amber-200 rounded-lg shadow">Check L3 Cache</div>
+                    <div id="arrow-4" class="flow-arrow text-3xl text-amber-300">↓ <span class="text-xs">(on miss)</span></div>
+                    <div id="flow-ram" class="flow-box w-48 p-3 bg-red-100 border-2 border-red-200 rounded-lg shadow">Access RAM</div>
+                    <div id="arrow-5" class="flow-arrow text-3xl text-red-300">↓ <span class="text-xs">(page not in RAM)</span></div>
+                    <div id="flow-fault" class="flow-box w-48 p-3 bg-red-100 border-2 border-red-200 rounded-lg shadow">Page Fault! (Access Disk)</div>
+                </div>
+                 <p id="simulation-status" class="mt-4 text-center font-semibold text-lg text-amber-800 h-8"></p>
+            </div>
+            
+            <div class="p-6 bg-white rounded-xl shadow-lg border border-amber-100">
+                <h3 class="text-2xl font-bold text-amber-900 text-center">Cache Mapping Techniques</h3>
+                <p class="mt-2 text-center text-amber-700 mb-6">How does a memory block get placed into a cache line? These techniques balance speed and complexity. Select one to see how it works.</p>
+                <div class="flex justify-center flex-wrap gap-2 mb-6">
+                    <button class="mapping-btn bg-amber-200 text-amber-800 font-semibold py-2 px-4 rounded-lg shadow" data-mapping="direct">Direct Mapped</button>
+                    <button class="mapping-btn bg-amber-100 text-amber-700 font-semibold py-2 px-4 rounded-lg shadow" data-mapping="set">2-Way Set-Associative</button>
+                    <button class="mapping-btn bg-amber-100 text-amber-700 font-semibold py-2 px-4 rounded-lg shadow" data-mapping="full">Fully Associative</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                    <div>
+                        <h4 class="font-bold mb-2">Main Memory</h4>
+                        <div id="mapping-memory" class="space-y-1"></div>
+                    </div>
+                    <div class="flex flex-col items-center justify-center">
+                        <div id="mapping-arrow" class="text-4xl font-bold text-amber-400 transform transition-transform duration-500">→</div>
+                        <p id="mapping-logic" class="text-xs font-mono bg-gray-100 p-2 rounded-md mt-2"></p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold mb-2">Cache</h4>
+                        <div id="mapping-cache" class="space-y-1"></div>
+                    </div>
+                </div>
+                <p id="mapping-explanation" class="mt-6 text-center text-amber-800 font-medium"></p>
+            </div>
+        </section>
+
+        <section id="comparison" class="hidden space-y-8 fade-in">
+             <div class="text-center">
+                <h2 class="text-3xl font-bold text-amber-900">Modern CPUs: A Tale of Two Caches</h2>
+                <p class="mt-2 max-w-3xl mx-auto text-lg text-amber-700">Cache architecture is a key battleground for CPU performance. Compare the L1, L2, and L3 cache sizes of recent high-performance processors from AMD and Intel.</p>
+            </div>
+             <div class="p-4 bg-white rounded-xl shadow-lg border border-amber-100">
+                <div class="flex justify-center flex-wrap gap-x-6 gap-y-2 my-4">
+                    <label class="font-medium"><input type="radio" name="cache-level" value="L1" checked> L1 Cache</label>
+                    <label class="font-medium"><input type="radio" name="cache-level" value="L2"> L2 Cache</label>
+                    <label class="font-medium"><input type="radio" name="cache-level" value="L3"> L3 Cache</label>
+                </div>
+                <div class="chart-container">
+                    <canvas id="cpuComparisonChart"></canvas>
+                </div>
+             </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center py-6 border-t border-amber-100 mt-12">
+        <p class="text-sm text-amber-600">Interactive Visualization based on the "Memory Hierarchy & CPU Interaction" Report.</p>
+    </footer>
+    
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm border-t border-amber-200 shadow-t-lg z-20">
+        <div class="flex justify-around items-center h-16">
+            <button data-target="overview" class="nav-button active flex flex-col items-center text-xs font-semibold"><span>📊</span>Overview</button>
+            <button data-target="deep-dive" class="nav-button flex flex-col items-center text-xs font-semibold"><span>🔬</span>Deep Dive</button>
+            <button data-target="how-it-works" class="nav-button flex flex-col items-center text-xs font-semibold"><span>⚙️</span>How It Works</button>
+            <button data-target="comparison" class="nav-button flex flex-col items-center text-xs font-semibold"><span>⚔️</span>Compare</button>
+        </div>
+    </nav>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const data = {
+        pyramid: {
+            registers: { 
+                title: 'CPU Registers', 
+                size: 'Few KB', 
+                latency: '< 1 ns (~1 cycle)',
+                cost: 'Highest',
+                description: 'The fastest memory, directly inside the CPU core. Holds data for immediate operations. Managed by the compiler and hardware.',
+                color: 'bg-amber-500',
+            },
+            l1: { 
+                title: 'L1 Cache', 
+                size: '32-128 KB/core', 
+                latency: '~1-2 ns (3-5 cycles)',
+                cost: 'Very High',
+                description: 'A small, extremely fast cache for each CPU core, often split for instructions and data. The first place the CPU looks after registers.',
+                color: 'bg-amber-400',
+            },
+            l2: { 
+                title: 'L2 Cache', 
+                size: '256KB-2MB/core', 
+                latency: '~3-10 ns (10-20 cycles)',
+                cost: 'High',
+                description: 'Larger and slightly slower than L1. Catches L1 misses. Can be private to a core or shared by a small cluster of cores.',
+                color: 'bg-orange-400',
+            },
+            l3: { 
+                title: 'L3 Cache (LLC)', 
+                size: 'Few MB - 100s MB', 
+                latency: '~10-25 ns (30-70 cycles)',
+                cost: 'Moderate',
+                description: 'A large cache shared by all CPU cores. It serves as the last on-chip stop before accessing RAM and is crucial for inter-core communication.',
+                color: 'bg-orange-500',
+            },
+            ram: { 
+                title: 'Main Memory (RAM)', 
+                size: '8GB - 128GB+', 
+                latency: '~50-100 ns',
+                cost: 'Moderate',
+                description: 'The system\'s main workspace. Holds the OS, running applications, and active data. Volatile and much slower than cache.',
+                color: 'bg-red-500',
+            },
+            vmem: { 
+                title: 'Virtual Memory (Disk)', 
+                size: '100s GB - TBs', 
+                latency: 'Milliseconds (ms)',
+                cost: 'Low',
+                description: 'Uses secondary storage (like an SSD) to extend RAM, allowing larger programs to run. Managed by the OS; accessing it (a "page fault") is extremely slow.',
+                color: 'bg-red-600',
+            }
+        },
+        deepDive: {
+            registers: {
+                title: 'CPU Registers: The Pinnacle of Speed',
+                content: `<p class="mb-4">Registers are the fastest, smallest, and most expensive memory, located directly on the CPU die. They hold the data that the Arithmetic Logic Unit (ALU) is operating on right now.</p>
+                          <ul class="list-disc list-inside space-y-2 text-amber-800">
+                            <li><strong>General-Purpose (GPRs):</strong> Hold integers and memory addresses (e.g., RAX, RDI in x86-64).</li>
+                            <li><strong>Vector/SIMD:</strong> Process multiple data points with a single instruction, crucial for multimedia and AI (e.g., AVX, SSE registers).</li>
+                            <li><strong>Special-Purpose:</strong> Control CPU state, like the Instruction Pointer (PC) which holds the address of the next instruction.</li>
+                          </ul>
+                          <p class="mt-4">The compiler's main job is to efficiently use the limited number of registers to avoid slow memory access.</p>`
+            },
+            cache: {
+                title: 'Cache Memory: The High-Speed Buffer',
+                content: `<p class="mb-4">Cache is a smaller, faster memory (SRAM) that stores copies of frequently used data from RAM. Its effectiveness relies on the <strong>principle of locality</strong>: programs tend to reuse data and access data located near recently used items.</p>
+                          <ul class="list-disc list-inside space-y-2 text-amber-800">
+                            <li><strong>L1 Cache:</strong> Smallest and fastest, split for Instructions (L1I) and Data (L1D) to allow simultaneous access. A hit here is ideal.</li>
+                            <li><strong>L2 Cache:</strong> Larger and slower, serves as a backup for L1. Catches most L1 misses.</li>
+                            <li><strong>L3 Cache (LLC):</strong> Largest on-chip cache, shared by all cores. Crucial for reducing slow RAM access and for efficient multi-core communication.</li>
+                            <li><strong>Cache Hit:</strong> The data is found in the cache. Fast.</li>
+                            <li><strong>Cache Miss:</strong> The data is not in the cache. A slower level must be accessed, and the data is copied into the cache.</li>
+                          </ul>`
+            },
+            ram: {
+                title: 'Main Memory (RAM): The System\'s Workbench',
+                content: `<p class="mb-4">Random Access Memory is the primary workspace for the computer, holding the OS, applications, and their data. It uses DRAM technology, which stores bits as charge in capacitors that require constant refreshing.</p>
+                          <ul class="list-disc list-inside space-y-2 text-amber-800">
+                            <li><strong>Technology:</strong> Dynamic RAM (DRAM) is much denser and cheaper than SRAM, allowing for large capacities (Gigabytes).</li>
+                            <li><strong>Volatility:</strong> RAM is volatile; all data is lost when power is turned off.</li>
+                            <li><strong>Interaction:</strong> The CPU communicates with RAM via a Memory Controller, typically integrated on the CPU die (IMC). A cache miss triggers a request to the IMC, which fetches the data from the appropriate RAM module.</li>
+                            <li><strong>Standards:</strong> Evolving standards like DDR5 increase speed (bandwidth) and efficiency.</li>
+                          </ul>`
+            },
+            vmem: {
+                title: 'Virtual Memory: The Illusion of Abundance',
+                content: `<p class="mb-4">Virtual memory is a technique managed by the OS and the Memory Management Unit (MMU) that uses a part of the disk (e.g., an SSD) as an extension of RAM. This provides each program with a huge, private address space.</p>
+                          <ul class="list-disc list-inside space-y-2 text-amber-800">
+                            <li><strong>Paging:</strong> Memory is divided into fixed-size blocks called 'pages'. The MMU uses 'page tables' to translate a program's virtual addresses to physical addresses in RAM.</li>
+                            <li><strong>Page Fault:</strong> Occurs when the MMU finds that a required page is not in RAM but on the disk. This triggers an OS routine to load the page from the disk—a very slow operation.</li>
+                            <li><strong>TLB (Translation Lookaside Buffer):</strong> A special cache that stores recent address translations to speed up the virtual-to-physical lookup and avoid constant page table walks in memory.</li>
+                            <li><strong>Benefit:</strong> Allows running more applications than could fit in physical RAM and provides memory protection between processes.</li>
+                          </ul>`
+            }
+        },
+        cpuComparison: {
+            L1: {
+                labels: ['L1 Data Cache (KB/core)', 'L1 Instruction Cache (KB/core)'],
+                amd: { name: 'AMD Ryzen 9 9950X', values: [48, 32] },
+                intel: { name: 'Intel Core i9-14900K (P-Core)', values: [48, 32] }
+            },
+            L2: {
+                labels: ['L2 Cache (MB/core)'],
+                amd: { name: 'AMD Ryzen 9 9950X', values: [1] },
+                intel: { name: 'Intel Core i9-14900K (P-Core)', values: [2] }
+            },
+            L3: {
+                labels: ['L3 Cache (Total MB)'],
+                amd: { name: 'AMD Ryzen 9 9950X', values: [64] },
+                intel: { name: 'Intel Core i9-14900K', values: [36] }
+            }
+        }
+    };
+
+    const sections = document.querySelectorAll('main > section');
+    const navButtons = document.querySelectorAll('.nav-button');
+    const pyramidInfo = document.getElementById('pyramid-info');
+    const pyramidLevels = document.querySelectorAll('.pyramid-level');
+
+    function switchView(targetId) {
+        sections.forEach(section => {
+            section.classList.toggle('hidden', section.id !== targetId);
+        });
+        navButtons.forEach(button => {
+            button.classList.toggle('active', button.dataset.target === targetId);
+        });
+    }
+
+    navButtons.forEach(button => {
+        button.addEventListener('click', () => switchView(button.dataset.target));
+    });
+
+    function updatePyramidInfo(levelId) {
+        const info = data.pyramid[levelId];
+        if (!info) return;
+
+        pyramidInfo.innerHTML = `
+            <div class="p-4 rounded-lg ${info.color} text-white shadow-inner">
+                <h3 class="text-2xl font-bold">${info.title}</h3>
+            </div>
+            <div class="p-4 space-y-3">
+                <p class="text-amber-800">${info.description}</p>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div class="bg-amber-50 p-3 rounded-lg"><strong class="block text-amber-900">Typical Size:</strong> ${info.size}</div>
+                    <div class="bg-amber-50 p-3 rounded-lg"><strong class="block text-amber-900">Access Time:</strong> ${info.latency}</div>
+                    <div class="bg-amber-50 p-3 rounded-lg"><strong class="block text-amber-900">Relative Cost:</strong> ${info.cost}</div>
+                </div>
+            </div>
+        `;
+        pyramidInfo.classList.add('fade-in');
+        setTimeout(() => pyramidInfo.classList.remove('fade-in'), 500);
+    }
+    
+    pyramidLevels.forEach(level => {
+        level.addEventListener('click', () => updatePyramidInfo(level.dataset.level));
+    });
+    
+    updatePyramidInfo('registers');
+
+    const latencyChartCtx = document.getElementById('latencyChart').getContext('2d');
+    new Chart(latencyChartCtx, {
+        type: 'bar',
+        data: {
+            labels: ['CPU Register', 'L1 Cache', 'L2 Cache', 'L3 Cache', 'RAM', 'Page Fault (SSD)'],
+            datasets: [{
+                label: 'Access Latency (nanoseconds - log scale)',
+                data: [1, 4, 10, 40, 100, 150000], 
+                backgroundColor: [
+                    '#FBBF24', '#FCD34D', '#FDBA74', '#FB923C', '#F87171', '#EF4444'
+                ],
+                borderColor: '#c27803',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: 'logarithmic',
+                    title: { display: true, text: 'Latency in Nanoseconds (Logarithmic Scale)' }
+                },
+                y: { ticks: { font: { size: 12 } } }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) { label += ': '; }
+                            if (context.parsed.x !== null) {
+                                label += new Intl.NumberFormat('en-US').format(context.parsed.x) + ' ns';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    const deepDiveTabs = document.getElementById('deep-dive-tabs');
+    const deepDiveContent = document.getElementById('deep-dive-content');
+    
+    function updateDeepDiveContent(tabId) {
+        const contentData = data.deepDive[tabId];
+        deepDiveContent.innerHTML = `
+            <h3 class="text-2xl font-bold text-amber-900 mb-4">${contentData.title}</h3>
+            <div class="prose max-w-none text-amber-800">${contentData.content}</div>
+        `;
+        deepDiveTabs.querySelectorAll('button').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabId);
+        });
+        deepDiveContent.classList.add('fade-in');
+        setTimeout(() => deepDiveContent.classList.remove('fade-in'), 500);
+    }
+
+    deepDiveTabs.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON') {
+            updateDeepDiveContent(e.target.dataset.tab);
+        }
+    });
+    
+    updateDeepDiveContent('registers');
+    
+    const requestFlowElements = {
+        cpu: document.getElementById('flow-cpu'),
+        l1: document.getElementById('flow-l1'),
+        l2: document.getElementById('flow-l2'),
+        l3: document.getElementById('flow-l3'),
+        ram: document.getElementById('flow-ram'),
+        fault: document.getElementById('flow-fault'),
+        arrows: [
+            document.getElementById('arrow-1'), document.getElementById('arrow-2'),
+            document.getElementById('arrow-3'), document.getElementById('arrow-4'),
+            document.getElementById('arrow-5'),
+        ]
+    };
+    const simulationStatus = document.getElementById('simulation-status');
+
+    document.getElementById('simulate-request-btn').addEventListener('click', () => {
+        const path = Math.floor(Math.random() * 100);
+        
+        Object.values(requestFlowElements).flat().forEach(el => el.classList.remove('highlight-flow', 'highlight-arrow'));
+        simulationStatus.textContent = "";
+
+        let delay = 0;
+        
+        const highlight = (el, isArrow = false) => {
+            setTimeout(() => {
+                el.classList.add(isArrow ? 'highlight-arrow' : 'highlight-flow');
+            }, delay);
+            delay += 500;
+        };
+        
+        highlight(requestFlowElements.cpu);
+        highlight(requestFlowElements.arrows[0], true);
+        highlight(requestFlowElements.l1);
+        
+        if (path < 75) { // L1 Hit
+            setTimeout(() => simulationStatus.textContent = 'L1 HIT! Fastest access.', delay);
+        } else if (path < 90) { // L2 Hit
+            highlight(requestFlowElements.arrows[1], true);
+            highlight(requestFlowElements.l2);
+            setTimeout(() => simulationStatus.textContent = 'L1 Miss → L2 HIT!', delay);
+        } else if (path < 98) { // L3 Hit
+            highlight(requestFlowElements.arrows[1], true);
+            highlight(requestFlowElements.l2);
+            highlight(requestFlowElements.arrows[2], true);
+            highlight(requestFlowElements.l3);
+            setTimeout(() => simulationStatus.textContent = 'L2 Miss → L3 HIT!', delay);
+        } else if (path < 99.9) { // RAM Hit
+            highlight(requestFlowElements.arrows[1], true);
+            highlight(requestFlowElements.l2);
+            highlight(requestFlowElements.arrows[2], true);
+            highlight(requestFlowElements.l3);
+            highlight(requestFlowElements.arrows[3], true);
+            highlight(requestFlowElements.ram);
+            setTimeout(() => simulationStatus.textContent = 'L3 Miss → RAM Access. (Slow)', delay);
+        } else { // Page Fault
+            highlight(requestFlowElements.arrows[1], true);
+            highlight(requestFlowElements.l2);
+            highlight(requestFlowElements.arrows[2], true);
+            highlight(requestFlowElements.l3);
+            highlight(requestFlowElements.arrows[3], true);
+            highlight(requestFlowElements.ram);
+            highlight(requestFlowElements.arrows[4], true);
+            highlight(requestFlowElements.fault);
+            setTimeout(() => simulationStatus.textContent = 'PAGE FAULT! Accessing disk. (Extremely slow)', delay);
+        }
+    });
+
+    const mappingMemory = document.getElementById('mapping-memory');
+    const mappingCache = document.getElementById('mapping-cache');
+    const mappingLogic = document.getElementById('mapping-logic');
+    const mappingExplanation = document.getElementById('mapping-explanation');
+    const mappingButtons = document.querySelectorAll('.mapping-btn');
+
+    function setupMappingDemo(type) {
+        mappingButtons.forEach(btn => {
+            btn.classList.remove('bg-amber-200', 'text-amber-800');
+            btn.classList.add('bg-amber-100', 'text-amber-700');
+        });
+        const activeBtn = document.querySelector(`.mapping-btn[data-mapping="${type}"]`);
+        activeBtn.classList.add('bg-amber-200', 'text-amber-800');
+        activeBtn.classList.remove('bg-amber-100', 'text-amber-700');
+        
+        mappingMemory.innerHTML = '';
+        for (let i = 0; i < 16; i++) {
+            mappingMemory.innerHTML += `<div class="p-1 bg-gray-200 rounded text-xs">Mem Block ${i}</div>`;
+        }
+
+        mappingCache.innerHTML = '';
+        let logicText = '';
+        let explanationText = '';
+        
+        switch (type) {
+            case 'direct':
+                for (let i = 0; i < 8; i++) {
+                    mappingCache.innerHTML += `<div class="p-1 bg-blue-100 rounded text-xs border-2 border-transparent" data-cache-line="${i}">Cache Line ${i}</div>`;
+                }
+                logicText = 'Index = Addr % 8';
+                explanationText = 'Each memory block maps to exactly ONE cache line. Simple and fast, but can cause "conflict misses" if two frequently used blocks map to the same line.';
+                
+                setTimeout(() => {
+                    document.querySelector('#mapping-memory').children[3].classList.add('bg-yellow-300');
+                    document.querySelector('#mapping-cache').children[3].classList.add('bg-yellow-300');
+                    document.querySelector('#mapping-memory').children[11].classList.add('bg-red-300', 'line-through');
+                    document.querySelector('#mapping-cache').children[3].classList.add('border-red-500');
+                }, 100);
+                break;
+            case 'set':
+                for (let i = 0; i < 4; i++) {
+                    mappingCache.innerHTML += `<div class="p-1 bg-green-100 rounded text-xs border border-green-300">
+                        <div class="font-bold mb-1">Set ${i}</div>
+                        <div class="space-y-1">
+                           <div class="p-1 bg-white rounded text-xs border-2 border-transparent" data-cache-line="${i}-0">Way 0</div>
+                           <div class="p-1 bg-white rounded text-xs border-2 border-transparent" data-cache-line="${i}-1">Way 1</div>
+                        </div>
+                    </div>`;
+                }
+                logicText = 'Set = Addr % 4';
+                explanationText = 'A compromise. Memory blocks map to a specific SET, but can be placed in any "way" within that set. Reduces conflicts.';
+                setTimeout(() => {
+                    document.querySelector('#mapping-memory').children[3].classList.add('bg-yellow-300');
+                    document.querySelector('[data-cache-line="3-0"]').classList.add('bg-yellow-300');
+                    document.querySelector('#mapping-memory').children[11].classList.add('bg-green-300');
+                    document.querySelector('[data-cache-line="3-1"]').classList.add('bg-green-300');
+                }, 100);
+                break;
+            case 'full':
+                for (let i = 0; i < 8; i++) {
+                    mappingCache.innerHTML += `<div class="p-1 bg-purple-100 rounded text-xs border-2 border-transparent" data-cache-line="${i}">Cache Line ${i}</div>`;
+                }
+                logicText = 'Search all tags';
+                explanationText = 'A memory block can go in ANY cache line. Most flexible and avoids conflicts, but very complex and expensive to build.';
+                 setTimeout(() => {
+                    document.querySelector('#mapping-memory').children[3].classList.add('bg-yellow-300');
+                    document.querySelector('#mapping-cache').children[0].classList.add('bg-yellow-300');
+                    document.querySelector('#mapping-memory').children[11].classList.add('bg-purple-300');
+                    document.querySelector('#mapping-cache').children[1].classList.add('bg-purple-300');
+                }, 100);
+                break;
+        }
+
+        mappingLogic.textContent = logicText;
+        mappingExplanation.textContent = explanationText;
+    }
+
+    mappingButtons.forEach(btn => btn.addEventListener('click', () => setupMappingDemo(btn.dataset.mapping)));
+    setupMappingDemo('direct');
+
+
+    let cpuComparisonChart = null;
+    const cpuChartCtx = document.getElementById('cpuComparisonChart').getContext('2d');
+    const cpuRadioButtons = document.querySelectorAll('input[name="cache-level"]');
+    
+    function createOrUpdateCpuChart(level) {
+        const chartData = data.cpuComparison[level];
+        const chartConfig = {
+            type: 'bar',
+            data: {
+                labels: chartData.labels,
+                datasets: [
+                    {
+                        label: chartData.amd.name,
+                        data: chartData.amd.values,
+                        backgroundColor: '#fb923c',
+                        borderColor: '#c2410c',
+                        borderWidth: 1
+                    },
+                    {
+                        label: chartData.intel.name,
+                        data: chartData.intel.values,
+                        backgroundColor: '#60a5fa',
+                        borderColor: '#1d4ed8',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: level === 'L3' ? 'Cache Size (MB)' : 'Cache Size (KB/core)'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: `${level} Cache Size Comparison`,
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y + (level === 'L3' ? ' MB' : ' KB');
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        if(cpuComparisonChart) {
+            cpuComparisonChart.destroy();
+        }
+        cpuComparisonChart = new Chart(cpuChartCtx, chartConfig);
+    }
+    
+    cpuRadioButtons.forEach(radio => {
+        radio.addEventListener('change', () => {
+            createOrUpdateCpuChart(radio.value);
+        });
+    });
+
+    createOrUpdateCpuChart('L1');
+
+});
+</script>
+</body>
+</html>

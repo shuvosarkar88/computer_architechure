@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: An In-Depth Analysis of the Code Execution Industry</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Energetic & Playful -->
+    <!-- Application Structure Plan: The infographic follows a narrative structure analogous to a market research report, divided into four scrollable sections. 1) 'Market Overview': Hooks the user with a high-level comparison of the three main 'competitors' (AOT, Interpreter, JIT) using a radar chart for an instant snapshot. 2) 'Competitive Landscape': Presents a detailed breakdown of each competitor's 'process flow' and a SWOT-style analysis (Pros/Cons) using HTML/CSS diagrams and cards. 3) 'Technology Adoption': Showcases 'market share' by illustrating which programming languages ('consumers') use which model, using descriptive cards. 4) 'Performance & Outlook': Visualizes quantitative 'benchmark data' with bar and line charts and provides a concluding 'market forecast'. This narrative structure was chosen to transform a dense technical report into a compelling, easy-to-digest story, guiding the user logically from broad concepts to specific data. -->
+    <!-- Visualization & Content Choices: 1. Market Overview: Goal: Compare -> Radar Chart (Chart.js/Canvas) to show multi-dimensional comparison of the three models. 2. Execution Flow Diagrams: Goal: Organize -> HTML/CSS Flowcharts to visually represent processes without using forbidden libraries (Mermaid/SVG). 3. Performance Slowdown: Goal: Compare -> Horizontal Bar Chart (Chart.js/Canvas) to rank language performance clearly. Logarithmic scale used for clarity with wide-ranging data. 4. Startup vs Throughput: Goal: Change -> Line Chart (Chart.js/Canvas) to show performance trends over time. 5. Pros & Cons: Goal: Inform -> Styled HTML cards for a clear, organized presentation of qualitative data. All choices prioritize clarity, engagement, and adherence to technical constraints. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Teko:wght@400;600&display=swap');
+        body { font-family: 'Roboto', sans-serif; background-color: #F8F9FA; }
+        h1, h2, h3 { font-family: 'Teko', sans-serif; }
+        .stat-card { background: linear-gradient(145deg, #ffffff, #e6e6e6); }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin: 0 auto; height: 320px; max-height: 450px; }
+        @media (min-width: 768px) { .chart-container { height: 400px; } }
+        .flow-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .flow-box {
+            padding: 0.5rem 1rem;
+            border: 2px solid;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.875rem;
+            width: 80%;
+            transition: all 0.2s ease-in-out;
+        }
+        .flow-arrow {
+            font-size: 1.5rem;
+            color: #003554;
+        }
+    </style>
+</head>
+<body class="text-[#0A2463]">
+
+    <header class="bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-md">
+        <nav class="container mx-auto px-6 py-3">
+            <h1 class="text-3xl font-bold text-[#006494]">THE CODE EXECUTION MARKET</h1>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-6 py-8">
+
+        <section id="intro" class="text-center py-12">
+            <h2 class="text-6xl font-bold text-[#003554]">FROM SOURCE TO SPEED</h2>
+            <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-700">An in-depth analysis of the core technologies that power the software industry. This report examines the market landscape of code execution models—Compilers, Interpreters, and JIT Compilers—evaluating their performance, strategic advantages, and adoption rates across major platforms.</p>
+        </section>
+
+        <section id="market-overview" class="py-10">
+            <h3 class="text-4xl font-semibold text-center mb-4 text-[#006494]">MARKET OVERVIEW: KEY PLAYER POSITIONING</h3>
+            <p class="text-center max-w-3xl mx-auto mb-10 text-gray-600">The code execution market is dominated by three distinct technological approaches. Our analysis reveals their competitive positioning across six critical performance indicators. While AOT Compilers lead in raw speed, Interpreters offer superior portability and development agility. JIT Compilers represent a strategic hybrid, capturing significant value by balancing performance with flexibility.</p>
+            <div class="bg-white rounded-lg shadow-xl p-6">
+                <div class="chart-container">
+                    <canvas id="marketRadarChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="competitive-landscape" class="py-16">
+            <h3 class="text-4xl font-semibold text-center mb-10 text-[#006494]">COMPETITIVE LANDSCAPE: PROCESS & STRATEGY</h3>
+            <div class="grid md:grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <div class="bg-white p-6 rounded-lg shadow-xl border-t-8 border-[#00A6FB]">
+                    <h4 class="text-3xl font-bold mb-4">AOT Compiler</h4>
+                    <p class="text-gray-600 mb-6">This model translates the entire codebase into platform-specific machine code before runtime, prioritizing maximum execution speed and optimization.</p>
+                    <div class="flow-diagram mb-6">
+                        <div class="flow-box" style="border-color: #00A6FB; color: #00A6FB;">Source Code</div>
+                        <div class="flow-arrow">&#129047;</div>
+                        <div class="flow-box" style="border-color: #00A6FB; color: #00A6FB;">Full Compilation & Linking</div>
+                        <div class="flow-arrow">&#129047;</div>
+                        <div class="flow-box bg-[#00A6FB] text-white" style="border-color: #00A6FB;">Native Executable</div>
+                    </div>
+                    <h5 class="font-bold text-lg mb-2">Strategic Analysis</h5>
+                    <ul class="list-disc list-inside space-y-2 text-sm">
+                        <li class="text-green-600"><span class="font-bold">Strength:</span> Unmatched runtime performance.</li>
+                        <li class="text-green-600"><span class="font-bold">Strength:</span> Extensive offline code optimization.</li>
+                        <li class="text-red-600"><span class="font-bold">Weakness:</span> Slower development cycle (recompilation).</li>
+                        <li class="text-red-600"><span class="font-bold">Weakness:</span> Output is not portable across platforms.</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-xl border-t-8 border-[#0582CA]">
+                    <h4 class="text-3xl font-bold mb-4">Interpreter</h4>
+                    <p class="text-gray-600 mb-6">This model reads and executes code line-by-line at runtime, often via an intermediate bytecode, maximizing developer productivity and portability.</p>
+                    <div class="flow-diagram mb-6">
+                        <div class="flow-box" style="border-color: #0582CA; color: #0582CA;">Source Code</div>
+                        <div class="flow-arrow">&#129047;</div>
+                        <div class="flow-box" style="border-color: #0582CA; color: #0582CA;">Runtime Interpretation</div>
+                        <div class="flow-arrow">&#129047;</div>
+                        <div class="flow-box bg-[#0582CA] text-white" style="border-color: #0582CA;">Direct Execution</div>
+                    </div>
+                     <h5 class="font-bold text-lg mb-2">Strategic Analysis</h5>
+                    <ul class="list-disc list-inside space-y-2 text-sm">
+                        <li class="text-green-600"><span class="font-bold">Strength:</span> Exceptional development speed.</li>
+                        <li class="text-green-600"><span class="font-bold">Strength:</span> High portability across systems.</li>
+                        <li class="text-red-600"><span class="font-bold">Weakness:</span> Slower runtime execution speed.</li>
+                        <li class="text-red-600"><span class="font-bold">Weakness:</span> Errors are discovered only at runtime.</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-xl border-t-8 border-[#006494]">
+                    <h4 class="text-3xl font-bold mb-4">JIT Compiler</h4>
+                    <p class="text-gray-600 mb-6">A hybrid model that interprets code initially, then compiles frequently used "hot spots" into native code at runtime for adaptive performance.</p>
+                     <div class="flow-diagram mb-6">
+                        <div class="flow-box" style="border-color: #006494; color: #006494;">Bytecode</div>
+                        <div class="flow-arrow">&#129047;</div>
+                        <div class="flow-box" style="border-color: #006494; color: #006494;">Interpreter + Profiler</div>
+                        <div class="flow-arrow">&#129047;</div>
+                        <div class="flow-box bg-[#006494] text-white" style="border-color: #006494;">Optimized Native Code</div>
+                    </div>
+                     <h5 class="font-bold text-lg mb-2">Strategic Analysis</h5>
+                    <ul class="list-disc list-inside space-y-2 text-sm">
+                        <li class="text-green-600"><span class="font-bold">Strength:</span> High performance after warm-up.</li>
+                        <li class="text-green-600"><span class="font-bold">Strength:</span> Adapts to runtime behavior.</li>
+                        <li class="text-red-600"><span class="font-bold">Weakness:</span> Initial startup overhead.</li>
+                        <li class="text-red-600"><span class="font-bold">Weakness:</span> Higher memory consumption.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="adoption" class="py-16">
+            <h3 class="text-4xl font-semibold text-center mb-10 text-[#006494]">TECHNOLOGY ADOPTION & KEY IMPLEMENTATIONS</h3>
+            <p class="text-center max-w-3xl mx-auto mb-10 text-gray-600">The adoption of these models defines the character of programming languages. Below are leading examples of how these technologies are implemented in the market's most influential languages.</p>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="stat-card p-6 rounded-lg shadow-lg">
+                    <h4 class="text-2xl font-bold mb-2">C/C++ with GCC/Clang</h4>
+                    <p class="font-semibold text-[#00A6FB] mb-4">Model: AOT Compilation</p>
+                    <p class="text-gray-700">These languages are the gold standard for performance, compiled directly to native machine code. This approach gives developers maximum control over system resources, making it ideal for operating systems, game engines, and high-frequency trading systems where speed is paramount.</p>
+                </div>
+                <div class="stat-card p-6 rounded-lg shadow-lg">
+                    <h4 class="text-2xl font-bold mb-2">Python with CPython</h4>
+                    <p class="font-semibold text-[#0582CA] mb-4">Model: Bytecode Interpretation</p>
+                    <p class="text-gray-700">Python prioritizes developer productivity. Source code is compiled to platform-agnostic bytecode, which is then executed by the Python Virtual Machine. While slower for CPU-bound tasks, its ease of use has led to dominant market share in data science, AI, and web backend development.</p>
+                </div>
+                 <div class="stat-card p-6 rounded-lg shadow-lg">
+                    <h4 class="text-2xl font-bold mb-2">Java with HotSpot JVM</h4>
+                    <p class="font-semibold text-[#006494] mb-4">Model: JIT Compilation</p>
+                    <p class="text-gray-700">Java's "write once, run anywhere" philosophy is powered by the JVM. Its advanced HotSpot JIT compiler analyzes running code and translates critical paths into highly optimized native code, achieving performance competitive with C++ for long-running enterprise applications and Android apps.</p>
+                </div>
+                 <div class="stat-card p-6 rounded-lg shadow-lg">
+                    <h4 class="text-2xl font-bold mb-2">JavaScript with V8</h4>
+                    <p class="font-semibold text-[#003554] mb-4">Model: JIT Compilation</p>
+                    <p class="text-gray-700">Once a simple scripting language, JavaScript is now a performance powerhouse thanks to engines like V8. A sophisticated multi-tiered JIT pipeline makes JavaScript fast enough for complex web applications, server-side development with Node.js, and even desktop apps, solidifying its position as the lingua franca of the web.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="benchmarks" class="py-16">
+            <h3 class="text-4xl font-semibold text-center mb-10 text-[#006494]">PERFORMANCE BENCHMARKS & MARKET OUTLOOK</h3>
+             <div class="grid lg:grid-cols-2 gap-12">
+                <div class="bg-white p-6 rounded-lg shadow-xl">
+                    <h4 class="text-2xl font-bold text-center mb-2">CPU Performance Analysis</h4>
+                     <p class="text-center text-sm text-gray-600 mb-4">(Relative slowdown vs C++, lower is better)</p>
+                    <div class="chart-container h-80">
+                        <canvas id="performanceBarChart"></canvas>
+                    </div>
+                </div>
+                 <div class="bg-white p-6 rounded-lg shadow-xl">
+                    <h4 class="text-2xl font-bold text-center mb-2">Performance Lifecycle</h4>
+                    <p class="text-center text-sm text-gray-600 mb-4">(Conceptual model of throughput over time)</p>
+                     <div class="chart-container h-80">
+                        <canvas id="throughputLineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-12 max-w-4xl mx-auto text-center bg-white p-8 rounded-xl shadow-2xl">
+                 <h4 class="text-2xl font-bold text-[#003554] mb-2">Market Outlook</h4>
+                 <p class="text-gray-700">The future of code execution lies in hybrid models. The performance gap between AOT and JIT compilation continues to narrow, with JITs demonstrating superior adaptability for dynamic, long-running applications. The market trend is towards increasingly sophisticated, multi-tiered JIT compilers (like in V8) and technologies like GraalVM that blur the lines, offering both high-performance JIT and AOT compilation options. Pure interpretation remains a vital niche for scripting and rapid development, but for performance-sensitive applications, the battle is between advanced AOT and adaptive JIT strategies.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-[#003554] text-white mt-10">
+        <div class="container mx-auto px-6 py-4 text-center text-sm opacity-75">
+            <p>&copy; 2025 Code Execution Industry Analytics. All data synthesized from internal research reports.</p>
+        </div>
+    </footer>
+
+    <script>
+        const wrapLabel = (label, maxWidth) => {
+            const words = label.split(' ');
+            const lines = [];
+            let currentLine = '';
+            for (const word of words) {
+                const testLine = currentLine ? `${currentLine} ${word}` : word;
+                if (testLine.length > maxWidth) {
+                    lines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    currentLine = testLine;
+                }
+            }
+            lines.push(currentLine);
+            return lines;
+        };
+
+        const universalTooltipCallback = function(tooltipItems) {
+            const item = tooltipItems[0];
+            let label = item.chart.data.labels[item.dataIndex];
+            if (Array.isArray(label)) {
+                return label.join(' ');
+            }
+            return label;
+        };
+        
+        const COLORS = {
+            AOT: '#00A6FB',
+            INTERPRETER: '#0582CA',
+            JIT: '#006494',
+            TEXT_DARK: '#003554',
+            TEXT_DEEP: '#0A2463',
+        };
+
+        const createRadarChart = () => {
+            const ctx = document.getElementById('marketRadarChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Runtime Speed', 'Startup Speed', 'Portability', 'Dev Cycle Speed', 'Optimization', 'Memory Efficiency'],
+                    datasets: [
+                        { label: 'AOT Compiler', data: [9, 3, 4, 3, 9, 7], backgroundColor: 'rgba(0, 166, 251, 0.2)', borderColor: COLORS.AOT, borderWidth: 2 },
+                        { label: 'Interpreter', data: [3, 9, 9, 9, 2, 5], backgroundColor: 'rgba(5, 130, 202, 0.2)', borderColor: COLORS.INTERPRETER, borderWidth: 2 },
+                        { label: 'JIT Compiler', data: [8, 5, 8, 6, 8, 3], backgroundColor: 'rgba(0, 100, 148, 0.2)', borderColor: COLORS.JIT, borderWidth: 2 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { callbacks: { title: universalTooltipCallback } }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(0, 53, 84, 0.2)' },
+                            grid: { color: 'rgba(0, 53, 84, 0.2)' },
+                            pointLabels: { font: { size: 12 }, color: COLORS.TEXT_DARK },
+                            ticks: { backdropColor: 'rgba(255,255,255,0.75)', color: COLORS.TEXT_DARK, stepSize: 2 }
+                        }
+                    }
+                }
+            });
+        };
+        
+        const createPerformanceBarChart = () => {
+            const ctx = document.getElementById('performanceBarChart').getContext('2d');
+            const rawLabels = ['Python (CPython)', 'JavaScript (V8)', 'Java (HotSpot JVM)', 'Go (Compiler)', 'C++ (GCC)'];
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: rawLabels.map(l => wrapLabel(l, 16)),
+                    datasets: [{
+                        label: 'Relative Slowdown vs C++',
+                        data: [29.50, 8.01, 1.43, 1.30, 1.0],
+                        backgroundColor: [COLORS.INTERPRETER, COLORS.JIT, COLORS.JIT, COLORS.AOT, COLORS.AOT],
+                        barThickness: 30,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { type: 'logarithmic', title: { display: true, text: 'Slowdown Factor (Log Scale)', color: COLORS.TEXT_DARK } },
+                        y: { grid: { display: false } }
+                    },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { 
+                            callbacks: { 
+                                title: universalTooltipCallback,
+                                label: (context) => `Slowdown: ${context.parsed.x.toFixed(2)}x`
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        const createThroughputLineChart = () => {
+            const ctx = document.getElementById('throughputLineChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Start', 'Warm-up', 'Sustained', 'Long Run'],
+                    datasets: [
+                        { label: 'Interpreter', data: [95, 95, 95, 95], borderColor: COLORS.INTERPRETER, tension: 0.1, fill: false },
+                        { label: 'AOT Compiler', data: [0, 100, 100, 100], borderColor: COLORS.AOT, tension: 0.1, fill: false },
+                        { label: 'JIT Compiler', data: [0, 60, 98, 99], borderColor: COLORS.JIT, tension: 0.4, fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { title: { display: true, text: 'Throughput (% of Peak)', color: COLORS.TEXT_DARK }, min: 0, max: 110 },
+                        x: { title: { display: true, text: 'Application Lifetime', color: COLORS.TEXT_DARK } }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: { 
+                            mode: 'index', 
+                            intersect: false,
+                            callbacks: { title: universalTooltipCallback }
+                        }
+                    }
+                }
+            });
+        };
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            createRadarChart();
+            createPerformanceBarChart();
+            createThroughputLineChart();
+        });
+    </script>
+</body>
+</html>

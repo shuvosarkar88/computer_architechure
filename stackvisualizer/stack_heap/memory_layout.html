@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Program Memory Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Tech Neutral -->
+    <!-- Application Structure Plan: A single-page application with a persistent sidebar navigation on desktop (top-bar on mobile) to switch between themed sections. This non-linear structure allows users to jump directly to topics of interest. The sections are: 'Overview' (an interactive memory layout diagram), 'Stack vs. Heap' (a side-by-side comparison with a chart), 'The Stack Deep Dive' (an interactive stack frame animation), 'The Heap Deep Dive' (a heap fragmentation simulator), 'Errors & Management' (covering overflows, leaks, and GC), and 'OS & Configuration' (static info on system limits). This interactive, thematic structure is chosen over a linear document to make the dense technical content more engaging and easier to digest by allowing users to explore concepts through visualization and direct interaction. -->
+    <!-- Visualization & Content Choices: 
+        - Overall Memory Layout: Info -> Segments of memory; Goal -> Inform/Organize; Viz -> HTML/CSS diagram; Interaction -> Hover to see details; Justification -> More engaging than static text/ASCII.
+        - Stack vs Heap Chart: Info -> Comparison of attributes; Goal -> Compare; Viz -> Chart.js Bar Chart; Interaction -> Hover tooltips; Justification -> Visually quantifies abstract differences.
+        - Stack Frame Animation: Info -> Function call/return flow; Goal -> Explain Change; Viz -> JS-manipulated HTML divs; Interaction -> Buttons to step through prologue/epilogue; Justification -> Makes the abstract process of stack manipulation concrete and understandable.
+        - Heap Fragmentation Simulator: Info -> Internal/External fragmentation; Goal -> Explain Relationships; Viz -> JS-manipulated HTML grid; Interaction -> User allocates/frees memory blocks; Justification -> A hands-on simulation demonstrates the problem more effectively than a description.
+        - Textual Content: Info -> Detailed explanations; Goal -> Inform; Viz -> Collapsible sections/cards; Interaction -> Click to expand; Justification -> Breaks down text-heavy content into manageable pieces.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://rsms.me/inter/inter.css');
+        .active-nav {
+            background-color: #3b82f6;
+            color: #ffffff;
+        }
+        .nav-item {
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+                max-height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <!-- Sidebar Navigation -->
+        <nav class="w-full md:w-64 bg-slate-900 text-white flex-shrink-0">
+            <div class="p-4 border-b border-slate-700">
+                <h1 class="text-xl font-bold text-center">Memory Explorer</h1>
+            </div>
+            <ul class="p-2 space-y-1">
+                <li><a href="#overview" class="nav-item block p-3 rounded-lg hover:bg-slate-700 active-nav">Overview</a></li>
+                <li><a href="#stack-heap-compare" class="nav-item block p-3 rounded-lg hover:bg-slate-700">Stack vs. Heap</a></li>
+                <li><a href="#deep-dive-stack" class="nav-item block p-3 rounded-lg hover:bg-slate-700">The Stack: Deep Dive</a></li>
+                <li><a href="#deep-dive-heap" class="nav-item block p-3 rounded-lg hover:bg-slate-700">The Heap: Deep Dive</a></li>
+                <li><a href="#errors-management" class="nav-item block p-3 rounded-lg hover:bg-slate-700">Errors & Management</a></li>
+                <li><a href="#os-role" class="nav-item block p-3 rounded-lg hover:bg-slate-700">OS & Configuration</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+            
+            <!-- Overview Section -->
+            <section id="overview" class="content-section active">
+                <h2 class="text-3xl font-bold mb-4 text-slate-900">Program Memory Layout</h2>
+                <p class="mb-6 text-lg text-slate-600">When a program runs, the operating system gives it a private virtual address space. This space is organized into distinct segments, each with a specific purpose. Below is an interactive diagram of this layout. Hover over a segment to learn more about it.</p>
+                
+                <div class="flex flex-col-reverse md:flex-row md:space-x-8">
+                    <div id="memory-diagram" class="w-full md:w-1/2 flex flex-col-reverse p-4 bg-slate-800 rounded-lg shadow-lg">
+                        <div data-segment="text" class="memory-segment border-t-2 border-slate-600 bg-green-900/50 p-4 text-center cursor-pointer hover:bg-green-800/70 transition-colors">
+                            <p class="font-mono text-white">Text (Code)</p>
+                        </div>
+                        <div data-segment="data" class="memory-segment border-t-2 border-slate-600 bg-cyan-900/50 p-4 text-center cursor-pointer hover:bg-cyan-800/70 transition-colors">
+                            <p class="font-mono text-white">Initialized Data</p>
+                        </div>
+                        <div data-segment="bss" class="memory-segment border-t-2 border-slate-600 bg-cyan-900/60 p-4 text-center cursor-pointer hover:bg-cyan-800/80 transition-colors">
+                            <p class="font-mono text-white">BSS</p>
+                        </div>
+                        <div data-segment="heap" class="memory-segment border-t-2 border-slate-600 bg-purple-900/60 p-8 text-center cursor-pointer hover:bg-purple-800/80 transition-colors">
+                             <p class="font-mono text-white flex items-center justify-center">Heap &nbsp; <span class="text-2xl">↑</span></p>
+                        </div>
+                        <div class="flex-grow p-4 text-center text-slate-400">...</div>
+                        <div data-segment="stack" class="memory-segment border-b-2 border-slate-600 bg-blue-900/60 p-8 text-center cursor-pointer hover:bg-blue-800/80 transition-colors">
+                            <p class="font-mono text-white flex items-center justify-center">Stack &nbsp; <span class="text-2xl">↓</span></p>
+                        </div>
+                         <div data-segment="kernel" class="memory-segment bg-slate-700 p-4 text-center cursor-pointer hover:bg-slate-600 transition-colors">
+                            <p class="font-mono text-white">Kernel Space</p>
+                        </div>
+                    </div>
+                    <div id="segment-details" class="w-full md:w-1/2 p-6 bg-white rounded-lg shadow-md mb-6 md:mb-0">
+                        <h3 class="text-2xl font-bold mb-3 text-slate-800">Select a Segment</h3>
+                        <p class="text-slate-600">Hover over a memory segment in the diagram to see its description here.</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Stack vs Heap Section -->
+            <section id="stack-heap-compare" class="content-section">
+                <h2 class="text-3xl font-bold mb-4 text-slate-900">Stack vs. Heap</h2>
+                <p class="mb-6 text-lg text-slate-600">The stack and heap are the two primary regions where a program stores its data at runtime. They have fundamental differences in speed, size, and management. This section provides a direct comparison to highlight their unique characteristics and use cases.</p>
+                <div class="chart-container mb-8">
+                    <canvas id="comparisonChart"></canvas>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-bold mb-3 text-blue-700">Stack</h3>
+                        <ul class="space-y-3 list-disc list-inside text-slate-700">
+                            <li><strong class="font-semibold">Allocation:</strong> Automatic, by the compiler.</li>
+                            <li><strong class="font-semibold">Speed:</strong> Extremely fast. Just involves moving a single pointer.</li>
+                            <li><strong class="font-semibold">Size:</strong> Small and fixed. Typically a few megabytes.</li>
+                            <li><strong class="font-semibold">Lifetime:</strong> Temporary. Data is destroyed when a function returns.</li>
+                            <li><strong class="font-semibold">Use Case:</strong> Local variables, function parameters, managing call flow.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-bold mb-3 text-purple-700">Heap</h3>
+                        <ul class="space-y-3 list-disc list-inside text-slate-700">
+                            <li><strong class="font-semibold">Allocation:</strong> Manual (C/C++) or by a Garbage Collector.</li>
+                            <li><strong class="font-semibold">Speed:</strong> Slower. Involves complex logic to find and manage blocks.</li>
+                            <li><strong class="font-semibold">Size:</strong> Large and dynamic. Limited only by virtual memory.</li>
+                            <li><strong class="font-semibold">Lifetime:</strong> Persistent. Data exists until explicitly freed or collected.</li>
+                            <li><strong class="font-semibold">Use Case:</strong> Large data structures, objects with long lifetimes.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stack Deep Dive Section -->
+            <section id="deep-dive-stack" class="content-section">
+                <h2 class="text-3xl font-bold mb-4 text-slate-900">The Stack: Deep Dive</h2>
+                <p class="mb-6 text-lg text-slate-600">The stack is the engine of function calls. Every time a function is called, a new "stack frame" is pushed onto the stack. This frame holds the function's local variables, parameters, and the return address. Use the controls below to simulate a function call and see how the stack grows and shrinks.</p>
+                
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <div class="lg:w-1/3">
+                        <h3 class="text-xl font-bold mb-3">Controls</h3>
+                        <div class="space-y-2 mb-4">
+                             <button id="call-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition-colors">Call `myFunction(10)`</button>
+                             <button id="return-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition-colors" disabled>Return from `myFunction`</button>
+                             <button id="reset-stack-btn" class="w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded transition-colors">Reset</button>
+                        </div>
+                        <div id="stack-explanation" class="bg-white p-4 rounded-lg shadow-md min-h-[100px] text-slate-700">
+                            Start by calling a function.
+                        </div>
+                    </div>
+
+                    <div class="lg:w-2/3 bg-slate-800 rounded-lg p-4 shadow-lg min-h-[400px]">
+                        <h3 class="text-white font-bold mb-4 text-center">Call Stack (Grows Downward)</h3>
+                        <div id="stack-visualizer" class="space-y-1 flex flex-col-reverse">
+                            <div class="p-4 bg-slate-700 text-white rounded text-center font-mono">
+                                Base of Stack
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Heap Deep Dive Section -->
+            <section id="deep-dive-heap" class="content-section">
+                 <h2 class="text-3xl font-bold mb-4 text-slate-900">The Heap: Deep Dive</h2>
+                <p class="mb-6 text-lg text-slate-600">The heap is a large pool of memory used for dynamic allocation. Unlike the stack, its management is more complex, leading to issues like fragmentation. This simulator lets you allocate and free memory blocks to see how fragmentation occurs.</p>
+                
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <div class="lg:w-1/3">
+                         <h3 class="text-xl font-bold mb-3">Heap Simulator</h3>
+                         <div class="bg-white p-4 rounded-lg shadow-md">
+                            <div class="mb-4">
+                               <label for="alloc-size" class="block text-sm font-medium text-slate-700">Allocation Size (1-10 blocks)</label>
+                               <input type="number" id="alloc-size" min="1" max="10" value="3" class="mt-1 block w-full p-2 border border-slate-300 rounded-md shadow-sm">
+                            </div>
+                             <button id="alloc-btn" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded transition-colors">Allocate Memory</button>
+                             <p class="text-xs text-slate-500 mt-2">Click an allocated block in the visualizer to free it.</p>
+                         </div>
+                         <div id="heap-stats" class="bg-white p-4 rounded-lg shadow-md mt-4 text-slate-700">
+                             <h4 class="font-bold">Heap Statistics</h4>
+                             <p>Total Blocks: <span id="total-blocks">64</span></p>
+                             <p>Allocated: <span id="allocated-blocks">0</span></p>
+                             <p>Free: <span id="free-blocks">64</span></p>
+                             <p>Fragmentation: <span id="fragmentation-percent">0</span>%</p>
+                         </div>
+                    </div>
+
+                    <div class="lg:w-2/3 bg-slate-200 rounded-lg p-4 shadow-inner">
+                        <h3 class="font-bold mb-4 text-center">Heap Memory Visualizer</h3>
+                        <div id="heap-visualizer" class="grid grid-cols-8 gap-1">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Errors & Management Section -->
+            <section id="errors-management" class="content-section">
+                <h2 class="text-3xl font-bold mb-4 text-slate-900">Errors & Management</h2>
+                <p class="mb-6 text-lg text-slate-600">Improper memory management leads to critical errors. The stack can overflow, and the heap can suffer from leaks and exhaustion. Different programming language paradigms offer various strategies to manage these risks.</p>
+
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-2xl font-bold mb-3 text-red-600">Common Memory Errors</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h4 class="font-bold text-xl">Stack Overflow</h4>
+                                <p class="text-slate-700 mt-2">Occurs when the stack's fixed-size limit is exceeded. The most common cause is excessively deep or infinite recursion. This usually results in the program crashing with a segmentation fault.</p>
+                            </div>
+                             <div>
+                                <h4 class="font-bold text-xl">Heap Exhaustion</h4>
+                                <p class="text-slate-700 mt-2">Occurs when the memory allocator cannot find a free block of memory large enough to satisfy a request. `malloc` returns NULL in C, while `new` throws a `std::bad_alloc` exception in C++.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-xl">Memory Leak</h4>
+                                <p class="text-slate-700 mt-2">Happens in manually managed languages (like C/C++) when heap-allocated memory is no longer needed but is not deallocated. The program loses the pointer and can no longer free the memory, which accumulates over time.</p>
+                            </div>
+                             <div>
+                                <h4 class="font-bold text-xl">Dangling Pointer</h4>
+                                <p class="text-slate-700 mt-2">A pointer that points to a memory location that has been deallocated (freed). Using a dangling pointer leads to undefined behavior, often causing crashes or data corruption.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-2xl font-bold mb-3">Management Strategies</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-bold text-xl">Manual (C/C++)</h4>
+                                <p class="text-slate-700 mt-2">The programmer is fully responsible for allocating (`malloc`, `new`) and deallocating (`free`, `delete`) heap memory. This offers maximum control and performance but is error-prone. Tools like <strong class="font-semibold">Valgrind</strong> are essential for detecting leaks and invalid memory access by running the program in a simulated environment and tracking every memory operation.</p>
+                            </div>
+                             <div>
+                                <h4 class="font-bold text-xl">Automatic (Garbage Collection - Java, Python, C#)</h4>
+                                <p class="text-slate-700 mt-2">The runtime environment automatically detects and reclaims heap memory that is no longer "reachable" by the program. This eliminates manual deallocation errors like leaks and dangling pointers. GCs use various strategies:</p>
+                                <ul class="list-disc list-inside space-y-1 mt-2 text-slate-600">
+                                    <li><strong>Mark-and-Sweep:</strong> Marks all reachable objects, then sweeps the heap to free unmarked ones.</li>
+                                    <li><strong>Reference Counting:</strong> Each object tracks how many references point to it. It's freed when the count hits zero.</li>
+                                    <li><strong>Generational GC:</strong> Splits the heap into generations, assuming most objects die young. Collects the "young" generation more frequently for efficiency.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- OS & Configuration Section -->
+            <section id="os-role" class="content-section">
+                <h2 class="text-3xl font-bold mb-4 text-slate-900">OS & Configuration</h2>
+                <p class="mb-6 text-lg text-slate-600">The operating system is the ultimate arbiter of memory. It sets up the initial memory layout for a process and provides tools to configure resource limits, which is crucial for system stability and performance tuning.</p>
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-bold mb-2">Initial Allocation</h3>
+                        <p class="text-slate-700">When you run a program, the OS loader reads the executable file (e.g., ELF on Linux). It maps the code to the Text segment, the initialized variables to the Data segment, and allocates space for the BSS segment (which it fills with zeros). It then allocates an initial stack of a default size (e.g., 8MB on Linux) and sets up the initial program break, which marks the beginning of the heap.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                         <h3 class="text-xl font-bold mb-2">Configuring Limits on Unix-like Systems</h3>
+                         <p class="text-slate-700 mb-4">The `ulimit` command in the shell can view and set resource limits for processes. This is useful for testing how your application behaves under memory constraints or for preventing a single process from consuming too many system resources.</p>
+                         <div>
+                            <p class="font-semibold">Setting the maximum stack size to 16MB:</p>
+                            <pre class="bg-slate-800 text-white p-3 rounded-md mt-1 font-mono text-sm"><code>ulimit -s 16384</code></pre>
+                         </div>
+                         <div class="mt-4">
+                            <p class="font-semibold">Setting the maximum heap (data segment) size:</p>
+                            <pre class="bg-slate-800 text-white p-3 rounded-md mt-1 font-mono text-sm"><code>ulimit -d <size_in_kbytes></code></pre>
+                         </div>
+                         <div class="mt-4">
+                             <p class="font-semibold">Setting the maximum virtual memory size:</p>
+                             <pre class="bg-slate-800 text-white p-3 rounded-md mt-1 font-mono text-sm"><code>ulimit -v <size_in_kbytes></code></pre>
+                         </div>
+                    </div>
+                </div>
+            </section>
+            
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // --- Navigation ---
+    const navLinks = document.querySelectorAll('nav a');
+    const sections = document.querySelectorAll('.content-section');
+
+    const setActiveSection = (hash) => {
+        const targetHash = hash || '#overview';
+        
+        navLinks.forEach(link => {
+            if (link.getAttribute('href') === targetHash) {
+                link.classList.add('active-nav');
+            } else {
+                link.classList.remove('active-nav');
+            }
+        });
+
+        sections.forEach(section => {
+            if (`#${section.id}` === targetHash) {
+                section.classList.add('active');
+            } else {
+                section.classList.remove('active');
+            }
+        });
+    };
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetHash = e.currentTarget.getAttribute('href');
+            setActiveSection(targetHash);
+            window.history.pushState(null, null, targetHash);
+        });
+    });
+
+    // --- Overview Section: Memory Diagram ---
+    const segmentDetails = {
+        text: { title: "Text Segment", desc: "Stores the executable machine code. It's read-only to prevent modification of instructions during runtime. It can be shared among multiple processes running the same program to save memory." },
+        data: { title: "Initialized Data Segment", desc: "Stores global and static variables that are initialized with a non-zero value by the programmer. This segment is read-write." },
+        bss: { title: "BSS Segment", desc: "Stands for 'Block Started by Symbol'. Stores uninitialized or zero-initialized global and static variables. The OS initializes this memory to zero before the program starts." },
+        heap: { title: "Heap Segment", desc: "A region for dynamic memory allocation. Managed by the programmer (malloc/free, new/delete) or a garbage collector. It grows upwards towards higher memory addresses." },
+        stack: { title: "Stack Segment", desc: "Manages function calls, local variables, and parameters using a Last-In, First-Out (LIFO) structure. It's fast, automatically managed, and grows downwards from high memory." },
+        kernel: { title: "Kernel Space", desc: "This region is reserved for the operating system kernel. User-mode applications cannot access this memory directly for security and stability reasons." }
+    };
+    const detailsPanel = document.getElementById('segment-details');
+    document.querySelectorAll('.memory-segment').forEach(segment => {
+        segment.addEventListener('mouseenter', () => {
+            const segmentKey = segment.dataset.segment;
+            const details = segmentDetails[segmentKey];
+            detailsPanel.innerHTML = `
+                <h3 class="text-2xl font-bold mb-3 text-slate-800">${details.title}</h3>
+                <p class="text-slate-600">${details.desc}</p>
+            `;
+        });
+    });
+    
+    // --- Stack vs Heap Section: Chart.js ---
+    let comparisonChart = null;
+    const createComparisonChart = () => {
+        const ctx = document.getElementById('comparisonChart').getContext('2d');
+        if (comparisonChart) {
+            comparisonChart.destroy();
+        }
+        comparisonChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Speed', 'Size', 'Flexibility'],
+                datasets: [
+                    {
+                        label: 'Stack',
+                        data: [9, 2, 2],
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Heap',
+                        data: [3, 9, 9],
+                        backgroundColor: 'rgba(168, 85, 247, 0.7)',
+                        borderColor: 'rgba(168, 85, 247, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        display: false,
+                        max: 10
+                    },
+                    y: {
+                        ticks: { font: { size: 14 } }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                }
+            }
+        });
+    };
+
+    // --- Stack Deep Dive Section ---
+    const stackVisualizer = document.getElementById('stack-visualizer');
+    const stackExplanation = document.getElementById('stack-explanation');
+    const callBtn = document.getElementById('call-btn');
+    const returnBtn = document.getElementById('return-btn');
+    const resetStackBtn = document.getElementById('reset-stack-btn');
+    let stackFrames = [];
+    let funcCounter = 0;
+
+    const renderStack = () => {
+        stackVisualizer.innerHTML = `<div class="p-4 bg-slate-700 text-white rounded text-center font-mono">Base of Stack</div>`;
+        stackFrames.forEach((frame, index) => {
+            const frameEl = document.createElement('div');
+            frameEl.className = 'p-3 bg-blue-800/80 text-white rounded border-2 border-blue-500 font-mono text-sm';
+            frameEl.innerHTML = `
+                <p class="font-bold">Frame ${index}: ${frame.name}</p>
+                <p>Parameter: ${frame.param}</p>
+                <p>Return Addr: 0x...${frame.retAddr}</p>
+            `;
+            stackVisualizer.prepend(frameEl);
+        });
+    };
+
+    const updateStackExplanation = (text) => {
+        stackExplanation.innerHTML = text;
+    };
+    
+    callBtn.addEventListener('click', () => {
+        funcCounter++;
+        const newFrame = {
+            name: `myFunction #${funcCounter}`,
+            param: 10 * funcCounter,
+            retAddr: (Math.random() * 1000).toString(16).slice(0, 4)
+        };
+        stackFrames.push(newFrame);
+        renderStack();
+        updateStackExplanation(`Pushed a new stack frame for <strong>${newFrame.name}</strong>. The stack grows downwards.`);
+        returnBtn.disabled = false;
+    });
+
+    returnBtn.addEventListener('click', () => {
+        if(stackFrames.length > 0) {
+            const poppedFrame = stackFrames.pop();
+            renderStack();
+            updateStackExplanation(`Returned from <strong>${poppedFrame.name}</strong>, popping its frame. The stack shrinks.`);
+        }
+        if (stackFrames.length === 0) {
+            returnBtn.disabled = true;
+            updateStackExplanation("Stack is now empty. Call a function to begin.");
+        }
+    });
+    
+    resetStackBtn.addEventListener('click', () => {
+        stackFrames = [];
+        funcCounter = 0;
+        renderStack();
+        updateStackExplanation("Stack has been reset. Call a function to begin.");
+        returnBtn.disabled = true;
+    });
+
+    // --- Heap Deep Dive Section ---
+    const heapVisualizer = document.getElementById('heap-visualizer');
+    const totalBlocks = 64;
+    let heapState = Array(totalBlocks).fill(0); // 0 = free, 1 = allocated
+    let nextAllocId = 1;
+
+    const renderHeap = () => {
+        heapVisualizer.innerHTML = '';
+        heapState.forEach((state, index) => {
+            const block = document.createElement('div');
+            block.className = 'w-6 h-6 border border-slate-400';
+            if (state > 0) {
+                block.classList.add('bg-purple-500', 'cursor-pointer');
+                block.dataset.allocId = state;
+                block.addEventListener('click', () => {
+                    const idToFree = parseInt(block.dataset.allocId);
+                    heapState = heapState.map(s => s === idToFree ? 0 : s);
+                    renderHeap();
+                    updateHeapStats();
+                });
+            } else {
+                block.classList.add('bg-slate-300');
+            }
+            heapVisualizer.appendChild(block);
+        });
+    };
+
+    const updateHeapStats = () => {
+        const allocated = heapState.filter(s => s > 0).length;
+        const free = totalBlocks - allocated;
+        document.getElementById('allocated-blocks').textContent = allocated;
+        document.getElementById('free-blocks').textContent = free;
+        
+        let largestContiguous = 0;
+        let currentContiguous = 0;
+        for (let i = 0; i < totalBlocks; i++) {
+            if (heapState[i] === 0) {
+                currentContiguous++;
+            } else {
+                if (currentContiguous > largestContiguous) {
+                    largestContiguous = currentContiguous;
+                }
+                currentContiguous = 0;
+            }
+        }
+        if (currentContiguous > largestContiguous) {
+            largestContiguous = currentContiguous;
+        }
+
+        let fragmentation = 0;
+        if (free > 0 && free !== largestContiguous) {
+            fragmentation = ((free - largestContiguous) / free) * 100;
+        }
+        document.getElementById('fragmentation-percent').textContent = fragmentation.toFixed(1);
+    };
+
+    document.getElementById('alloc-btn').addEventListener('click', () => {
+        const size = parseInt(document.getElementById('alloc-size').value);
+        if (isNaN(size) || size < 1) return;
+
+        let foundIndex = -1;
+        let currentGap = 0;
+        for (let i = 0; i < totalBlocks; i++) {
+            if (heapState[i] === 0) {
+                currentGap++;
+            } else {
+                currentGap = 0;
+            }
+            if (currentGap >= size) {
+                foundIndex = i - size + 1;
+                break;
+            }
+        }
+
+        if (foundIndex !== -1) {
+            for (let i = 0; i < size; i++) {
+                heapState[foundIndex + i] = nextAllocId;
+            }
+            nextAllocId++;
+            renderHeap();
+            updateHeapStats();
+        } else {
+            alert('Allocation failed: Not enough contiguous free space!');
+        }
+    });
+
+
+    // --- Initial Setup ---
+    const initialHash = window.location.hash || '#overview';
+    setActiveSection(initialHash);
+
+    // Dynamic chart creation on section view
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && entry.target.id === 'stack-heap-compare' && !comparisonChart) {
+                createComparisonChart();
+            }
+        });
+    }, { threshold: 0.5 });
+    
+    observer.observe(document.getElementById('stack-heap-compare'));
+    
+    // Initial render for heap
+    renderHeap();
+    updateHeapStats();
+});
+</script>
+
+</body>
+</html>

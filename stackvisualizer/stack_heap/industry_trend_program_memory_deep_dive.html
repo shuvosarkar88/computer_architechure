@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: A Deep Dive into Program Memory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Energetic & Playful -->
+    <!-- Application Structure Plan: A single-page, top-to-bottom narrative infographic. The flow starts with a high-level overview of program memory layout to establish context. It then dives into a direct comparison of the two key dynamic areas, the Stack and Heap. Following this, dedicated sections break down the mechanics of each (Stack Frames, Heap Fragmentation), making abstract concepts tangible. The narrative culminates in visualizing common errors (Stack Overflow, Leaks) and contrasting management models. This linear, story-driven structure is chosen over a complex dashboard to guide the user through a dense technical topic in a logical, digestible manner, building knowledge progressively. -->
+    <!-- Visualization & Content Choices: 
+        - Program Layout: Goal -> Organize. Viz -> HTML/CSS Diagram. Justification -> A clear, color-coded map to start the journey. Method -> Tailwind CSS. NO SVG/Mermaid.
+        - Stack vs Heap Attributes: Goal -> Compare. Viz -> Chart.js Radar Chart. Justification -> A radar chart is excellent for comparing multiple quantitative/qualitative attributes of two or more items simultaneously, showing their strengths and weaknesses in a single shape. Method -> Chart.js/Canvas. NO SVG.
+        - Function Call Process: Goal -> Organize/Explain Process. Viz -> HTML/CSS Flowchart. Justification -> Visually walks through the prologue/epilogue steps which is clearer than text. Method -> Tailwind CSS. NO SVG/Mermaid.
+        - Heap Fragmentation: Goal -> Inform/Explain Relationship. Viz -> HTML/CSS grid visualization. Justification -> A concrete visual grid makes the abstract idea of memory fragmentation instantly understandable. Method -> Tailwind CSS. NO SVG.
+        - Memory Leaks Cause/Effect: Goal -> Inform. Viz -> Big Number stat + HTML/CSS diagram. Justification -> Shows the cause (lost pointer) and effect (unusable memory) in a simple visual story. Method -> Tailwind CSS. NO SVG.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #073B4C; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 400px; max-height: 450px; } }
+        .arrow { width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; margin: 1rem auto; }
+        .arrow-down { border-top: 15px solid #FFD166; }
+        .arrow-up { border-bottom: 15px solid #FF6B6B; }
+    </style>
+</head>
+<body class="text-white">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+
+        <!-- Header -->
+        <header class="text-center my-12">
+            <h1 class="text-4xl md:text-6xl font-black text-white leading-tight">THE ANATOMY OF MEMORY</h1>
+            <p class="text-xl md:text-2xl text-cyan-300 mt-2">An Industry Deep Dive into Program Memory Layout</p>
+        </header>
+
+        <!-- Section 1: Memory Layout -->
+        <section class="my-16">
+            <h2 class="text-3xl font-bold text-center mb-2">The Digital Blueprint</h2>
+            <p class="text-center text-lg text-slate-300 mb-8 max-w-3xl mx-auto">When a program runs, the OS allocates it a private virtual address space, organized into distinct segments. This structure is the foundation for everything that follows.</p>
+            <div class="bg-slate-800 rounded-xl shadow-2xl p-4 md:p-8 flex flex-col-reverse text-center font-bold text-lg">
+                <div class="p-4 bg-green-500/80 rounded-lg mt-2">Text Segment (Code)</div>
+                <div class="p-4 bg-sky-500/80 rounded-lg mt-2">Initialized Data</div>
+                <div class="p-4 bg-sky-600/80 rounded-lg mt-2">BSS (Uninitialized Data)</div>
+                <div class="p-12 relative bg-red-500/20 rounded-lg mt-2">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="text-3xl font-black text-red-300 flex items-center">HEAP <span class="text-4xl ml-2">↑</span></div>
+                    </div>
+                </div>
+                <div class="p-4 text-slate-400">... Free Space ...</div>
+                <div class="p-12 relative bg-blue-500/20 rounded-lg">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="text-3xl font-black text-blue-300 flex items-center">STACK <span class="text-4xl ml-2">↓</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Stack vs Heap -->
+        <section class="my-24">
+            <h2 class="text-3xl font-bold text-center mb-2">The Two Titans: Stack vs. Heap</h2>
+            <p class="text-center text-lg text-slate-300 mb-12 max-w-3xl mx-auto">The two most dynamic regions are the Stack and the Heap. They manage runtime data but in fundamentally different ways, creating a crucial trade-off between speed and flexibility.</p>
+            <div class="bg-slate-800 rounded-xl shadow-2xl p-6 md:p-10">
+                <div class="chart-container">
+                    <canvas id="stackHeapChart"></canvas>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
+                    <div class="text-center border-t-4 border-blue-400 pt-4">
+                        <h3 class="text-2xl font-bold text-blue-300">STACK</h3>
+                        <p class="mt-2 text-slate-300">Fast, rigid, and automatic. Manages function calls with LIFO (Last-In, First-Out) discipline. Ideal for temporary, known-size data.</p>
+                    </div>
+                    <div class="text-center border-t-4 border-red-400 pt-4">
+                        <h3 class="text-2xl font-bold text-red-300">HEAP</h3>
+                        <p class="mt-2 text-slate-300">Flexible, vast, and manual (in C/C++). A pool for creating long-lived, dynamic-sized objects. Requires careful management.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: The Stack Deep Dive -->
+        <section class="my-24">
+            <h2 class="text-3xl font-bold text-center mb-2">Orchestrating the Call: How the Stack Works</h2>
+            <p class="text-center text-lg text-slate-300 mb-12 max-w-3xl mx-auto">Every function call follows a strict protocol, creating a "stack frame" to hold its private data. This process is the engine of program flow.</p>
+            <div class="bg-slate-800 rounded-xl shadow-2xl p-6 md:p-10">
+                <div class="flex flex-col items-center">
+                    <div class="p-4 bg-cyan-600 rounded-lg text-center w-full md:w-2/3">
+                        <h3 class="font-bold">1. Caller Pushes Arguments</h3>
+                        <p class="text-sm text-cyan-100">The calling function places parameters for the new function onto the stack.</p>
+                    </div>
+                    <div class="arrow arrow-down"></div>
+                    <div class="p-4 bg-cyan-600 rounded-lg text-center w-full md:w-2/3">
+                        <h3 class="font-bold">2. `CALL` Instruction Pushes Return Address</h3>
+                        <p class="text-sm text-cyan-100">The CPU saves the location to return to after the function is done.</p>
+                    </div>
+                    <div class="arrow arrow-down"></div>
+                    <div class="p-4 bg-yellow-500 rounded-lg text-center w-full md:w-2/3 border-2 border-yellow-300">
+                        <h3 class="font-bold">3. Callee Prologue: New Frame is Built</h3>
+                        <p class="text-sm text-yellow-100">The called function saves the old frame pointer and allocates space for its local variables.</p>
+                    </div>
+                    <div class="arrow arrow-down"></div>
+                    <div class="p-4 bg-green-500 rounded-lg text-center w-full md:w-2/3">
+                        <h3 class="font-bold">4. Function Body Executes</h3>
+                        <p class="text-sm text-green-100">The function does its work using its local variables and parameters.</p>
+                    </div>
+                    <div class="arrow arrow-up"></div>
+                     <div class="p-4 bg-yellow-500 rounded-lg text-center w-full md:w-2/3 border-2 border-yellow-300">
+                        <h3 class="font-bold">5. Callee Epilogue: Frame is Torn Down</h3>
+                        <p class="text-sm text-yellow-100">Local variable space is freed and the old frame pointer is restored.</p>
+                    </div>
+                    <div class="arrow arrow-up"></div>
+                    <div class="p-4 bg-cyan-600 rounded-lg text-center w-full md:w-2/3">
+                        <h3 class="font-bold">6. `RET` Instruction Pops Return Address</h3>
+                        <p class="text-sm text-cyan-100">The CPU jumps back to the stored return address in the caller.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: The Heap Deep Dive -->
+        <section class="my-24">
+            <h2 class="text-3xl font-bold text-center mb-2">The Wild Frontier: Dangers of the Heap</h2>
+            <p class="text-center text-lg text-slate-300 mb-12 max-w-3xl mx-auto">The heap's flexibility is powerful but introduces risks. Mismanagement leads to fragmentation and memory leaks, silently crippling applications.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Fragmentation Card -->
+                <div class="bg-slate-800 rounded-xl shadow-2xl p-6">
+                    <h3 class="text-2xl font-bold text-center text-yellow-300 mb-4">Fragmentation</h3>
+                    <p class="text-center mb-6">Over time, the heap breaks into small, non-contiguous pieces. Even with enough total free space, a large allocation can fail.</p>
+                    <div class="bg-slate-700 p-3 rounded-lg grid grid-cols-10 gap-1">
+                        <div class="w-full h-6 bg-red-500 rounded-sm"></div><div class="w-full h-6 bg-red-500 rounded-sm"></div><div class="w-full h-6 bg-red-500 rounded-sm"></div>
+                        <div class="w-full h-6 bg-slate-500 rounded-sm"></div><div class="w-full h-6 bg-slate-500 rounded-sm"></div>
+                        <div class="w-full h-6 bg-red-500 rounded-sm"></div><div class="w-full h-6 bg-red-500 rounded-sm"></div>
+                        <div class="w-full h-6 bg-slate-500 rounded-sm"></div>
+                        <div class="w-full h-6 bg-red-500 rounded-sm"></div><div class="w-full h-6 bg-red-500 rounded-sm"></div>
+                        <div class="w-full h-6 bg-red-500 rounded-sm"></div>
+                        <div class="w-full h-6 bg-slate-500 rounded-sm"></div><div class="w-full h-6 bg-slate-500 rounded-sm"></div><div class="w-full h-6 bg-slate-500 rounded-sm"></div>
+                        <div class="w-full h-6 bg-red-500 rounded-sm"></div>
+                        <div class="w-full h-6 bg-slate-500 rounded-sm"></div>
+                        <div class="w-full h-6 bg-red-500 rounded-sm"></div><div class="w-full h-6 bg-red-500 rounded-sm"></div><div class="w-full h-6 bg-red-500 rounded-sm"></div><div class="w-full h-6 bg-red-500 rounded-sm"></div>
+                    </div>
+                    <div class="mt-4 text-center">
+                        <p class="font-bold">Total Free: 7 blocks. <span class="text-yellow-400">Request for 4 fails.</span></p>
+                    </div>
+                </div>
+                <!-- Memory Leak Card -->
+                <div class="bg-slate-800 rounded-xl shadow-2xl p-6">
+                     <h3 class="text-2xl font-bold text-center text-red-400 mb-4">Memory Leaks</h3>
+                     <p class="text-center mb-6">Allocated memory is "leaked" when the program loses all pointers to it, making it impossible to free. This is lost memory.</p>
+                     <div class="text-center">
+                        <div class="p-4 bg-slate-700 rounded-lg inline-block font-mono">char* ptr = new char[10];</div>
+                        <div class="arrow arrow-down"></div>
+                        <div class="p-4 bg-slate-700 rounded-lg inline-block font-mono">ptr = nullptr; <span class="text-red-400 font-bold ml-2">// Leak!</span></div>
+                        <div class="mt-6">
+                            <div class="p-6 bg-gray-600 border-4 border-dashed border-gray-500 rounded-lg inline-block">
+                                <span class="font-bold text-gray-400">Unreachable Memory</span>
+                            </div>
+                        </div>
+                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Conclusion / Call to action -->
+        <footer class="text-center my-16">
+            <h2 class="text-3xl font-bold mb-4">Knowledge is Power</h2>
+            <p class="text-lg text-slate-300 max-w-3xl mx-auto">Understanding how memory works is not just academic; it's fundamental to writing fast, efficient, and robust software. By choosing the right tool—Stack for speed, Heap for flexibility—and managing it wisely, developers can prevent critical bugs and build better applications.</p>
+        </footer>
+    </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        const wrapLabel = (str, maxWidth) => {
+            if (str.length <= maxWidth) {
+                return str;
+            }
+            const words = str.split(' ');
+            const lines = [];
+            let currentLine = '';
+            for (const word of words) {
+                if ((currentLine + word).length > maxWidth && currentLine.length > 0) {
+                    lines.push(currentLine.trim());
+                    currentLine = '';
+                }
+                currentLine += word + ' ';
+            }
+            lines.push(currentLine.trim());
+            return lines;
+        };
+
+        const createStackHeapChart = () => {
+            const ctx = document.getElementById('stackHeapChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: [
+                        'Allocation Speed', 
+                        'Size Limit', 
+                        'Management Complexity', 
+                        'Flexibility', 
+                        'Cache Friendliness'
+                    ],
+                    datasets: [{
+                        label: 'Stack',
+                        data: [9, 2, 1, 2, 9],
+                        backgroundColor: 'rgba(96, 165, 250, 0.4)',
+                        borderColor: 'rgba(96, 165, 250, 1)',
+                        pointBackgroundColor: 'rgba(96, 165, 250, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(96, 165, 250, 1)',
+                        borderWidth: 2,
+                    }, {
+                        label: 'Heap',
+                        data: [3, 9, 8, 9, 4],
+                        backgroundColor: 'rgba(248, 113, 113, 0.4)',
+                        borderColor: 'rgba(248, 113, 113, 1)',
+                        pointBackgroundColor: 'rgba(248, 113, 113, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(248, 113, 113, 1)',
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.2)' },
+                            pointLabels: {
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                },
+                                color: '#fff'
+                            },
+                            ticks: {
+                                color: '#fff',
+                                backdropColor: 'rgba(0,0,0,0)',
+                                stepSize: 2
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 10
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#fff',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    const item = tooltipItems[0];
+                                    let label = item.chart.data.labels[item.dataIndex];
+                                    if (Array.isArray(label)) {
+                                      return label.join(' ');
+                                    } else {
+                                      return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        createStackHeapChart();
+    });
+</script>
+
+</body>
+</html>

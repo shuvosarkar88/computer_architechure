@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide to Modern CPU Features</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Neutrals with Tech Accents -->
+    <!-- Application Structure Plan: A thematic, single-page application with a primary top navigation to switch between four core concepts: Instruction-Level, Data-Level, Thread-Level Parallelism, and Power Management. This structure allows users to explore complex topics in a non-linear, focused manner. Each section uses interactive elements (animated diagrams, clickable cards, dynamic charts) to explain concepts visually, which is more effective for comprehension than static text. The user flow is designed for drill-down exploration: select a theme, then interact with specific sub-topic visualizations within that theme. This is chosen over a report-like scroll to make the dense information digestible and engaging. -->
+    <!-- Visualization & Content Choices: 
+        - ILP (Superscalar/OoOE): Goal: Explain process. Method: Animated diagrams using HTML/CSS/JS. Interaction: Play button triggers animation. Justification: Visually demonstrates abstract execution flows.
+        - DLP (SIMD): Goal: Show change/compare. Method: Interactive HTML timeline. Interaction: Click to reveal info. Justification: Better than a static table for showing evolution.
+        - TLP (Interconnects): Goal: Organize/compare. Method: Clickable HTML/Tailwind cards. Interaction: Click to show diagram/details. Justification: Easy side-by-side comparison.
+        - Power (DVFS): Goal: Compare behaviors. Method: Chart.js line chart. Interaction: Select governor from dropdown to update chart against a sample workload. Justification: Dynamically illustrates the impact of different power-saving policies.
+        - Library/Method: All visuals use HTML/CSS/JS and Chart.js (Canvas). -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #1e293b; /* slate-800 */
+        }
+        .nav-item {
+            transition: all 0.2s ease-in-out;
+        }
+        .nav-item.active {
+            background-color: #e0f2fe; /* sky-100 */
+            color: #0c4a6e; /* sky-900 */
+            font-weight: 600;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        /* Animation styles for ILP */
+        .pipeline-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            background-color: #ffffff;
+            min-height: 150px;
+        }
+        .pipeline {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            height: 40px;
+        }
+        .stage {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 30px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: 0.25rem;
+            border: 1px solid;
+        }
+        .instruction {
+            position: relative;
+            left: -100px; /* Start off-screen */
+            width: 70px;
+            height: 25px;
+            border-radius: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: white;
+            transition: left 0.5s ease-in-out;
+        }
+        .instr-color-1 { background-color: #3b82f6; }
+        .instr-color-2 { background-color: #16a34a; }
+        .instr-color-3 { background-color: #f97316; }
+        .instr-color-4 { background-color: #9333ea; }
+        .instr-color-5 { background-color: #ef4444; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="min-h-screen">
+        <header class="bg-white shadow-sm">
+            <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+                <h1 class="text-3xl font-bold tracking-tight text-gray-900">Decoding Modern CPU Architectures</h1>
+                <p class="mt-1 text-md text-gray-600">An interactive exploration of the advanced features that power today's processors.</p>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <nav class="bg-white rounded-lg shadow p-2 mb-6">
+                <ul class="flex flex-wrap items-center justify-center gap-2 md:gap-4">
+                    <li><button data-target="ilp" class="nav-item active w-full sm:w-auto px-4 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100">🚀 Instruction-Level Parallelism</button></li>
+                    <li><button data-target="dlp" class="nav-item w-full sm:w-auto px-4 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100">📊 Data-Level Parallelism</button></li>
+                    <li><button data-target="tlp" class="nav-item w-full sm:w-auto px-4 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100">🧵 Thread-Level Parallelism</button></li>
+                    <li><button data-target="power" class="nav-item w-full sm:w-auto px-4 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100">⚡ Power & Efficiency</button></li>
+                </ul>
+            </nav>
+
+            <!-- Instruction-Level Parallelism Section -->
+            <section id="ilp" class="content-section active">
+                <div class="bg-white p-6 rounded-lg shadow space-y-6">
+                    <h2 class="text-2xl font-bold text-sky-800">🚀 Instruction-Level Parallelism (ILP)</h2>
+                    <p class="text-slate-600">This section explores how modern CPUs execute multiple instructions from a single program thread simultaneously to boost performance. Instead of a simple one-by-one execution, techniques like Superscalar Execution and Out-of-Order Execution create a high-throughput instruction pipeline. The visualizations below will help you understand these foundational concepts of high-performance CPU design.</p>
+                    
+                    <div class="border-t pt-6">
+                        <h3 class="text-xl font-semibold mb-2">Superscalar Execution</h3>
+                        <p class="mb-4 text-slate-600">A superscalar processor has multiple execution pipelines, allowing it to execute more than one instruction per clock cycle. This is like having multiple assembly lines instead of just one. Click "Run" to see a comparison between a simple scalar pipeline and a 2-way superscalar pipeline.</p>
+                        <button id="run-pipeline-anim" class="bg-sky-600 text-white px-4 py-2 rounded-md hover:bg-sky-700 transition">Run Animation</button>
+                        
+                        <div class="grid md:grid-cols-2 gap-6 mt-4">
+                            <div>
+                                <h4 class="font-medium mb-2">Scalar Pipeline (1 instruction/cycle)</h4>
+                                <div id="scalar-pipeline-container" class="pipeline-container">
+                                    <div class="pipeline">
+                                        <div class="stage border-slate-400 bg-slate-100">Fetch</div>
+                                        <div class="stage border-slate-400 bg-slate-100">Decode</div>
+                                        <div class="stage border-slate-400 bg-slate-100">Execute</div>
+                                        <div class="stage border-slate-400 bg-slate-100">Write</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="font-medium mb-2">Superscalar Pipeline (2 instructions/cycle)</h4>
+                                <div id="superscalar-pipeline-container" class="pipeline-container">
+                                    <div class="pipeline">
+                                        <div class="stage border-sky-400 bg-sky-100">Fetch</div>
+                                        <div class="stage border-sky-400 bg-sky-100">Decode</div>
+                                        <div class="stage border-sky-400 bg-sky-100">Execute 1</div>
+                                        <div class="stage border-sky-400 bg-sky-100">Write 1</div>
+                                    </div>
+                                    <div class="pipeline">
+                                        <div class="stage border-sky-400 bg-sky-100">Fetch</div>
+                                        <div class="stage border-sky-400 bg-sky-100">Decode</div>
+                                        <div class="stage border-sky-400 bg-sky-100">Execute 2</div>
+                                        <div class="stage border-sky-400 bg-sky-100">Write 2</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t pt-6">
+                        <h3 class="text-xl font-semibold mb-2">Out-of-Order Execution (OoOE)</h3>
+                        <p class="text-slate-600">OoOE allows the CPU to execute instructions based on operand availability, not their original program order. This is crucial for hiding latency, especially from slow memory accesses. The animation shows an instruction that depends on a slow memory load (Instr 2, red) being bypassed by independent instructions (Instr 3 & 4), which execute "out of order" to keep the CPU busy.</p>
+                        <div id="oooe-demo" class="mt-4 p-4 border rounded-lg bg-slate-50 space-y-2 font-mono text-sm">
+                            <p><strong>Program Order:</strong></p>
+                            <div class="flex flex-wrap gap-2">
+                                <div id="oooe-instr-1" class="instr-color-1 p-2 rounded">1: ADD R1, R2, R3</div>
+                                <div id="oooe-instr-2" class="instr-color-5 p-2 rounded">2: LOAD R4, [MEM] <span class="text-xs font-sans">(Slow)</span></div>
+                                <div id="oooe-instr-3" class="instr-color-2 p-2 rounded">3: SUB R5, R6, R7</div>
+                                <div id="oooe-instr-4" class="instr-color-4 p-2 rounded">4: MUL R8, R9, R10</div>
+                            </div>
+                             <p class="mt-4"><strong>Execution Timeline:</strong> <button id="run-oooe-anim" class="bg-sky-600 text-white px-3 py-1 rounded-md hover:bg-sky-700 transition text-xs font-sans">Run</button></p>
+                             <div id="oooe-timeline" class="space-y-1"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Data-Level Parallelism Section -->
+            <section id="dlp" class="content-section">
+                <div class="bg-white p-6 rounded-lg shadow space-y-6">
+                    <h2 class="text-2xl font-bold text-emerald-800">📊 Data-Level Parallelism (DLP)</h2>
+                    <p class="text-slate-600">This section covers how CPUs perform a single operation on multiple pieces of data simultaneously. This technique, primarily known as SIMD (Single Instruction, Multiple Data), is vital for accelerating tasks like multimedia processing, scientific computing, and AI. Explore the evolution of SIMD instruction sets and see how they've grown in power and capability over time.</p>
+                
+                    <div class="border-t pt-6">
+                        <h3 class="text-xl font-semibold mb-2">The Evolution of x86 SIMD</h3>
+                        <p class="text-slate-600">From the 128-bit registers of SSE to the massive 512-bit registers of AVX-512, SIMD capabilities have expanded dramatically. Click on each instruction set in the timeline to learn about its key features and impact.</p>
+                        <div class="mt-4 flex flex-col md:flex-row gap-4">
+                            <div id="simd-timeline" class="flex md:flex-col justify-between md:justify-start md:w-1/4 space-x-2 md:space-x-0 md:space-y-2">
+                                <!-- SIMD buttons will be injected here -->
+                            </div>
+                            <div id="simd-details" class="md:w-3/4 p-4 border rounded-lg bg-slate-50 min-h-[200px]">
+                                <!-- SIMD details will be shown here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Thread-Level Parallelism Section -->
+            <section id="tlp" class="content-section">
+                <div class="bg-white p-6 rounded-lg shadow space-y-6">
+                    <h2 class="text-2xl font-bold text-amber-800">🧵 Thread-Level Parallelism (TLP)</h2>
+                    <p class="text-slate-600">Driven by the multicore revolution, TLP involves executing multiple threads concurrently, either from the same application or different ones. This approach is fundamental to modern system performance and responsiveness. Here, you can explore how cores are connected, how they maintain a consistent view of memory (cache coherence), and the challenges involved.</p>
+
+                    <div class="border-t pt-6">
+                        <h3 class="text-xl font-semibold mb-2">On-Chip Interconnect Topologies</h3>
+                        <p class="text-slate-600">How cores, caches, and memory are connected on a chip critically affects performance and scalability. A simple bus is cheap but doesn't scale, while a Network-on-Chip (NoC) is complex but highly scalable. Click on a topology to see a conceptual diagram and its key characteristics.</p>
+                        <div id="interconnect-explorer" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4 text-center">
+                            <!-- Interconnect buttons will be injected here -->
+                        </div>
+                        <div class="mt-6 p-4 border rounded-lg bg-slate-50 grid md:grid-cols-2 gap-4 items-center min-h-[150px]">
+                            <div id="interconnect-viz" class="flex justify-center items-center"></div>
+                            <div id="interconnect-details" class="text-sm"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t pt-6">
+                        <h3 class="text-xl font-semibold mb-2">Cache Coherence Protocols</h3>
+                        <p class="text-slate-600">When multiple cores cache the same data, a protocol is needed to ensure all cores see a consistent view. Below is a simplified comparison of the two main approaches.</p>
+                        <div class="grid md:grid-cols-2 gap-6 mt-4">
+                            <div class="p-4 border rounded-lg bg-slate-50">
+                                <h4 class="font-semibold text-lg">Snooping Protocols</h4>
+                                <p class="text-sm mt-2 text-slate-600">Each cache "snoops" on a shared bus to monitor what other caches are doing. When a write occurs, it's broadcast to all cores.</p>
+                                <ul class="text-sm mt-3 space-y-1 list-disc list-inside">
+                                    <li><span class="font-medium text-green-600">Pro:</span> Simple for a few cores.</li>
+                                    <li><span class="font-medium text-red-600">Con:</span> Bus becomes a bottleneck, doesn't scale to many cores.</li>
+                                </ul>
+                            </div>
+                            <div class="p-4 border rounded-lg bg-slate-50">
+                                <h4 class="font-semibold text-lg">Directory-Based Protocols</h4>
+                                <p class="text-sm mt-2 text-slate-600">A central "directory" tracks which cores have copies of data. Invalidation messages are sent only to the specific cores that need them.</p>
+                                <ul class="text-sm mt-3 space-y-1 list-disc list-inside">
+                                     <li><span class="font-medium text-green-600">Pro:</span> Highly scalable for many-core systems.</li>
+                                     <li><span class="font-medium text-red-600">Con:</span> More complex to implement, directory can add latency.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Power & Efficiency Section -->
+            <section id="power" class="content-section">
+                 <div class="bg-white p-6 rounded-lg shadow space-y-6">
+                    <h2 class="text-2xl font-bold text-violet-800">⚡ Power & Efficiency</h2>
+                    <p class="text-slate-600">Maximizing performance is only half the battle; it must be done within a strict power and thermal budget. This section focuses on Dynamic Voltage and Frequency Scaling (DVFS), the primary technique CPUs use to balance performance with power consumption. The interactive chart demonstrates how different software policies, or "governors," adjust CPU frequency in response to workload.</p>
+
+                    <div class="border-t pt-6">
+                        <h3 class="text-xl font-semibold mb-2">Dynamic Voltage & Frequency Scaling (DVFS)</h3>
+                        <p class="text-slate-600">DVFS allows the OS to adjust the CPU's frequency and voltage based on demand. Lower frequency and voltage save power, while higher settings provide more performance. Select a governor from the dropdown to see how it responds to a sample fluctuating workload. The chart shows the workload (gray) and the CPU's frequency response (purple).</p>
+                        
+                        <div class="mt-4">
+                            <label for="governor-select" class="block text-sm font-medium text-gray-700">Select DVFS Governor:</label>
+                            <select id="governor-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                <option value="performance">Performance</option>
+                                <option value="ondemand" selected>OnDemand</option>
+                                <option value="conservative">Conservative</option>
+                                <option value="powersave">PowerSave</option>
+                                <option value="schedutil">Schedutil</option>
+                            </select>
+                        </div>
+
+                        <div class="mt-6 chart-container">
+                            <canvas id="dvfsChart"></canvas>
+                        </div>
+                    </div>
+                 </div>
+            </section>
+
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const navItems = document.querySelectorAll('.nav-item');
+    const contentSections = document.querySelectorAll('.content-section');
+
+    function activateSection(targetId) {
+        contentSections.forEach(section => {
+            section.classList.toggle('active', section.id === targetId);
+        });
+        navItems.forEach(item => {
+            item.classList.toggle('active', item.dataset.target === targetId);
+        });
+    }
+
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            activateSection(item.dataset.target);
+        });
+    });
+
+    // ILP Section: Pipeline Animation
+    const runPipelineBtn = document.getElementById('run-pipeline-anim');
+    const scalarContainer = document.getElementById('scalar-pipeline-container');
+    const superscalarContainer = document.getElementById('superscalar-pipeline-container');
+
+    runPipelineBtn.addEventListener('click', () => {
+        runPipelineBtn.disabled = true;
+        scalarContainer.innerHTML = `<div class="pipeline"><div class="stage border-slate-400 bg-slate-100">Fetch</div><div class="stage border-slate-400 bg-slate-100">Decode</div><div class="stage border-slate-400 bg-slate-100">Execute</div><div class="stage border-slate-400 bg-slate-100">Write</div></div>`;
+        superscalarContainer.innerHTML = `<div class="pipeline"><div class="stage border-sky-400 bg-sky-100">Fetch</div><div class="stage border-sky-400 bg-sky-100">Decode</div><div class="stage border-sky-400 bg-sky-100">Execute 1</div><div class="stage border-sky-400 bg-sky-100">Write 1</div></div><div class="pipeline"><div class="stage border-sky-400 bg-sky-100">Fetch</div><div class="stage border-sky-400 bg-sky-100">Decode</div><div class="stage border-sky-400 bg-sky-100">Execute 2</div><div class="stage border-sky-400 bg-sky-100">Write 2</div></div>`;
+
+        let scalarInstructions = [];
+        let superInstructions = [];
+        const numInstructions = 5;
+
+        for (let i = 0; i < numInstructions; i++) {
+            const scalarInstr = document.createElement('div');
+            scalarInstr.className = `instruction instr-color-${i + 1}`;
+            scalarInstr.textContent = `I${i + 1}`;
+            scalarContainer.querySelector('.pipeline').appendChild(scalarInstr);
+            scalarInstructions.push(scalarInstr);
+
+            const superInstr = document.createElement('div');
+            superInstr.className = `instruction instr-color-${i + 1}`;
+            superInstr.textContent = `I${i + 1}`;
+            const targetPipeline = i % 2 === 0 ? superscalarContainer.children[0] : superscalarContainer.children[1];
+            targetPipeline.appendChild(superInstr);
+            superInstructions.push(superInstr);
+        }
+
+        let step = 0;
+        const totalSteps = 4 + numInstructions - 1;
+
+        const interval = setInterval(() => {
+            for (let i = 0; i < scalarInstructions.length; i++) {
+                if (step >= i && step < i + 4) {
+                    scalarInstructions[i].style.left = `${(step - i) * 90}px`;
+                }
+            }
+            for (let i = 0; i < superInstructions.length; i++) {
+                 const pipelineIndex = Math.floor(i / 2);
+                 if (step >= pipelineIndex && step < pipelineIndex + 4) {
+                    superInstructions[i].style.left = `${(step - pipelineIndex) * 90}px`;
+                }
+            }
+            step++;
+            if (step > totalSteps) {
+                clearInterval(interval);
+                runPipelineBtn.disabled = false;
+            }
+        }, 500);
+    });
+    
+    // ILP Section: OoOE Animation
+    const runOoOEBtn = document.getElementById('run-oooe-anim');
+    const oooeTimelineDiv = document.getElementById('oooe-timeline');
+    runOoOEBtn.addEventListener('click', () => {
+        runOoOEBtn.disabled = true;
+        oooeTimelineDiv.innerHTML = '';
+        const executionOrder = [
+            { text: "T1: Dispatch Instr 1 (ADD)", class: "instr-color-1" },
+            { text: "T2: Dispatch Instr 2 (LOAD), Instr 3 (SUB), Instr 4 (MUL)", class: "" },
+            { text: "T3: Instr 1 Finishes", class: "instr-color-1" },
+            { text: "T4: Instr 3 Finishes (executed out-of-order)", class: "instr-color-2" },
+            { text: "T5: Instr 4 Finishes (executed out-of-order)", class: "instr-color-4" },
+            { text: "T6: ...waiting for memory...", class: "text-red-500" },
+            { text: "T7: Instr 2 (LOAD) finally gets data and finishes", class: "instr-color-5" },
+            { text: "T8: All instructions commit in original program order (1, 2, 3, 4)", class: "" },
+        ];
+        
+        let i = 0;
+        const oooeInterval = setInterval(() => {
+            if (i < executionOrder.length) {
+                const p = document.createElement('p');
+                p.textContent = executionOrder[i].text;
+                if(executionOrder[i].class) p.classList.add('font-semibold', executionOrder[i].class.replace('bg', 'text').replace('-1', '-600').replace('-2', '-600').replace('-3', '-600').replace('-4', '-600').replace('-5', '-600'));
+                oooeTimelineDiv.appendChild(p);
+                i++;
+            } else {
+                clearInterval(oooeInterval);
+                runOoOEBtn.disabled = false;
+            }
+        }, 600);
+    });
+
+    // DLP Section: SIMD Timeline
+    const simdData = {
+        sse: {
+            year: '1999',
+            width: 128,
+            title: 'SSE (Streaming SIMD Extensions)',
+            desc: 'Introduced 128-bit registers (XMM) primarily for single-precision floating-point math, massively accelerating 3D graphics and multimedia applications.'
+        },
+        sse2: {
+            year: '2000',
+            width: 128,
+            title: 'SSE2',
+            desc: 'Expanded SSE to include double-precision floating-point and a wide range of integer operations, making it a baseline for all modern x86-64 CPUs.'
+        },
+        avx: {
+            year: '2011',
+            width: 256,
+            title: 'AVX (Advanced Vector Extensions)',
+            desc: 'Doubled the register width to 256 bits (YMM) and introduced a more flexible 3-operand instruction format, boosting performance for HPC and scientific computing.'
+        },
+        avx2: {
+            year: '2013',
+            width: 256,
+            title: 'AVX2',
+            desc: 'Brought 256-bit integer operations and introduced "gather" instructions, allowing vectorization of code with non-contiguous memory access patterns.'
+        },
+        avx512: {
+            year: '2017',
+            width: 512,
+            title: 'AVX-512',
+            desc: 'Doubled the register width again to 512 bits (ZMM) and added powerful features like opmask registers for per-element conditional execution, targeting HPC, AI, and data analytics.'
+        }
+    };
+
+    const timelineContainer = document.getElementById('simd-timeline');
+    const detailsContainer = document.getElementById('simd-details');
+
+    Object.keys(simdData).forEach((key, index) => {
+        const btn = document.createElement('button');
+        btn.dataset.simd = key;
+        btn.className = 'simd-btn text-left p-2 rounded-md hover:bg-emerald-100 transition w-full';
+        btn.innerHTML = `<span class="font-bold text-emerald-800">${simdData[key].title}</span> <span class="text-sm text-slate-500">(${simdData[key].year})</span>`;
+        if (index === 0) btn.classList.add('bg-emerald-100');
+        timelineContainer.appendChild(btn);
+    });
+
+    function displaySimdDetails(key) {
+        const data = simdData[key];
+        detailsContainer.innerHTML = `
+            <h4 class="text-lg font-bold text-emerald-800">${data.title}</h4>
+            <p class="mt-2 text-slate-600">${data.desc}</p>
+            <div class="mt-4">
+                <p class="font-medium">Register Width:</p>
+                <div class="w-full bg-slate-200 rounded-full h-6 mt-1">
+                    <div class="bg-emerald-500 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style="width: ${ (data.width / 512) * 100}%">${data.width}-bit</div>
+                </div>
+            </div>
+        `;
+        document.querySelectorAll('.simd-btn').forEach(b => b.classList.toggle('bg-emerald-100', b.dataset.simd === key));
+    }
+
+    timelineContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('.simd-btn');
+        if (btn) {
+            displaySimdDetails(btn.dataset.simd);
+        }
+    });
+    displaySimdDetails('sse');
+
+    // TLP Section: Interconnect Explorer
+    const interconnectData = {
+        bus: {
+            name: 'Shared Bus',
+            pros: 'Simple, low cost.',
+            cons: 'Bottleneck prone, does not scale well.',
+            viz: () => {
+                const container = document.createElement('div');
+                container.className = 'w-48 h-24 relative';
+                const busLine = document.createElement('div');
+                busLine.className = 'absolute top-1/2 left-0 w-full h-1 bg-amber-500 -translate-y-1/2';
+                container.appendChild(busLine);
+                for(let i=0; i<4; i++) {
+                    const core = document.createElement('div');
+                    core.className = 'absolute w-8 h-8 bg-amber-700 text-white text-xs flex items-center justify-center rounded';
+                    core.style.left = `${10 + i * 25}%`;
+                    core.style.top = i % 2 === 0 ? '5%' : '55%';
+                    core.textContent = `C${i}`;
+                    container.appendChild(core);
+                }
+                return container;
+            }
+        },
+        ring: {
+            name: 'Ring',
+            pros: 'More scalable than bus, allows multiple simultaneous transfers.',
+            cons: 'Latency increases with core count and distance.',
+            viz: () => {
+                const container = document.createElement('div');
+                container.className = 'w-40 h-40 relative flex items-center justify-center';
+                const ringEl = document.createElement('div');
+                ringEl.className = 'w-32 h-32 border-2 border-amber-500 rounded-full';
+                container.appendChild(ringEl);
+                for(let i=0; i<4; i++) {
+                    const angle = i * Math.PI / 2;
+                    const core = document.createElement('div');
+                    core.className = 'absolute w-8 h-8 bg-amber-700 text-white text-xs flex items-center justify-center rounded-full';
+                    core.style.left = `calc(50% + ${Math.cos(angle) * 50}px - 16px)`;
+                    core.style.top = `calc(50% + ${Math.sin(angle) * 50}px - 16px)`;
+                    core.textContent = `C${i}`;
+                    container.appendChild(core);
+                }
+                return container;
+            }
+        },
+        mesh: {
+            name: '2D Mesh',
+            pros: 'Good scalability, multiple paths provide redundancy.',
+            cons: 'Distance-dependent latency.',
+            viz: () => {
+                 const container = document.createElement('div');
+                container.className = 'grid grid-cols-3 gap-2 w-40';
+                for(let i=0; i<9; i++) {
+                     const core = document.createElement('div');
+                     core.className = 'w-10 h-10 bg-amber-700 text-white text-xs flex items-center justify-center rounded';
+                     core.textContent = `C${i}`;
+                     container.appendChild(core);
+                }
+                return container;
+            }
+        },
+        crossbar: {
+            name: 'Crossbar Switch',
+            pros: 'Very low latency, high bandwidth.',
+            cons: 'Very expensive and complex, scales poorly in cost.',
+            viz: () => {
+                const container = document.createElement('div');
+                container.className = 'w-48 h-24 relative flex justify-between';
+                const left = document.createElement('div');
+                left.className = 'flex flex-col justify-around';
+                const right = document.createElement('div');
+                right.className = 'flex flex-col justify-around';
+                const center = document.createElement('div');
+                center.className = 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-amber-300 rounded-md flex items-center justify-center text-xs font-bold';
+                center.textContent = 'Switch'
+                container.append(left, center, right);
+
+                for(let i=0; i<3; i++) {
+                    const lcore = document.createElement('div');
+                    lcore.className = 'w-8 h-8 bg-amber-700 rounded text-white text-xs flex items-center justify-center';
+                    lcore.textContent = `C${i}`;
+                    left.appendChild(lcore);
+                    const rcore = document.createElement('div');
+                    rcore.className = 'w-8 h-8 bg-amber-700 rounded text-white text-xs flex items-center justify-center';
+                    rcore.textContent = `M${i}`;
+                    right.appendChild(rcore);
+                }
+                 return container;
+            }
+        },
+        noc: {
+            name: 'Network-on-Chip',
+            pros: 'Highly scalable and flexible.',
+            cons: 'High design complexity.',
+            viz: () => {
+                const container = document.createElement('div');
+                container.className = 'grid grid-cols-3 gap-2 w-48';
+                for(let i=0; i<9; i++) {
+                     const node = document.createElement('div');
+                     const type = (i%4 === 0) ? 'C' : (i%4 === 1 ? 'M' : 'R');
+                     const color = (type === 'C') ? 'bg-amber-700' : (type === 'M' ? 'bg-amber-600' : 'bg-amber-400');
+                     node.className = `w-12 h-12 ${color} text-white text-xs flex items-center justify-center rounded`;
+                     node.textContent = `${type}${Math.floor(i/4)}`;
+                     container.appendChild(node);
+                }
+                return container;
+            }
+        },
+    };
+    
+    const interconnectExplorer = document.getElementById('interconnect-explorer');
+    const interconnectViz = document.getElementById('interconnect-viz');
+    const interconnectDetails = document.getElementById('interconnect-details');
+
+    Object.keys(interconnectData).forEach((key, index) => {
+        const btn = document.createElement('button');
+        btn.dataset.ict = key;
+        btn.className = 'ict-btn p-2 rounded-md hover:bg-amber-100 transition';
+        if(index === 0) btn.classList.add('bg-amber-100');
+        btn.textContent = interconnectData[key].name;
+        interconnectExplorer.appendChild(btn);
+    });
+    
+    function displayInterconnectDetails(key) {
+        const data = interconnectData[key];
+        interconnectViz.innerHTML = '';
+        interconnectViz.appendChild(data.viz());
+        interconnectDetails.innerHTML = `
+            <h4 class="font-semibold text-lg">${data.name}</h4>
+            <p class="mt-2 text-sm"><span class="font-medium text-green-600">Pros:</span> ${data.pros}</p>
+            <p class="mt-1 text-sm"><span class="font-medium text-red-600">Cons:</span> ${data.cons}</p>
+        `;
+        document.querySelectorAll('.ict-btn').forEach(b => b.classList.toggle('bg-amber-100', b.dataset.ict === key));
+    }
+
+    interconnectExplorer.addEventListener('click', (e) => {
+        const btn = e.target.closest('.ict-btn');
+        if (btn) {
+            displayInterconnectDetails(btn.dataset.ict);
+        }
+    });
+
+    displayInterconnectDetails('bus');
+
+
+    // Power Section: DVFS Chart
+    const governorSelect = document.getElementById('governor-select');
+    const dvfsCtx = document.getElementById('dvfsChart').getContext('2d');
+    let dvfsChart;
+
+    const workloadData = [20, 25, 30, 80, 85, 90, 80, 40, 30, 20, 15, 10, 5, 5, 10, 60, 70, 95, 100, 90, 50, 30, 20];
+    const labels = workloadData.map((_, i) => `T${i+1}`);
+
+    function getFrequencyData(governor) {
+        let freq = 20; // Start at a low freq
+        const freqData = [];
+        switch (governor) {
+            case 'performance':
+                return workloadData.map(() => 100);
+            case 'powersave':
+                return workloadData.map(() => 20);
+            case 'ondemand':
+                return workloadData.map(load => load > 30 ? 100 : 20);
+            case 'conservative':
+                workloadData.forEach(load => {
+                    if (load > 60 && freq < 100) freq += 20;
+                    else if (load < 30 && freq > 20) freq -= 20;
+                    freq = Math.max(20, Math.min(100, freq));
+                    freqData.push(freq);
+                });
+                return freqData;
+            case 'schedutil':
+                 return workloadData.map(load => Math.max(20, Math.min(100, load * 1.1)));
+        }
+        return [];
+    }
+    
+    function createOrUpdateChart() {
+        const selectedGovernor = governorSelect.value;
+        const frequencyData = getFrequencyData(selectedGovernor);
+
+        if (dvfsChart) {
+            dvfsChart.data.datasets[1].data = frequencyData;
+            dvfsChart.update();
+        } else {
+            dvfsChart = new Chart(dvfsCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Workload (%)',
+                            data: workloadData,
+                            borderColor: 'rgba(100, 116, 139, 0.4)',
+                            backgroundColor: 'rgba(100, 116, 139, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: 'CPU Frequency Response (%)',
+                            data: frequencyData,
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#8b5cf6'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 110,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%'
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        legend: {
+                            position: 'bottom',
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+    }
+
+    governorSelect.addEventListener('change', createOrUpdateChart);
+    createOrUpdateChart();
+});
+</script>
+
+</body>
+</html>

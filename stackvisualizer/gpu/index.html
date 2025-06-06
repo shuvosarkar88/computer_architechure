@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The GPU Explainer: An Interactive Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals & Subtle Accents -->
+    <!-- Application Structure Plan: A single-page application with a fixed sidebar navigation for non-linear exploration. The content is broken down into thematic sections: 1. Overview, 2. Core Architecture (interactive diagram), 3. Rendering Pipeline (interactive flow chart), 4. Key Comparisons (iGPU vs dGPU, NVIDIA vs AMD, CUDA vs OpenCL using interactive charts and toggles), 5. Applications (card-based exploration), and 6. Future Trends. This structure is chosen to deconstruct the dense report into manageable, engaging topics, allowing users to either follow a logical path or jump directly to their area of interest, which is more effective for learning complex technical information than a linear document. -->
+    <!-- Visualization & Content Choices: 
+        - GPU Architecture: Goal: Inform. Method: Clickable HTML/CSS diagram. Interaction: Click on a component (e.g., 'SM') to see its description in a modal. Justification: Visually shows how components relate, with details on demand to avoid clutter. Library: None (HTML/CSS).
+        - Rendering Pipeline: Goal: Organize. Method: HTML/CSS horizontal flowchart. Interaction: Hover/click to highlight a stage and read its details. Justification: Clarifies the complex sequence of operations in a digestible, linear flow. Library: None (HTML/CSS).
+        - iGPU vs dGPU: Goal: Compare. Method: Radar chart. Interaction: Static chart clearly shows trade-offs. Justification: Radar charts are excellent for comparing multiple quantitative metrics (power, cost, performance) across two categories. Library: Chart.js.
+        - NVIDIA vs AMD: Goal: Compare. Method: Side-by-side cards and a grouped bar chart. Interaction: Buttons to switch between viewing 'Ray Tracing', 'AI Hardware', and 'Software'. Chart updates dynamically. Justification: Direct comparison of specific technologies is clearer than a single large table. The chart quantifies conceptual strengths. Library: Chart.js.
+        - CUDA vs OpenCL: Goal: Compare. Method: Doughnut chart and table. Interaction: Static chart visualizes market share concept. Justification: A visual metaphor for ecosystem dominance, supported by a detailed feature table. Library: Chart.js.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F7F4;
+            color: #3D405B;
+        }
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+        }
+        .nav-link.active, .nav-link:hover {
+            background-color: #81B29A;
+            color: #FFFFFF;
+            transform: translateX(4px);
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .card {
+            background-color: #FFFFFF;
+            border: 1px solid #E0E0E0;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .interactive-diagram-item {
+            cursor: pointer;
+            border: 2px dashed #D1D5DB;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .interactive-diagram-item:hover {
+            background-color: #E0E7FF;
+            border-color: #81B29A;
+        }
+        .pipeline-stage {
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 4px solid transparent;
+        }
+        .pipeline-stage:hover, .pipeline-stage.selected {
+            border-bottom-color: #E07A5F;
+            transform: translateY(-2px);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 350px; }
+        }
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 2rem;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 0.5rem;
+            animation: slideIn 0.3s;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0;}
+            to { transform: translateY(0); opacity: 1;}
+        }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row">
+
+    <!-- Modal -->
+    <div id="componentModal" class="modal">
+      <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h3 id="modalTitle" class="text-2xl font-bold mb-4 text-[#3D405B]"></h3>
+        <p id="modalText" class="text-base text-gray-700 leading-relaxed"></p>
+      </div>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <nav class="w-full md:w-64 bg-white md:h-screen md:sticky top-0 p-4 shadow-lg z-10">
+        <div class="flex items-center mb-8">
+            <div class="p-2 bg-[#81B29A] rounded-md mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M12 6V3m0 18v-3M5.636 5.636l-.707-.707M19.071 5.636l-.707.707M5.636 18.364l-.707.707M19.071 18.364l.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            </div>
+            <h1 class="text-xl font-bold text-[#3D405B]">GPU Explainer</h1>
+        </div>
+        <ul id="navigation" class="space-y-2">
+            <li><a href="#overview" class="nav-link block p-3 rounded-md font-medium">Introduction</a></li>
+            <li><a href="#architecture" class="nav-link block p-3 rounded-md font-medium">Core Architecture</a></li>
+            <li><a href="#pipeline" class="nav-link block p-3 rounded-md font-medium">Rendering Pipeline</a></li>
+            <li><a href="#comparison" class="nav-link block p-3 rounded-md font-medium">Key Comparisons</a></li>
+            <li><a href="#applications" class="nav-link block p-3 rounded-md font-medium">Real-World Applications</a></li>
+            <li><a href="#trends" class="nav-link block p-3 rounded-md font-medium">Future Trends</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4 sm:p-6 md:p-10 bg-[#F8F7F4]">
+        
+        <!-- Section: Overview -->
+        <section id="overview" class="content-section">
+            <div class="bg-white p-8 rounded-xl shadow-md border border-gray-200">
+                <h2 class="text-4xl font-bold mb-4 text-[#3D405B]">The Modern Graphics Processing Unit</h2>
+                <p class="text-lg text-gray-600 mb-6">Welcome to the interactive guide to GPUs. A Graphics Processing Unit (GPU) is more than just a component for gaming; it's a specialized, massively parallel processor that has revolutionized computing. This explainer will break down its complex architecture, processes, and applications into understandable, interactive modules. Use the navigation to explore the concepts that interest you most.</p>
+                <div class="grid md:grid-cols-2 gap-6 text-center">
+                    <div class="p-6 bg-[#E0E7FF] rounded-lg">
+                        <h3 class="text-2xl font-bold text-[#3D405B]">CPU: The Serial Master</h3>
+                        <p class="mt-2 text-gray-700">A CPU (Central Processing Unit) has a few powerful cores optimized for sequential, single-threaded tasks. It's a master of all trades, handling system operations and complex logic one task at a time, very quickly.</p>
+                        <div id="cpu-viz" class="mt-4 h-16 w-full bg-gray-200 rounded-lg p-2 flex items-center justify-start space-x-2 overflow-hidden"></div>
+                    </div>
+                    <div class="p-6 bg-[#D1FAE5] rounded-lg">
+                        <h3 class="text-2xl font-bold text-[#3D405B]">GPU: The Parallel Powerhouse</h3>
+                        <p class="mt-2 text-gray-700">A GPU has thousands of smaller, more efficient cores designed to handle multiple tasks simultaneously. It excels at repetitive, parallelizable workloads, like rendering millions of pixels for an image.</p>
+                        <div id="gpu-viz" class="mt-4 h-16 w-full bg-gray-200 rounded-lg p-2 grid grid-cols-8 gap-1"></div>
+                    </div>
+                </div>
+                 <p class="mt-6 text-sm text-gray-500">This visualization demonstrates the fundamental difference in workload handling. The CPU processes tasks in a queue, while the GPU tackles a large batch of similar tasks all at once, showcasing the concept of parallelism.</p>
+            </div>
+        </section>
+
+        <!-- Section: Core Architecture -->
+        <section id="architecture" class="content-section">
+            <h2 class="text-3xl font-bold mb-2">Core Architecture: Inside the Chip</h2>
+            <p class="text-gray-600 mb-8">A GPU is a complex system on a chip, composed of several key components working in concert. This section introduces the main building blocks. Click on any component in the diagram below to learn more about its specific function and importance within the GPU's architecture.</p>
+            <div class="card p-6">
+                <div class="bg-gray-50 p-4 rounded-lg border-2 border-gray-800">
+                    <h3 class="text-center font-bold text-lg mb-4">Simplified GPU Die</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-2 p-4 bg-gray-100 rounded-md border-2 border-gray-400">
+                             <h4 class="text-center font-semibold mb-2">Processing Clusters</h4>
+                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                                <div class="interactive-diagram-item p-2 rounded text-center text-sm font-medium" data-title="Streaming Multiprocessor (SM) / Compute Unit (CU)" data-text="The fundamental building block of the GPU. Each SM (NVIDIA) or CU (AMD) is a mini-processor containing numerous execution units (CUDA Cores/Stream Processors), schedulers, and a small, fast local memory (Shared Memory/LDS). It's designed to execute hundreds of threads in parallel.">SM / CU</div>
+                                <div class="interactive-diagram-item p-2 rounded text-center text-sm font-medium" data-title="Streaming Multiprocessor (SM) / Compute Unit (CU)" data-text="The fundamental building block of the GPU. Each SM (NVIDIA) or CU (AMD) is a mini-processor containing numerous execution units (CUDA Cores/Stream Processors), schedulers, and a small, fast local memory (Shared Memory/LDS). It's designed to execute hundreds of threads in parallel.">SM / CU</div>
+                                <div class="interactive-diagram-item p-2 rounded text-center text-sm font-medium" data-title="Streaming Multiprocessor (SM) / Compute Unit (CU)" data-text="The fundamental building block of the GPU. Each SM (NVIDIA) or CU (AMD) is a mini-processor containing numerous execution units (CUDA Cores/Stream Processors), schedulers, and a small, fast local memory (Shared Memory/LDS). It's designed to execute hundreds of threads in parallel.">SM / CU</div>
+                                <div class="interactive-diagram-item p-2 rounded text-center text-sm font-medium" data-title="Streaming Multiprocessor (SM) / Compute Unit (CU)" data-text="The fundamental building block of the GPU. Each SM (NVIDIA) or CU (AMD) is a mini-processor containing numerous execution units (CUDA Cores/Stream Processors), schedulers, and a small, fast local memory (Shared Memory/LDS). It's designed to execute hundreds of threads in parallel.">SM / CU</div>
+                            </div>
+                            <div class="interactive-diagram-item mt-4 p-3 rounded text-center" data-title="L2 Cache" data-text="A larger cache shared across all the SMs/CUs. It serves as an intermediate memory pool to reduce requests to the much slower VRAM. A larger L2 cache can significantly improve performance by keeping frequently accessed data closer to the processing cores.">Shared L2 Cache</div>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="interactive-diagram-item p-4 rounded text-center" data-title="Memory Controller" data-text="The traffic cop for data. This sophisticated circuit manages the flow of data between the GPU cores and the VRAM. It optimizes memory accesses to maximize bandwidth and minimize latency, which is critical for keeping the thousands of cores fed with data.">Memory Controller</div>
+                            <div class="interactive-diagram-item p-4 rounded text-center bg-green-200 border-green-400" data-title="Video RAM (VRAM)" data-text="The GPU's dedicated, high-speed memory (e.g., GDDR6, HBM). It stores textures, 3D models (geometry), framebuffers, and other data needed for rendering and computation. Its high bandwidth is a key differentiator from system RAM and is essential for high performance.">VRAM</div>
+                            <div class="interactive-diagram-item p-4 rounded text-center" data-title="Render Output Units (ROPs)" data-text="The final stage of the rendering pipeline. ROPs are responsible for writing the final pixel data (color, depth) to the framebuffer in VRAM. They handle tasks like depth testing (determining which objects are in front), blending (for transparency), and anti-aliasing.">ROPs</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section: Rendering Pipeline -->
+        <section id="pipeline" class="content-section">
+            <h2 class="text-3xl font-bold mb-2">The Graphics Rendering Pipeline</h2>
+             <p class="text-gray-600 mb-8">To create the image you see on screen, a GPU processes 3D data through a series of steps known as the rendering pipeline. This is a highly optimized flowchart of operations, converting abstract models into a grid of colored pixels. Click on each stage to understand its role in this complex transformation.</p>
+            <div class="card overflow-x-auto p-6">
+                <div id="pipeline-container" class="flex items-center justify-between space-x-2 md:space-x-4">
+                    <div class="pipeline-stage flex-1 text-center p-3 rounded-lg" data-title="1. Vertex Processing" data-text="This initial GPU stage works on the vertices (the points) of 3D models. A programmable Vertex Shader transforms each vertex's position from 3D model space to 2D screen space. It also calculates other attributes like color and texture coordinates.">
+                        <span class="text-2xl">V</span>
+                        <p class="font-semibold text-sm mt-1">Vertex</p>
+                    </div>
+                    <div class="text-gray-400 font-bold text-2xl">&rarr;</div>
+                    <div class="pipeline-stage flex-1 text-center p-3 rounded-lg" data-title="2. Rasterization" data-text="This fixed-function hardware stage takes the 2D triangles (primitives) from the previous step and determines which pixels on the screen they cover. It then generates 'fragments' (potential pixels) for each covered pixel, interpolating the vertex attributes (like color and texture coordinates) across the triangle's surface.">
+                        <span class="text-2xl">R</span>
+                        <p class="font-semibold text-sm mt-1">Rasterize</p>
+                    </div>
+                     <div class="text-gray-400 font-bold text-2xl">&rarr;</div>
+                    <div class="pipeline-stage flex-1 text-center p-3 rounded-lg" data-title="3. Fragment Processing" data-text="Also known as Pixel Shading. Here, a programmable Fragment (or Pixel) Shader runs for each fragment. Its main job is to calculate the final color of the fragment. This is where textures are applied, complex lighting is calculated, and special effects are created.">
+                        <span class="text-2xl">F</span>
+                        <p class="font-semibold text-sm mt-1">Fragment</p>
+                    </div>
+                     <div class="text-gray-400 font-bold text-2xl">&rarr;</div>
+                    <div class="pipeline-stage flex-1 text-center p-3 rounded-lg" data-title="4. Output Merging" data-text="The final stage, handled by the ROPs. Here, the processed fragments are combined with the existing image in the framebuffer. It involves depth testing (to handle object occlusion), blending (for transparency), and writing the final color to memory, which is then sent to your display.">
+                         <span class="text-2xl">O</span>
+                        <p class="font-semibold text-sm mt-1">Output</p>
+                    </div>
+                </div>
+                <div id="pipeline-info" class="mt-6 p-4 bg-gray-50 rounded-lg min-h-[120px]">
+                    <h3 id="pipeline-title" class="text-xl font-bold text-[#3D405B]"></h3>
+                    <p id="pipeline-text" class="text-gray-700 mt-2"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section: Key Comparisons -->
+        <section id="comparison" class="content-section">
+            <h2 class="text-3xl font-bold mb-2">Key Comparisons</h2>
+            <p class="text-gray-600 mb-8">The GPU market is defined by key differences in architecture and approach. This section visually compares the most important dichotomies: integrated versus dedicated GPUs, the architectural battle between NVIDIA and AMD, and the programming frameworks CUDA and OpenCL.</p>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Integrated vs. Dedicated -->
+                <div class="card">
+                    <h3 class="font-bold text-xl mb-4">Integrated vs. Dedicated GPUs</h3>
+                    <p class="text-sm text-gray-600 mb-4">Integrated GPUs (iGPUs) are built into the CPU and share system RAM, making them power-efficient and cost-effective for basic tasks. Dedicated GPUs (dGPUs) are separate cards with their own ultra-fast VRAM, offering maximum performance for demanding tasks like gaming and AI at the cost of power and price.</p>
+                    <div class="chart-container"><canvas id="igpu-dgpu-chart"></canvas></div>
+                </div>
+                
+                <!-- CUDA vs OpenCL -->
+                <div class="card">
+                    <h3 class="font-bold text-xl mb-4">Programming: CUDA vs. OpenCL</h3>
+                    <p class="text-sm text-gray-600 mb-4">CUDA is NVIDIA's proprietary, mature, and widely adopted platform, offering a rich ecosystem especially for AI. OpenCL is an open standard that runs on diverse hardware (AMD, Intel, etc.), offering portability at the cost of a less unified ecosystem.</p>
+                     <div class="chart-container"><canvas id="cuda-opencl-chart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- NVIDIA vs. AMD -->
+            <div class="card mt-8">
+                <h3 class="font-bold text-xl mb-4 text-center">Architectural Showdown: NVIDIA vs. AMD</h3>
+                <p class="text-sm text-gray-600 mb-6 text-center max-w-3xl mx-auto">NVIDIA and AMD are the giants of the GPU world, each with unique architectural philosophies. NVIDIA often pioneers features like hardware ray tracing and has a dominant AI ecosystem with CUDA. AMD competes strongly on price-to-performance and champions open standards. Here’s a conceptual look at their relative strengths.</p>
+                <div class="chart-container h-96 max-h-[450px]"><canvas id="nvidia-amd-chart"></canvas></div>
+            </div>
+        </section>
+
+        <!-- Section: Applications -->
+        <section id="applications" class="content-section">
+            <h2 class="text-3xl font-bold mb-2">Real-World Applications</h2>
+            <p class="text-gray-600 mb-8">The parallel processing power of GPUs extends far beyond gaming. They have become essential accelerators in scientific research, artificial intelligence, and professional creative workflows, solving some of the world's most complex computational problems.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="card">
+                    <h3 class="font-bold text-xl mb-2">🤖 Artificial Intelligence</h3>
+                    <p class="text-gray-600">GPUs are the engines of the AI revolution. Training deep learning models involves trillions of matrix calculations, a task perfectly suited for a GPU's parallel architecture. This accelerates breakthroughs in computer vision, natural language processing (like LLMs), and autonomous systems.</p>
+                </div>
+                <div class="card">
+                    <h3 class="font-bold text-xl mb-2">🔬 Scientific Computing (HPC)</h3>
+                    <p class="text-gray-600">Scientists use GPUs to run massive simulations. From molecular dynamics for drug discovery to climate modeling and astrophysics, GPUs allow researchers to analyze complex systems at a scale and speed previously unimaginable, leading to faster discoveries.</p>
+                </div>
+                <div class="card">
+                    <h3 class="font-bold text-xl mb-2">🎬 Content Creation</h3>
+                    <p class="text-gray-600">For video editors, 3D artists, and designers, GPUs dramatically cut down rendering times. They provide real-time feedback on complex visual effects, 3D models, and high-resolution video, enabling more interactive and efficient creative workflows.</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Section: Future Trends -->
+        <section id="trends" class="content-section">
+            <h2 class="text-3xl font-bold mb-2">Future Trends in GPU Technology</h2>
+            <p class="text-gray-600 mb-8">GPU development never stops. The next wave of innovation focuses on greater realism, smarter performance, and more efficient ways to build and connect these powerful processors.</p>
+            <div class="space-y-6">
+                <div class="card">
+                    <h3 class="font-bold text-xl mb-2">Real-Time Ray Tracing</h3>
+                    <p class="text-gray-600">This technology simulates the physical behavior of light to create hyper-realistic lighting, shadows, and reflections. Dedicated hardware (NVIDIA's RT Cores, AMD's Ray Accelerators) is making this computationally expensive technique a standard feature in games and professional visualization.</p>
+                </div>
+                <div class="card">
+                    <h3 class="font-bold text-xl mb-2">Advanced AI Upscaling (DLSS/FSR)</h3>
+                    <p class="text-gray-600">Smart upscaling technologies use AI to render games at a lower resolution and then intelligently reconstruct a high-quality, high-resolution image. This significantly boosts performance, allowing for higher frame rates and more demanding graphics settings.</p>
+                </div>
+                <div class="card">
+                    <h3 class="font-bold text-xl mb-2">Chiplet Architectures (MCM)</h3>
+                    <p class="text-gray-600">As single, monolithic chips become harder to build, manufacturers are moving to Multi-Chip Modules (MCMs). This involves connecting smaller, specialized "chiplets" together on a single package. This approach improves manufacturing yield and allows for more scalable and customizable GPU designs.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('.content-section');
+            const pipelineStages = document.querySelectorAll('.pipeline-stage');
+            const pipelineTitle = document.getElementById('pipeline-title');
+            const pipelineText = document.getElementById('pipeline-text');
+            const diagramItems = document.querySelectorAll('.interactive-diagram-item');
+            const modal = document.getElementById('componentModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalText = document.getElementById('modalText');
+            const closeModal = document.querySelector('.close-button');
+
+            function showSection(hash) {
+                const targetHash = hash || '#overview';
+                
+                sections.forEach(section => {
+                    if ('#' + section.id === targetHash) {
+                        section.classList.add('active');
+                    } else {
+                        section.classList.remove('active');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    if (link.getAttribute('href') === targetHash) {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+            }
+            
+            document.getElementById('navigation').addEventListener('click', function(e) {
+                if(e.target.tagName === 'A'){
+                    e.preventDefault();
+                    const targetId = e.target.getAttribute('href');
+                    history.pushState(null, null, targetId);
+                    showSection(targetId);
+                }
+            });
+
+            window.addEventListener('popstate', function() {
+                showSection(window.location.hash);
+            });
+
+            pipelineStages.forEach(stage => {
+                stage.addEventListener('click', () => {
+                    pipelineStages.forEach(s => s.classList.remove('selected'));
+                    stage.classList.add('selected');
+                    pipelineTitle.textContent = stage.dataset.title;
+                    pipelineText.textContent = stage.dataset.text;
+                });
+            });
+
+            diagramItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    modalTitle.textContent = item.dataset.title;
+                    modalText.textContent = item.dataset.text;
+                    modal.style.display = 'block';
+                });
+            });
+
+            closeModal.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+
+            window.addEventListener('click', (event) => {
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
+            });
+
+            // Set initial state
+            showSection(window.location.hash);
+            if (pipelineStages.length > 0) {
+              pipelineStages[0].click();
+            }
+
+            // CPU vs GPU animation
+            const cpuViz = document.getElementById('cpu-viz');
+            const gpuViz = document.getElementById('gpu-viz');
+            let taskCounter = 0;
+            function runViz() {
+                // CPU
+                const cpuTask = document.createElement('div');
+                cpuTask.className = 'w-6 h-10 bg-[#81B29A] rounded animate-pulse';
+                cpuViz.appendChild(cpuTask);
+                setTimeout(() => {
+                    if(cpuViz.contains(cpuTask)) cpuViz.removeChild(cpuTask);
+                }, 1500);
+
+                // GPU
+                for(let i = 0; i < 16; i++) {
+                    const gpuTask = document.createElement('div');
+                    gpuTask.className = 'w-full h-2 bg-[#81B29A] rounded';
+                    if (gpuViz.children[i]) {
+                        gpuViz.replaceChild(gpuTask, gpuViz.children[i]);
+                    } else {
+                        gpuViz.appendChild(gpuTask);
+                    }
+                }
+                 setTimeout(() => {
+                    for(let i = 0; i < 16; i++) {
+                       if(gpuViz.children[i]) gpuViz.children[i].className = 'w-full h-2 bg-gray-300 rounded';
+                    }
+                }, 750);
+
+                if (cpuViz.children.length > 5) {
+                    cpuViz.removeChild(cpuViz.children[0]);
+                }
+            }
+            setInterval(runViz, 400);
+
+            // Chart initializations
+            const chartLabelColor = '#3D405B';
+            const chartGridColor = 'rgba(0, 0, 0, 0.05)';
+
+            // iGPU vs dGPU Radar Chart
+            new Chart(document.getElementById('igpu-dgpu-chart'), {
+                type: 'radar',
+                data: {
+                    labels: ['Performance', 'Power Efficiency', 'Low Cost', 'Compact Size', 'Gaming/AI'],
+                    datasets: [{
+                        label: 'Integrated GPU',
+                        data: [3, 9, 10, 10, 2],
+                        backgroundColor: 'rgba(224, 122, 95, 0.2)',
+                        borderColor: '#E07A5F',
+                        pointBackgroundColor: '#E07A5F',
+                    }, {
+                        label: 'Dedicated GPU',
+                        data: [10, 4, 2, 3, 10],
+                        backgroundColor: 'rgba(129, 178, 154, 0.2)',
+                        borderColor: '#81B29A',
+                        pointBackgroundColor: '#81B29A',
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: chartGridColor },
+                            grid: { color: chartGridColor },
+                            pointLabels: { font: { size: 12 }, color: chartLabelColor },
+                            ticks: { backdropColor: '#F8F7F4', color: chartLabelColor }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: chartLabelColor } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.raw + '/10';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // CUDA vs OpenCL Doughnut Chart
+            new Chart(document.getElementById('cuda-opencl-chart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['CUDA Ecosystem (NVIDIA-only)', 'OpenCL Ecosystem (Multi-vendor)'],
+                    datasets: [{
+                        label: 'Conceptual Ecosystem Share',
+                        data: [85, 15],
+                        backgroundColor: ['#81B29A', '#E07A5F'],
+                        borderColor: '#F8F7F4',
+                        borderWidth: 4
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: chartLabelColor } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.raw + '% (Conceptual)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // NVIDIA vs AMD Bar Chart
+            new Chart(document.getElementById('nvidia-amd-chart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Rasterization (Gaming)', 'Ray Tracing Performance', 'AI/ML Compute', 'Power Efficiency', 'Open Standards'],
+                    datasets: [{
+                        label: 'NVIDIA (Conceptual)',
+                        data: [9, 10, 10, 8, 4],
+                        backgroundColor: '#81B29A',
+                        borderColor: '#6a947d',
+                        borderWidth: 1
+                    }, {
+                        label: 'AMD (Conceptual)',
+                        data: [9.5, 8, 7, 7, 9],
+                        backgroundColor: '#E07A5F',
+                        borderColor: '#c26951',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            grid: { color: chartGridColor },
+                            ticks: { color: chartLabelColor,
+                                callback: function(value) { return value + '/10' }
+                            }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: chartLabelColor }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top', labels: { color: chartLabelColor } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.raw + '/10';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>

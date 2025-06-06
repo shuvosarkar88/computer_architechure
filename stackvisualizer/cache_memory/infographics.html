@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: Understanding Cache Memory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues & Oranges -->
+    <!-- Application Structure Plan: The infographic follows a logical narrative flow, designed for education. It starts with the "Why" (the CPU-memory speed gap), moves to the "What" (the cache hierarchy and its components), then to the "How" (hits, misses, and mapping techniques), and concludes with a summary of the "Process" (how a CPU request is handled). This top-down approach makes a complex technical topic accessible. Each section builds upon the last, telling a coherent story with data. -->
+    <!-- Visualization & Content Choices: Data from the report is visualized for impact. The speed gap (Goal: Inform) is a bar chart to emphasize the scale of the problem. The cache hierarchy (Goal: Organize/Compare) is a custom HTML diagram, which is more intuitive for showing proximity and scale than a table. Hit/Miss ratio (Goal: Inform) is a donut chart, perfect for showing a simple proportion. Mapping techniques (Goal: Organize/Compare) are visualized as simplified flow diagrams using HTML/CSS to make the abstract logic concrete. The CPU request flow (Goal: Organize) is a step-by-step HTML diagram that synthesizes all previous concepts into a single process. All visualizations directly use information from the source text and are designed to avoid SVG and Mermaid JS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            transition: all 0.3s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #003f5c, #2f4b7c);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 50vh;
+        }
+        h1 { color: #003f5c; }
+        h2 { color: #2f4b7c; }
+        h3 { color: #665191; }
+        .accent-color { color: #ff7c43; }
+        .accent-bg { background-color: #ff7c43; }
+        .arrow {
+            width: 0;
+            height: 0;
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+        }
+        .arrow-right {
+            border-left: 15px solid #ff7c43;
+        }
+    </style>
+</head>
+<body class="text-slate-700">
+
+    <div class="max-w-6xl mx-auto p-4 md:p-8">
+
+        <header class="text-center my-12">
+            <h1 class="text-4xl md:text-6xl font-black mb-4">The Engine Under the Hood</h1>
+            <p class="text-xl md:text-2xl text-slate-600 max-w-4xl mx-auto">An Infographic on Cache Memory: The Unsung Hero of Computer Performance</p>
+        </header>
+
+        <section id="speed-gap" class="my-16">
+            <h2 class="text-3xl font-bold text-center mb-4">The Need for Speed</h2>
+            <p class="text-lg text-center text-slate-600 max-w-3xl mx-auto mb-10">Modern CPUs are incredibly fast, but they are shackled by the much slower speed of main memory (RAM). Cache memory is the essential bridge that closes this performance gap, preventing the CPU from constantly waiting for data.</p>
+            <div class="card p-6 md:p-8">
+                <h3 class="text-2xl font-bold text-center mb-4">Visualizing the Performance Chasm</h3>
+                <p class="text-center text-slate-600 mb-6">This chart shows the massive difference in access times between the CPU and other memory types. Notice how each cache level provides a crucial stepping stone in speed.</p>
+                <div class="chart-container h-96 md:h-[450px]">
+                    <canvas id="speedGapChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="hierarchy" class="my-16">
+            <h2 class="text-3xl font-bold text-center mb-4">A Hierarchy of Speed</h2>
+            <p class="text-lg text-center text-slate-600 max-w-3xl mx-auto mb-10">To balance speed, size, and cost, CPUs use a multi-level cache system. Data is sought first in the smallest, fastest L1 cache, then L2, then L3, before finally resorting to slow main memory.</p>
+            <div class="card p-6 md:p-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                    <div class="md:col-span-2 flex justify-center items-center relative h-96">
+                        <div class="absolute rounded-full bg-orange-100" style="width: 360px; height: 360px;"></div>
+                        <div class="absolute rounded-full bg-purple-100" style="width: 280px; height: 280px;"></div>
+                        <div class="absolute rounded-full bg-blue-100" style="width: 200px; height: 200px;"></div>
+                        <div class="absolute rounded-full bg-slate-800 text-white flex justify-center items-center font-bold" style="width: 120px; height: 120px;">CPU Core</div>
+                        <div class="absolute font-semibold text-purple-800" style="bottom: 110px;">L1 Cache</div>
+                        <div class="absolute font-semibold text-indigo-800" style="bottom: 70px;">L2 Cache</div>
+                        <div class="absolute font-semibold text-rose-800" style="bottom: 30px;">L3 Cache</div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="p-4 rounded-lg bg-blue-50 border-l-4 border-blue-400">
+                            <h4 class="font-bold text-lg text-blue-800">L1 Cache</h4>
+                            <p class="text-sm"><strong>Size:</strong> 16-64KB</p>
+                            <p class="text-sm"><strong>Speed:</strong> Fastest (~1ns)</p>
+                            <p class="text-sm">Private to a CPU core.</p>
+                        </div>
+                        <div class="p-4 rounded-lg bg-purple-50 border-l-4 border-purple-400">
+                            <h4 class="font-bold text-lg text-purple-800">L2 Cache</h4>
+                            <p class="text-sm"><strong>Size:</strong> 256KB-2MB</p>
+                            <p class="text-sm"><strong>Speed:</strong> Very Fast (~10ns)</p>
+                            <p class="text-sm">Often private to a core.</p>
+                        </div>
+                        <div class="p-4 rounded-lg bg-orange-50 border-l-4 border-orange-400">
+                            <h4 class="font-bold text-lg text-orange-800">L3 Cache</h4>
+                            <p class="text-sm"><strong>Size:</strong> 4MB-32MB+</p>
+                            <p class="text-sm"><strong>Speed:</strong> Fast</p>
+                            <p class="text-sm">Shared across all cores.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="hits-misses" class="my-16">
+            <h2 class="text-3xl font-bold text-center mb-4">Hits & Misses: The Game of Performance</h2>
+            <p class="text-lg text-center text-slate-600 max-w-3xl mx-auto mb-10">Every time the CPU needs data, it's a race. A "cache hit" means the data is found in the fast cache. A "cache miss" means a slow trip to main memory, costing precious time.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="card p-6 md:p-8 text-center">
+                    <h3 class="text-2xl font-bold mb-4">Typical Hit Rate</h3>
+                     <p class="text-slate-600 mb-6">The goal is to maximize hits. Modern systems achieve very high hit rates, thanks to the principle of locality.</p>
+                    <div class="chart-container h-72">
+                         <canvas id="hitMissChart"></canvas>
+                    </div>
+                </div>
+                <div class="stat-card p-6 md:p-8 text-white rounded-lg flex flex-col justify-center items-center text-center">
+                     <h3 class="text-3xl font-bold mb-4">The Miss Penalty</h3>
+                     <p class="text-lg opacity-90 mb-6">The time lost on a miss is enormous. A single miss can cost hundreds of CPU cycles.</p>
+                     <div class="text-6xl font-black accent-color">100-200x</div>
+                     <p class="mt-4 text-lg opacity-90">Slower to access RAM than L1 Cache.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="mapping" class="my-16">
+            <h2 class="text-3xl font-bold text-center mb-4">Organizing the Data</h2>
+            <p class="text-lg text-center text-slate-600 max-w-3xl mx-auto mb-10">How does the cache decide where to store data? Mapping techniques are the rules that govern data placement. This choice is a trade-off between simplicity and avoiding "conflict misses" where data kicks other useful data out.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="card p-6">
+                    <h3 class="text-xl font-bold text-center mb-4">Direct-Mapped</h3>
+                    <p class="text-sm text-center text-slate-600 mb-6">Simple & fast. Each memory block has exactly one place it can go in the cache.</p>
+                    <div class="space-y-2 text-center">
+                        <div class="p-2 bg-slate-100 rounded">Memory Block A</div>
+                        <div class="text-2xl font-bold accent-color">&darr;</div>
+                        <div class="p-2 border-2 border-dashed border-slate-300 rounded">Cache Line 5</div>
+                        <div class="p-2 bg-rose-100 rounded mt-4">Memory Block B</div>
+                        <div class="text-2xl font-bold text-rose-500">&darr;</div>
+                        <div class="p-2 border-2 border-dashed border-slate-300 rounded">Cache Line 5</div>
+                        <p class="text-xs text-red-600 font-semibold mt-4">High risk of conflicts!</p>
+                    </div>
+                </div>
+                <div class="card p-6 border-4 border-indigo-500">
+                    <h3 class="text-xl font-bold text-center mb-4">Set-Associative (The Balance)</h3>
+                    <p class="text-sm text-center text-slate-600 mb-6">A compromise. A block can go to any of a few places within a specific "set".</p>
+                     <div class="space-y-2 text-center">
+                        <div class="p-2 bg-slate-100 rounded">Memory Block A</div>
+                        <div class="text-2xl font-bold accent-color">&darr;</div>
+                        <div class="p-2 border-2 border-dashed border-indigo-300 rounded">Cache Set 1</div>
+                        <div class="flex gap-2 mt-2">
+                           <div class="flex-1 p-2 bg-slate-50 rounded">Line 0</div>
+                           <div class="flex-1 p-2 bg-slate-50 rounded">Line 1</div>
+                        </div>
+                         <div class="p-2 bg-rose-100 rounded mt-4">Memory Block B</div>
+                        <div class="text-2xl font-bold text-rose-500">&darr;</div>
+                         <div class="p-2 border-2 border-dashed border-indigo-300 rounded">Cache Set 1</div>
+                        <p class="text-xs text-green-600 font-semibold mt-4">Conflicts are greatly reduced.</p>
+                    </div>
+                </div>
+                <div class="card p-6">
+                    <h3 class="text-xl font-bold text-center mb-4">Fully Associative</h3>
+                    <p class="text-sm text-center text-slate-600 mb-6">Most flexible. A block can go anywhere in the cache.</p>
+                     <div class="space-y-2 text-center">
+                        <div class="p-2 bg-slate-100 rounded">Memory Block A</div>
+                        <div class="text-2xl font-bold accent-color">&darr;</div>
+                        <div class="p-2 border-2 border-dashed border-slate-300 rounded h-24">Any Free Cache Line</div>
+                        <p class="text-xs text-red-600 font-semibold mt-4">Very complex and expensive hardware.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="process" class="my-16">
+             <h2 class="text-3xl font-bold text-center mb-4">Putting It All Together</h2>
+             <p class="text-lg text-center text-slate-600 max-w-3xl mx-auto mb-10">When the CPU requests data, it kicks off a high-speed process. The memory address is broken down and used to check the cache in a fraction of a second.</p>
+             <div class="card p-6 md:p-8">
+                 <div class="flex flex-col md:flex-row items-center justify-center gap-4">
+                     <div class="text-center">
+                         <div class="p-4 rounded-full bg-slate-800 text-white font-bold w-24 h-24 flex items-center justify-center">CPU Request</div>
+                     </div>
+                     <div class="arrow arrow-right hidden md:block"></div>
+                     <div class="text-2xl md:hidden">&darr;</div>
+                     <div class="card p-4 bg-slate-50 flex-grow w-full md:w-auto">
+                        <div class="font-mono text-center break-all p-2 bg-white rounded shadow-inner">01101010<span class="accent-color">1101</span><span class="text-blue-500">011010</span></div>
+                        <div class="flex justify-between text-xs mt-2 font-semibold">
+                            <span>TAG</span>
+                            <span class="accent-color">INDEX</span>
+                            <span class="text-blue-500">OFFSET</span>
+                        </div>
+                     </div>
+                     <div class="arrow arrow-right hidden md:block"></div>
+                     <div class="text-2xl md:hidden">&darr;</div>
+                     <div class="text-center card p-4 w-full md:w-auto">
+                        <div class="font-bold mb-2">Check Cache</div>
+                        <div class="flex gap-4">
+                            <div class="text-green-600 text-center">
+                                <span class="text-4xl">&#10004;</span>
+                                <p class="font-semibold">HIT</p>
+                            </div>
+                             <div class="text-red-600 text-center">
+                                <span class="text-4xl">&#10008;</span>
+                                <p class="font-semibold">MISS</p>
+                            </div>
+                        </div>
+                     </div>
+                     <div class="arrow arrow-right hidden md:block"></div>
+                     <div class="text-2xl md:hidden">&darr;</div>
+                     <div class="text-center">
+                         <div class="p-4 rounded-full accent-bg text-white font-bold w-24 h-24 flex items-center justify-center">Return Data to CPU</div>
+                     </div>
+                 </div>
+                 <p class="text-center text-slate-600 mt-8">If it's a <strong class="text-green-600">HIT</strong>, data is returned instantly. If it's a <strong class="text-red-600">MISS</strong>, the system fetches the data from main memory, places it in the cache for next time, and then returns it.</p>
+             </div>
+        </section>
+
+    </div>
+
+    <footer class="text-center p-8 bg-slate-800 text-slate-400 mt-12">
+        <p>Infographic created based on the "Cache Memory Explained Comprehensively" report.</p>
+    </footer>
+
+    <script>
+        const wrapLabel = (label, maxLength) => {
+            const words = label.split(' ');
+            const lines = [];
+            let currentLine = '';
+            words.forEach(word => {
+                if ((currentLine + ' ' + word).length > maxLength && currentLine.length > 0) {
+                    lines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    currentLine += (currentLine.length === 0 ? '' : ' ') + word;
+                }
+            });
+            lines.push(currentLine);
+            return lines;
+        };
+        
+        const tooltipTitleCallback = (tooltipItems) => {
+            const item = tooltipItems[0];
+            let label = item.chart.data.labels[item.dataIndex];
+            if (Array.isArray(label)) {
+              return label.join(' ');
+            }
+            return label;
+        };
+        
+        const speedGapCtx = document.getElementById('speedGapChart').getContext('2d');
+        new Chart(speedGapCtx, {
+            type: 'bar',
+            data: {
+                labels: ['L1 Cache Access', 'L2 Cache Access', ['Main Memory', '(RAM) Access']],
+                datasets: [{
+                    label: 'Relative Access Time (Logarithmic Scale)',
+                    data: [4, 10, 200],
+                    backgroundColor: ['#ff7c43', '#d45087', '#003f5c'],
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        type: 'logarithmic',
+                        title: { display: true, text: 'Time in CPU Cycles (Illustrative)' },
+                        grid: { color: '#e2e8f0' }
+                    },
+                    y: {
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: tooltipTitleCallback,
+                            label: (context) => `${context.raw} cycles. RAM is orders of magnitude slower.`
+                        }
+                    }
+                }
+            }
+        });
+
+        const hitMissCtx = document.getElementById('hitMissChart').getContext('2d');
+        new Chart(hitMissCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Cache Hit', 'Cache Miss'],
+                datasets: [{
+                    label: 'Cache Performance',
+                    data: [95, 5],
+                    backgroundColor: ['#665191', '#ffa600'],
+                    borderColor: '#ffffff',
+                    borderWidth: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: { size: 14 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                           title: tooltipTitleCallback,
+                           label: (context) => `${context.label}: ${context.raw}%`
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>

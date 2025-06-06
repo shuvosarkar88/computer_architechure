@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Report: A Deep Dive into RAM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Tech Neutral -->
+    <!-- Application Structure Plan: The SPA is designed as a thematic, top-down dashboard rather than mirroring the report's chapters. It starts with high-level concepts (What is RAM, Memory Hierarchy), flows into a historical evolution (DDR Timeline), dives into technical specifics via an interactive tabbed interface (Types, How it Works, Performance), provides practical application via a use-case explorer (RAM for Gaming, etc.), and concludes with future trends. This non-linear, task-oriented structure enhances usability by allowing users to engage with content based on their interest and understanding level, rather than forcing a linear read-through of a dense technical document. Key interactions include smooth scrolling, chart filtering, and dynamic content updates to make learning active and intuitive. -->
+    <!-- Visualization & Content Choices: The application uses a variety of interactive elements to make the report's data digestible. (1) Report Info: DDR Generations -> Goal: Compare/Show Change -> Viz: Interactive Line Chart -> Interaction: Hover for tooltips -> Justification: Visually shows performance gains over time more effectively than a table. (2) Report Info: Performance Factors -> Goal: Explain Relationship -> Viz: Bar Chart -> Interaction: Button to toggle between Frequency/Latency views -> Justification: Simplifies the complex relationship between speed and timings. (3) Report Info: Real-World Use Cases -> Goal: Inform/Explore -> Viz: Dropdown + Bar Chart + Text -> Interaction: Select use-case to dynamically update chart and text -> Justification: Provides direct, personalized answers to common user questions. All diagrams are built with HTML/CSS to avoid static images and maintain interactivity. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #334155; /* slate-700 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 40vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .nav-link {
+            transition: color 0.3s ease, border-bottom-color 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #0284c7; /* sky-600 */
+            border-bottom-color: #0284c7; /* sky-600 */
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        .tab-button.active {
+            background-color: #0284c7; /* sky-600 */
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold text-sky-600">RAM Explained</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#fundamentals" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-600">Fundamentals</a>
+                        <a href="#evolution" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-600">Evolution</a>
+                        <a href="#deep-dive" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-600">Deep Dive</a>
+                        <a href="#use-cases" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-600">Use Cases</a>
+                        <a href="#future" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-600">Future</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        
+        <section id="fundamentals" class="py-12">
+            <div class="text-center mb-12">
+                <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight">A Deep Dive into <span class="text-sky-600">Random Access Memory</span></h1>
+                <p class="mt-4 max-w-2xl mx-auto text-lg text-slate-600">Your computer's short-term memory, explained. Explore the core concepts behind the technology that powers your digital life.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-md card">
+                    <h3 class="text-xl font-bold text-slate-900">What is RAM?</h3>
+                    <p class="mt-2 text-slate-600">RAM (Random Access Memory) is a volatile, high-speed temporary workspace for your computer's processor. It holds data for active applications, allowing for rapid access and smooth multitasking. Think of it as your desk surface, where you keep everything you're currently working on.</p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-md card lg:col-span-2">
+                     <h3 class="text-xl font-bold text-slate-900 mb-4">The Memory Hierarchy</h3>
+                     <p class="text-slate-600 mb-4">Computers use a tiered system of memory to balance speed, cost, and capacity. Data flows from slow, large storage to ultra-fast, small registers as the CPU needs it. This interactive diagram shows the journey.</p>
+                     <div id="memory-hierarchy-diagram" class="flex flex-col md:flex-row justify-around items-center space-y-4 md:space-y-0 md:space-x-2 text-center text-sm">
+                         <div class="hierarchy-item p-3 rounded-lg w-full md:w-auto" data-info="The slowest but largest memory, holding your OS and files permanently. Data must be loaded from here first.">
+                             <div class="font-bold text-lg">💽</div>
+                             <div class="font-semibold mt-1">Storage</div>
+                             <div class="text-xs text-slate-500">(HDD/SSD)</div>
+                         </div>
+                         <div class="text-2xl font-mono text-slate-400">&rarr;</div>
+                         <div class="hierarchy-item p-3 rounded-lg w-full md:w-auto" data-info="The main system memory. It's much faster than storage and holds all currently running apps and their data.">
+                            <div class="font-bold text-lg">💾</div>
+                             <div class="font-semibold mt-1">RAM</div>
+                             <div class="text-xs text-slate-500">(DRAM)</div>
+                         </div>
+                         <div class="text-2xl font-mono text-slate-400">&rarr;</div>
+                         <div class="hierarchy-item p-3 rounded-lg w-full md:w-auto" data-info="Extremely fast memory built into the CPU. It stores frequently used data from RAM to prevent delays.">
+                            <div class="font-bold text-lg">⚡</div>
+                             <div class="font-semibold mt-1">CPU Cache</div>
+                             <div class="text-xs text-slate-500">(SRAM)</div>
+                         </div>
+                         <div class="text-2xl font-mono text-slate-400">&rarr;</div>
+                         <div class="hierarchy-item p-3 rounded-lg w-full md:w-auto" data-info="The fastest, smallest memory, right inside the CPU core, holding the exact data being processed at this instant.">
+                            <div class="font-bold text-lg">🧠</div>
+                             <div class="font-semibold mt-1">CPU Registers</div>
+                             <div class="text-xs text-slate-500">(Inside CPU)</div>
+                         </div>
+                     </div>
+                     <div id="hierarchy-info-box" class="mt-4 p-3 bg-sky-50 text-sky-800 rounded-lg text-sm min-h-[50px]">
+                        Click or hover on an item to learn more.
+                     </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="evolution" class="py-12">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-slate-900 tracking-tight">The Evolution of DDR RAM</h2>
+                <p class="mt-3 max-w-2xl mx-auto text-lg text-slate-600">From the turn of the millennium, DDR SDRAM has continuously evolved, doubling bandwidth with each generation to keep pace with faster processors. This chart tracks the rise in speed over time.</p>
+            </div>
+            <div class="bg-white p-4 md:p-6 rounded-lg shadow-lg">
+                <div class="chart-container">
+                    <canvas id="ddrEvolutionChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="deep-dive" class="py-12">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-slate-900 tracking-tight">RAM Deep Dive</h2>
+                <p class="mt-3 max-w-2xl mx-auto text-lg text-slate-600">Explore the technical underpinnings of RAM. Use the tabs below to switch between topics like memory types, internal workings, and performance metrics.</p>
+            </div>
+            <div class="w-full max-w-4xl mx-auto">
+                <div class="mb-6 flex justify-center flex-wrap gap-2">
+                    <button class="tab-button px-4 py-2 text-sm font-semibold rounded-full bg-white shadow-sm text-slate-700 active" data-tab="types">Types of RAM</button>
+                    <button class="tab-button px-4 py-2 text-sm font-semibold rounded-full bg-white shadow-sm text-slate-700" data-tab="how-it-works">How It Works</button>
+                    <button class="tab-button px-4 py-2 text-sm font-semibold rounded-full bg-white shadow-sm text-slate-700" data-tab="performance">Performance</button>
+                </div>
+                <div id="tabs-content" class="bg-white p-6 rounded-lg shadow-lg min-h-[400px]">
+                    
+                    <div id="types-content" class="tab-content">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">Key RAM Technologies</h3>
+                        <p class="text-slate-600 mb-6">RAM isn't monolithic. Different types are designed for different roles, balancing speed, cost, and power.</p>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                                <h4 class="font-bold text-slate-900">SRAM (Static RAM)</h4>
+                                <p class="text-sm text-slate-600 mt-1">Extremely fast and expensive. Uses transistors to store data and doesn't need refreshing. Perfect for CPU Caches (L1, L2, L3) where speed is everything.</p>
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                                <h4 class="font-bold text-slate-900">DRAM (Dynamic RAM)</h4>
+                                <p class="text-sm text-slate-600 mt-1">The workhorse. Uses a tiny capacitor and transistor per bit, making it dense and affordable. Requires constant refreshing. Used for main system memory.</p>
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                                <h4 class="font-bold text-slate-900">SDRAM (Synchronous DRAM)</h4>
+                                <p class="text-sm text-slate-600 mt-1">An evolution of DRAM that synchronized with the system clock, improving efficiency and paving the way for DDR.</p>
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                                <h4 class="font-bold text-slate-900">ECC RAM (Error-Correcting Code)</h4>
+                                <p class="text-sm text-slate-600 mt-1">A specialized type of DRAM with an extra chip to detect and correct data corruption. Essential for servers and critical workstations where data integrity is paramount.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="how-it-works-content" class="tab-content hidden">
+                         <h3 class="text-xl font-bold text-slate-800 mb-4">Inside a DRAM Chip</h3>
+                         <p class="text-slate-600 mb-6">DRAM stores data as electrical charges in millions of tiny cells arranged in a grid of rows and columns. Accessing a single bit involves activating a row (wordline) and then selecting a column (bitline). This diagram simplifies the concept.</p>
+                         <div class="flex flex-col items-center p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <div class="font-mono text-xs text-slate-500">Memory Array (Grid of Cells)</div>
+                            <div id="dram-grid" class="mt-4 grid grid-cols-8 gap-1 w-64 h-32"></div>
+                            <div class="mt-4 flex space-x-4">
+                                <button id="read-write-button" class="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition">Simulate Access</button>
+                            </div>
+                            <div id="dram-op-info" class="mt-4 text-sm text-slate-700 h-5"></div>
+                         </div>
+                    </div>
+
+                    <div id="performance-content" class="tab-content hidden">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">Performance: It's a Balancing Act</h3>
+                        <p class="text-slate-600 mb-6">RAM performance isn't just about speed (frequency). It's a trade-off between how fast data can be transferred and the delay (latency) before that transfer begins. Multi-channel architecture also plays a huge role in total bandwidth.</p>
+                        <div class="chart-container">
+                             <canvas id="performanceChart"></canvas>
+                        </div>
+                        <div class="text-center mt-4">
+                            <p class="text-sm text-slate-500">A dual-channel setup (using two RAM sticks) effectively doubles the data path to the CPU, significantly boosting bandwidth.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="use-cases" class="py-12">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-slate-900 tracking-tight">RAM in the Real World (2025)</h2>
+                <p class="mt-3 max-w-2xl mx-auto text-lg text-slate-600">How much RAM do you actually need? It depends entirely on your workload. Select a profile below to see the recommended RAM capacity for 2025.</p>
+            </div>
+
+            <div class="max-w-4xl mx-auto grid md:grid-cols-3 gap-8 items-start">
+                <div class="md:col-span-1">
+                     <label for="use-case-selector" class="block text-sm font-medium text-slate-700 mb-2">Select Your Profile:</label>
+                     <select id="use-case-selector" class="w-full p-3 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                         <option value="casual">Casual User</option>
+                         <option value="gaming" selected>Mainstream Gaming</option>
+                         <option value="pro_gaming">High-End Gaming/VR</option>
+                         <option value="programming">Software Development</option>
+                         <option value="video_hd">HD Video Editing</option>
+                         <option value="video_4k">4K Video Editing</option>
+                         <option value="server">Web Server</option>
+                     </select>
+                     <div id="use-case-text" class="mt-6 text-slate-600"></div>
+                </div>
+                <div class="md:col-span-2 bg-white p-4 md:p-6 rounded-lg shadow-lg">
+                    <div class="chart-container" style="height:300px; max-height:300px;">
+                        <canvas id="useCaseChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="future" class="py-12">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-slate-900 tracking-tight">The Future of Memory</h2>
+                <p class="mt-3 max-w-2xl mx-auto text-lg text-slate-600">The quest for faster, denser, and more efficient memory never stops. Here's a glimpse of what's next.</p>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-md card">
+                    <h3 class="text-xl font-bold text-slate-900">DDR6</h3>
+                    <p class="mt-2 text-slate-600">The next mainstream standard, projected to double DDR5's bandwidth. Expect starting speeds around 12,800 MT/s, pushing systems to new performance heights.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md card">
+                    <h3 class="text-xl font-bold text-slate-900">HBM</h3>
+                    <p class="mt-2 text-slate-600">High Bandwidth Memory uses 3D stacking of DRAM dies for an ultra-wide data path. It provides massive bandwidth for AI accelerators and high-end GPUs.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md card">
+                    <h3 class="text-xl font-bold text-slate-900">3D Stacking</h3>
+                    <p class="mt-2 text-slate-600">Beyond HBM, this involves fabricating memory cells in vertical layers on a single chip, promising revolutionary increases in density and efficiency, much like 3D NAND flash.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md card">
+                    <h3 class="text-xl font-bold text-slate-900">Unified Memory</h3>
+                    <p class="mt-2 text-slate-600">An architecture where the CPU, GPU, and other processors share a single pool of memory. This eliminates slow data copies between components, boosting efficiency in heterogeneous computing (e.g., Apple M-series chips).</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    
+    <footer class="bg-slate-800 text-slate-400">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-sm">
+            <p>Interactive report generated based on "A Comprehensive Analysis of Random Access Memory".</p>
+            <p>&copy; 2025 RAM Explained. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            const ddrEvolutionData = {
+                labels: ['SDR', 'DDR1', 'DDR2', 'DDR3', 'DDR4', 'DDR5', 'DDR6 (Est.)'],
+                datasets: [{
+                    label: 'Max Transfer Rate (MT/s)',
+                    data: [133, 400, 1066, 2133, 3200, 8400, 17000],
+                    backgroundColor: 'rgba(2, 132, 199, 0.2)',
+                    borderColor: 'rgba(2, 132, 199, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(2, 132, 199, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(2, 132, 199, 1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            };
+
+            const evolutionCtx = document.getElementById('ddrEvolutionChart').getContext('2d');
+            new Chart(evolutionCtx, {
+                type: 'line',
+                data: ddrEvolutionData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'MegaTransfers per Second (MT/s)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'RAM Generation' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.dataset.label}: ${context.parsed.y} MT/s`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const performanceData = {
+                labels: ['Single Channel', 'Dual Channel'],
+                datasets: [{
+                    label: 'Peak Bandwidth (GB/s) for DDR5-6400',
+                    data: [51.2, 102.4],
+                    backgroundColor: ['rgba(56, 189, 248, 0.6)', 'rgba(2, 132, 199, 0.6)'],
+                    borderColor: ['rgba(56, 189, 248, 1)', 'rgba(2, 132, 199, 1)'],
+                    borderWidth: 1
+                }]
+            };
+
+            const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+            new Chart(performanceCtx, {
+                type: 'bar',
+                data: performanceData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Theoretical Peak Bandwidth (GB/s)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Impact of Multi-Channel Architecture' }
+                    }
+                }
+            });
+
+            const useCaseData = {
+                casual: {
+                    text: "For web browsing, email, streaming, and office apps, 16GB provides a comfortable experience, avoiding slowdowns even with many browser tabs open.",
+                    values: [8, 16]
+                },
+                gaming: {
+                    text: "16GB is the sweet spot for most modern titles at good settings. 32GB is becoming advisable for more demanding AAA games at high resolutions to prevent stuttering.",
+                    values: [16, 32]
+                },
+                pro_gaming: {
+                    text: "For elite 4K gaming, VR, and simultaneous streaming, 32GB is the clear recommendation to handle complex game assets and background software without a hitch.",
+                    values: [32, 32]
+                },
+                programming: {
+                    text: "While 16GB is a decent start, 32GB is strongly preferred for running IDEs, multiple emulators or containers (like Docker), and compiling large codebases smoothly.",
+                    values: [16, 32]
+                },
+                video_hd: {
+                    text: "For basic 1080p projects, 16GB is sufficient. For more complex edits with effects and color grading, 32GB ensures a much smoother workflow.",
+                    values: [16, 32]
+                },
+                video_4k: {
+                    text: "32GB is the optimal capacity for efficient 4K video editing. It allows for smoother playback, faster rendering, and better handling of large project files.",
+                    values: [32, 64]
+                },
+                server: {
+                    text: "For a moderate traffic web server, 16GB of ECC RAM is a good minimum, with 32GB recommended to handle traffic spikes, caching, and database queries.",
+                    values: [16, 32]
+                }
+            };
+
+            const useCaseCtx = document.getElementById('useCaseChart').getContext('2d');
+            let useCaseChart = new Chart(useCaseCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Minimum Recommended', 'Optimal Recommended'],
+                    datasets: [{
+                        label: 'RAM Capacity (GB)',
+                        data: useCaseData.gaming.values,
+                        backgroundColor: ['rgba(251, 146, 60, 0.6)', 'rgba(234, 88, 12, 0.6)'],
+                        borderColor: ['rgba(251, 146, 60, 1)', 'rgba(234, 88, 12, 1)'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Capacity (GB)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'RAM for Mainstream Gaming' }
+                    }
+                }
+            });
+
+            const useCaseSelector = document.getElementById('use-case-selector');
+            const useCaseText = document.getElementById('use-case-text');
+
+            function updateUseCase() {
+                const selectedValue = useCaseSelector.value;
+                const selectedData = useCaseData[selectedValue];
+                const selectedLabel = useCaseSelector.options[useCaseSelector.selectedIndex].text;
+                
+                useCaseText.textContent = selectedData.text;
+                useCaseChart.data.datasets[0].data = selectedData.values;
+                useCaseChart.options.plugins.title.text = `RAM for ${selectedLabel}`;
+                useCaseChart.update();
+            }
+
+            useCaseSelector.addEventListener('change', updateUseCase);
+            updateUseCase();
+            
+            const tabs = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    const targetId = tab.dataset.tab + '-content';
+                    tabContents.forEach(content => {
+                        if (content.id === targetId) {
+                            content.classList.remove('hidden');
+                        } else {
+                            content.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+
+            const hierarchyItems = document.querySelectorAll('.hierarchy-item');
+            const hierarchyInfoBox = document.getElementById('hierarchy-info-box');
+
+            hierarchyItems.forEach(item => {
+                const info = item.dataset.info;
+                item.addEventListener('mouseenter', () => {
+                    hierarchyInfoBox.textContent = info;
+                    item.classList.add('bg-sky-100');
+                });
+                item.addEventListener('mouseleave', () => {
+                     item.classList.remove('bg-sky-100');
+                });
+                item.addEventListener('click', () => {
+                    hierarchyInfoBox.textContent = info;
+                });
+            });
+
+            const dramGrid = document.getElementById('dram-grid');
+            for(let i = 0; i < 64; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'w-4 h-4 bg-slate-200 rounded-sm transition-colors duration-300';
+                dramGrid.appendChild(cell);
+            }
+            
+            const dramOpInfo = document.getElementById('dram-op-info');
+            document.getElementById('read-write-button').addEventListener('click', () => {
+                const cells = dramGrid.children;
+                const randRow = Math.floor(Math.random() * 8);
+                const randCol = Math.floor(Math.random() * 8);
+                
+                dramOpInfo.textContent = `Activating row ${randRow+1}...`;
+                
+                for(let i=0; i < cells.length; i++) {
+                    cells[i].classList.remove('bg-sky-300', 'bg-red-400');
+                }
+                
+                setTimeout(() => {
+                    for(let i = randRow * 8; i < (randRow + 1) * 8; i++) {
+                        cells[i].classList.add('bg-sky-300');
+                    }
+                    dramOpInfo.textContent = `Accessing column ${randCol+1}...`;
+
+                    setTimeout(() => {
+                         const targetCell = cells[randRow * 8 + randCol];
+                         targetCell.classList.add('bg-red-400');
+                         dramOpInfo.textContent = `Data at [${randRow+1}, ${randCol+1}] accessed!`;
+                    }, 800);
+                }, 800);
+            });
+            
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('section');
+
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 80) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').includes(current)) {
+                        link.classList.add('active');
+                    }
+                });
+            });
+
+
+        });
+    </script>
+</body>
+</html>

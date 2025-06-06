@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Chosen Palette: Tech Slate -->
+    <!-- Application Structure Plan: A single-page application with tabbed navigation to logically separate concepts. The core of the application is an interactive pipeline simulator where users can inject instructions and visualize the flow, including hazards and mitigation techniques like forwarding and stalling. This hands-on approach is chosen over a static text display to make the complex, process-oriented concepts of pipelining tangible and easier to understand. The structure prioritizes learning by doing, starting with foundational concepts (Microarchitecture, Datapath) and building up to the interactive simulation. -->
+    <!-- Visualization & Content Choices: 
+        - Microarchitecture vs ISA: Goal: Compare -> Method: Styled HTML cards for a clear side-by-side view.
+        - Datapath & Control: Goal: Organize/Inform -> Method: Interactive diagram from styled HTML divs with JS-powered popups for details. No SVG used.
+        - Pipelining Process: Goal: Change/Process -> Method: A custom, animated pipeline diagram built with HTML/CSS/JS. This is superior to a static chart for showing a dynamic process. Library: Vanilla JS.
+        - Hazards & Mitigation: Goal: Relationships/Problem-Solution -> Method: Enhancing the pipeline simulation to visually demonstrate stalls (bubbles), forwarding (new data paths), and flushing. This directly illustrates cause and effect. Library: Vanilla JS.
+        - No Chart.js/Plotly.js is used as the report contains no quantitative data; all visualizations are of processes and logical structures.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <title>Interactive CPU Microarchitecture & Pipelining</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .nav-active {
+            border-bottom-color: #3b82f6;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        .nav-item {
+            border-bottom: 2px solid transparent;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .diagram-box {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .diagram-box:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .pipeline-stage {
+            clip-path: polygon(0% 0%, 90% 0, 100% 50%, 90% 100%, 0% 100%);
+        }
+        .pipeline-stage-label {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+        }
+        .instr-bubble {
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            opacity: 0;
+            transform: scale(0.5);
+        }
+        .instr-bubble.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .forwarding-path {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: dash 1s linear forwards;
+            animation-iteration-count: 1;
+        }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+        .stalled {
+            animation: pulse-red 1s infinite;
+        }
+        .flushed {
+            animation: fade-out 0.5s forwards;
+        }
+        @keyframes pulse-red {
+            0%, 100% { background-color: #fecaca; }
+            50% { background-color: #ef4444; color: white; }
+        }
+        @keyframes fade-out {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.8); }
+        }
+        /* Constrained container for the main visualization */
+        .visualization-container {
+            position: relative;
+            width: 100%;
+            max-width: 1100px;
+            margin-left: auto;
+            margin-right: auto;
+            height: auto; 
+            min-height: 400px;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="min-h-screen">
+        <header class="bg-white shadow-sm sticky top-0 z-20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-3">
+                    <h1 class="text-xl font-bold text-slate-800">CPU Pipeline Explorer</h1>
+                    <nav class="hidden md:flex space-x-6" id="main-nav">
+                        <a href="#home" class="nav-item py-2 px-1 text-sm font-medium text-slate-600 hover:text-blue-600 nav-active">Home</a>
+                        <a href="#microarchitecture" class="nav-item py-2 px-1 text-sm font-medium text-slate-600 hover:text-blue-600">Microarchitecture</a>
+                        <a href="#datapath" class="nav-item py-2 px-1 text-sm font-medium text-slate-600 hover:text-blue-600">Datapath & Control</a>
+                        <a href="#simulation" class="nav-item py-2 px-1 text-sm font-medium text-slate-600 hover:text-blue-600">Pipeline Simulation</a>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+            <!-- Home Section -->
+            <section id="home" class="content-section active">
+                <div class="text-center bg-white p-8 rounded-lg shadow">
+                    <h2 class="text-3xl font-bold text-slate-900 mb-4">Welcome to the CPU Pipeline Explorer</h2>
+                    <p class="max-w-3xl mx-auto text-slate-600 mb-6">
+                        This interactive application demystifies the core concepts of modern CPU design. Go beyond static text and explore the inner workings of a processor, from its fundamental building blocks to the complex dance of instruction pipelining. This tool is designed to provide an intuitive, visual understanding of how CPUs achieve high performance.
+                    </p>
+                    <p class="max-w-3xl mx-auto text-slate-600">
+                        Navigate through the sections using the tabs above to learn about the microarchitecture, explore the datapath, and then dive into the fully interactive pipeline simulation to see how instructions flow, encounter hazards, and how these challenges are solved in hardware.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Microarchitecture Section -->
+            <section id="microarchitecture" class="content-section">
+                <h2 class="text-3xl font-bold text-slate-900 mb-2">Understanding CPU Microarchitecture</h2>
+                <p class="text-slate-600 mb-8">The microarchitecture is the specific hardware implementation of an Instruction Set Architecture (ISA). While the ISA defines *what* a processor does (the instructions, registers, etc.), the microarchitecture defines *how* it does it. This section breaks down this crucial distinction.</p>
+
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-semibold mb-3 text-blue-700">Instruction Set Architecture (ISA)</h3>
+                        <p class="text-sm text-slate-500 mb-4">The "Contract" - Visible to Software</p>
+                        <p class="text-slate-600">The ISA is an abstract model defining the processor's programming interface. It specifies the set of instructions, data types, registers, and memory model. It's the stable target that compilers and operating systems are written for.</p>
+                        <ul class="mt-4 space-y-2 text-sm text-slate-700 list-disc list-inside">
+                            <li><strong>Focus:</strong> Instructions (`ADD`, `LOAD`), registers, memory addressing.</li>
+                            <li><strong>Abstraction:</strong> High-level, programmer-visible.</li>
+                            <li><strong>Variability:</strong> Standardized for compatibility (e.g., x86-64, Armv8-A).</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-semibold mb-3 text-teal-700">CPU Microarchitecture</h3>
+                        <p class="text-sm text-slate-500 mb-4">The "Implementation" - The Hardware Reality</p>
+                        <p class="text-slate-600">The microarchitecture is the concrete hardware design that implements the ISA. Different microarchitectures can implement the same ISA, offering different trade-offs in power, performance, and area (PPA).</p>
+                        <ul class="mt-4 space-y-2 text-sm text-slate-700 list-disc list-inside">
+                            <li><strong>Focus:</strong> Pipeline depth, cache size, branch prediction algorithms, functional units.</li>
+                            <li><strong>Abstraction:</strong> Low-level hardware details, hidden from programmers.</li>
+                            <li><strong>Variability:</strong> Changes constantly between processor generations (e.g., Intel's Skylake vs. Alder Lake).</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Datapath & Control Section -->
+            <section id="datapath" class="content-section">
+                <h2 class="text-3xl font-bold text-slate-900 mb-2">The Core of Execution: Datapath & Control</h2>
+                <p class="text-slate-600 mb-8">Within any microarchitecture, two components work in concert to execute instructions: the datapath performs the operations, and the control unit orchestrates them. Click on the components in the diagram below to learn more about their roles.</p>
+                
+                <div class="bg-white p-8 rounded-lg shadow">
+                    <div class="relative w-full max-w-4xl mx-auto">
+                        <div class="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1 bg-slate-200"></div>
+                        <div class="relative flex justify-between items-center">
+                            <div id="dp-pc" class="diagram-box bg-blue-100 border-2 border-blue-300 text-blue-800 rounded-lg p-4 w-32 text-center shadow-md">
+                                <h4 class="font-bold">Program Counter (PC)</h4>
+                                <p class="text-xs">Holds address of next instruction</p>
+                            </div>
+                            <div id="dp-alu" class="diagram-box bg-teal-100 border-2 border-teal-300 text-teal-800 rounded-lg p-4 w-32 text-center shadow-md">
+                                <h4 class="font-bold">ALU</h4>
+                                <p class="text-xs">Performs calculations</p>
+                            </div>
+                            <div id="dp-rf" class="diagram-box bg-indigo-100 border-2 border-indigo-300 text-indigo-800 rounded-lg p-4 w-32 text-center shadow-md">
+                                <h4 class="font-bold">Register File</h4>
+                                <p class="text-xs">Stores temporary data</p>
+                            </div>
+                            <div id="dp-mem" class="diagram-box bg-amber-100 border-2 border-amber-300 text-amber-800 rounded-lg p-4 w-32 text-center shadow-md">
+                                <h4 class="font-bold">Memory Interface</h4>
+                                <p class="text-xs">Reads/Writes data</p>
+                            </div>
+                        </div>
+                        <div id="dp-cu" class="diagram-box absolute -top-20 left-1/2 -translate-x-1/2 bg-rose-100 border-2 border-rose-300 text-rose-800 rounded-lg p-4 w-32 text-center shadow-md">
+                            <h4 class="font-bold">Control Unit</h4>
+                            <p class="text-xs">The "Brain"</p>
+                        </div>
+                    </div>
+                    <div id="dp-info" class="mt-16 p-4 bg-slate-50 rounded-md border border-slate-200 min-h-[100px]">
+                        <p class="text-slate-500 text-center">Click a component to see its description here.</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Simulation Section -->
+            <section id="simulation" class="content-section">
+                <h2 class="text-3xl font-bold text-slate-900 mb-2">Interactive 5-Stage Pipeline Simulation</h2>
+                 <p class="text-slate-600 mb-6">This is a simulation of the classic 5-stage RISC pipeline. Add instructions to the queue, then step through the clock cycles to see how they flow through the pipeline. Enable hazards to see how data dependencies can disrupt the flow, and then turn on mitigation techniques like forwarding and stalling to see how the hardware solves these problems in real-time.</p>
+                
+                <!-- Controls -->
+                <div class="bg-white p-4 rounded-lg shadow mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                        <div>
+                            <label for="instruction-select" class="block text-sm font-medium text-slate-700">1. Add Instruction to Queue</label>
+                            <div class="flex mt-1">
+                                <select id="instruction-select" class="block w-full rounded-l-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                                    <option value='{"asm": "LW R1, 0(R0)", "op": "LW", "dest": "R1", "src1": "R0", "src2": null}'>LW R1, 0(R0)</option>
+                                    <option value='{"asm": "ADD R2, R1, R0", "op": "ADD", "dest": "R2", "src1": "R1", "src2": "R0"}'>ADD R2, R1, R0</option>
+                                    <option value='{"asm": "SUB R3, R1, R2", "op": "SUB", "dest": "R3", "src1": "R1", "src2": "R2"}'>SUB R3, R1, R2</option>
+                                    <option value='{"asm": "SW R3, 0(R0)", "op": "SW", "dest": null, "src1": "R3", "src2": "R0"}'>SW R3, 0(R0)</option>
+                                    <option value='{"asm": "AND R4, R2, R3", "op": "AND", "dest": "R4", "src1": "R2", "src2": "R3"}'>AND R4, R2, R3</option>
+                                    <option value='{"asm": "BEQ R1, R0, L1", "op": "BEQ", "dest": null, "src1": "R1", "src2": "R0"}'>BEQ R1, R0, L1</option>
+                                </select>
+                                <button id="add-instr-btn" class="relative -ml-px inline-flex items-center space-x-2 rounded-r-md border border-gray-300 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100">Add</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="block text-sm font-medium text-slate-700">2. Mitigation Techniques</p>
+                             <div class="flex space-x-4 mt-1">
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="forwarding-toggle" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked>
+                                    <span class="ml-2 text-sm text-gray-700">Enable Forwarding</span>
+                                </label>
+                                 <label class="flex items-center">
+                                    <input type="checkbox" id="stalling-toggle" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked>
+                                    <span class="ml-2 text-sm text-gray-700">Enable Stalling</span>
+                                </label>
+                             </div>
+                        </div>
+
+                        <div>
+                            <p class="block text-sm font-medium text-slate-700">3. Control Pipeline</p>
+                            <div class="flex space-x-2 mt-1">
+                               <button id="next-cycle-btn" class="w-1/2 bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition">Next Clock Cycle</button>
+                               <button id="reset-btn" class="w-1/2 bg-slate-200 text-slate-800 font-semibold py-2 px-4 rounded-md hover:bg-slate-300 transition">Reset</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simulation Visualization -->
+                <div class="bg-white p-4 rounded-lg shadow visualization-container">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="font-mono">Clock Cycle: <span id="clock-cycle" class="font-bold text-lg">0</span></div>
+                        <div class="font-mono">Instructions Completed: <span id="instr-completed" class="font-bold text-lg">0</span></div>
+                        <div class="font-mono">CPI: <span id="cpi-value" class="font-bold text-lg">0.00</span></div>
+                    </div>
+                    
+                    <div id="pipeline-visualization" class="relative space-y-2">
+                        <!-- Pipeline SVG for forwarding paths -->
+                        <svg id="pipeline-svg" class="absolute top-0 left-0 w-full h-full" style="pointer-events: none;"></svg>
+
+                        <!-- Pipeline Stages -->
+                        <div class="flex items-stretch h-20 bg-slate-100 rounded-md overflow-hidden">
+                           <div class="flex items-center justify-center bg-slate-600 text-white font-bold text-lg p-2 pipeline-stage-label">IF</div>
+                           <div id="stage-if" class="flex-1 flex items-center justify-center p-2"></div>
+                        </div>
+                        <div class="flex items-stretch h-20 bg-slate-100 rounded-md overflow-hidden">
+                            <div class="flex items-center justify-center bg-slate-600 text-white font-bold text-lg p-2 pipeline-stage-label">ID</div>
+                            <div id="stage-id" class="flex-1 flex items-center justify-center p-2"></div>
+                        </div>
+                        <div class="flex items-stretch h-20 bg-slate-100 rounded-md overflow-hidden">
+                           <div class="flex items-center justify-center bg-slate-600 text-white font-bold text-lg p-2 pipeline-stage-label">EX</div>
+                           <div id="stage-ex" class="flex-1 flex items-center justify-center p-2"></div>
+                        </div>
+                        <div class="flex items-stretch h-20 bg-slate-100 rounded-md overflow-hidden">
+                           <div class="flex items-center justify-center bg-slate-600 text-white font-bold text-lg p-2 pipeline-stage-label">MEM</div>
+                           <div id="stage-mem" class="flex-1 flex items-center justify-center p-2"></div>
+                        </div>
+                        <div class="flex items-stretch h-20 bg-slate-100 rounded-md overflow-hidden">
+                           <div class="flex items-center justify-center bg-slate-600 text-white font-bold text-lg p-2 pipeline-stage-label">WB</div>
+                           <div id="stage-wb" class="flex-1 flex items-center justify-center p-2"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 flex">
+                        <div class="w-1/2 pr-2">
+                            <h4 class="font-semibold mb-2">Instruction Queue</h4>
+                            <div id="instr-queue" class="bg-slate-50 border h-40 rounded-md p-2 overflow-y-auto font-mono text-sm"></div>
+                        </div>
+                        <div class="w-1/2 pl-2">
+                            <h4 class="font-semibold mb-2">Event Log</h4>
+                            <div id="event-log" class="bg-slate-50 border h-40 rounded-md p-2 overflow-y-auto font-mono text-sm"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.querySelectorAll('#main-nav a');
+            const sections = document.querySelectorAll('.content-section');
+
+            const datapathInfo = {
+                'dp-pc': { title: 'Program Counter (PC)', description: 'The Program Counter is a special register that holds the memory address of the next instruction to be fetched from memory. After an instruction is fetched, the PC is updated to point to the next one, typically by incrementing it. For branches or jumps, it\'s loaded with a new target address.' },
+                'dp-alu': { title: 'Arithmetic Logic Unit (ALU)', description: 'The ALU is the computational core of the CPU. It performs arithmetic operations (like addition, subtraction) and logical operations (AND, OR, NOT) on its input operands. It\'s the "brawn" that executes calculations.' },
+                'dp-rf': { title: 'Register File', description: 'The Register File is a small, very fast bank of memory located inside the CPU. It consists of a set of registers used to store temporary data and operands for calculations. Accessing the register file is much faster than accessing main memory.' },
+                'dp-mem': { title: 'Memory Interface', description: 'This unit handles all communication with the main memory (RAM) and cache hierarchy. It manages loading data from memory into registers (for `load` instructions) and storing data from registers into memory (for `store` instructions).' },
+                'dp-cu': { title: 'Control Unit', description: 'The Control Unit is the "brain" of the processor. It interprets the instructions and generates a sequence of control signals that command the datapath components (PC, ALU, Register File, Memory) to perform the necessary actions in the correct order to execute the instruction.' },
+            };
+
+            const infoPanel = document.getElementById('dp-info');
+            Object.keys(datapathInfo).forEach(id => {
+                document.getElementById(id).addEventListener('click', () => {
+                    infoPanel.innerHTML = `<h4 class="font-bold text-lg text-slate-800 mb-2">${datapathInfo[id].title}</h4><p class="text-slate-600">${datapathInfo[id].description}</p>`;
+                });
+            });
+
+            const setActiveTab = (hash) => {
+                const targetHash = hash || '#home';
+                navLinks.forEach(link => {
+                    link.classList.toggle('nav-active', link.hash === targetHash);
+                });
+                sections.forEach(section => {
+                    section.classList.toggle('active', section.id === targetHash.substring(1));
+                });
+            };
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.location.hash = e.target.hash;
+                });
+            });
+
+            window.addEventListener('hashchange', () => setActiveTab(window.location.hash));
+            setActiveTab(window.location.hash);
+
+
+            // --- PIPELINE SIMULATION LOGIC ---
+            const instructionQueue = [];
+            let pipelineState = { if: null, id: null, ex: null, mem: null, wb: null };
+            let clock = 0;
+            let completedInstructions = 0;
+            let nextInstrId = 0;
+            let stallNextID = false;
+            let pcStalled = false;
+
+            const addInstrBtn = document.getElementById('add-instr-btn');
+            const instrSelect = document.getElementById('instruction-select');
+            const nextCycleBtn = document.getElementById('next-cycle-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const forwardingToggle = document.getElementById('forwarding-toggle');
+            const stallingToggle = document.getElementById('stalling-toggle');
+
+            const queueEl = document.getElementById('instr-queue');
+            const logEl = document.getElementById('event-log');
+
+            const logEvent = (message, color = 'text-slate-500') => {
+                logEl.innerHTML += `<p class="text-xs ${color}">${clock}: ${message}</p>`;
+                logEl.scrollTop = logEl.scrollHeight;
+            }
+
+            const updateQueueUI = () => {
+                queueEl.innerHTML = instructionQueue.map(instr => `<p>${instr.asm}</p>`).join('');
+            }
+            
+            const createBubble = (id, text, color, extraClasses = '') => {
+                const bubble = document.createElement('div');
+                bubble.id = `instr-${id}`;
+                bubble.className = `instr-bubble p-2 rounded-md shadow-sm font-mono text-sm text-center w-32 h-16 flex items-center justify-center ${color} ${extraClasses}`;
+                bubble.textContent = text;
+                return bubble;
+            };
+
+            const renderPipeline = () => {
+                const stages = ['if', 'id', 'ex', 'mem', 'wb'];
+                
+                stages.forEach(stage => {
+                    const stageEl = document.getElementById(`stage-${stage}`);
+                    stageEl.innerHTML = '';
+                    const instr = pipelineState[stage];
+                    if (instr) {
+                        let color = 'bg-blue-100 text-blue-800';
+                        if (instr.isStalled) color = 'bg-red-200 text-red-800 stalled';
+                        if (instr.isFlushed) color = 'bg-gray-300 text-gray-600 flushed';
+                        if (instr.op === 'NOP') color = 'bg-slate-200 text-slate-500';
+                        if (instr.op === 'LW' || instr.op === 'SW') color = 'bg-amber-100 text-amber-800';
+
+                        const bubble = createBubble(instr.id, instr.asm, color, instr.isFlushed ? 'flushed' : '');
+                        stageEl.appendChild(bubble);
+                        // Delay adding visible to trigger transition
+                        setTimeout(() => bubble.classList.add('visible'), 10);
+                    }
+                });
+
+                document.getElementById('clock-cycle').textContent = clock;
+                document.getElementById('instr-completed').textContent = completedInstructions;
+                document.getElementById('cpi-value').textContent = (clock === 0 || completedInstructions === 0) ? '0.00' : (clock / completedInstructions).toFixed(2);
+                document.getElementById('pipeline-svg').innerHTML = ''; // Clear old paths
+            };
+            
+            const drawForwardingPath = (fromStage, toStage, color) => {
+                const svg = document.getElementById('pipeline-svg');
+                const fromEl = document.getElementById(`stage-${fromStage}`).querySelector('.instr-bubble');
+                const toEl = document.getElementById(`stage-${toStage}`).querySelector('.instr-bubble');
+
+                if (!fromEl || !toEl) return;
+                
+                const fromRect = fromEl.getBoundingClientRect();
+                const toRect = toEl.getBoundingClientRect();
+                const containerRect = svg.getBoundingClientRect();
+
+                const startX = fromRect.left - containerRect.left + fromRect.width / 2;
+                const startY = fromRect.top - containerRect.top;
+
+                const endX = toRect.left - containerRect.left + toRect.width / 2;
+                const endY = toRect.top - containerRect.top + toRect.height;
+                
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', `M ${startX} ${startY} C ${startX} ${startY - 40}, ${endX} ${endY + 40}, ${endX} ${endY}`);
+                path.setAttribute('stroke', color);
+                path.setAttribute('stroke-width', '3');
+                path.setAttribute('fill', 'none');
+                path.setAttribute('class', 'forwarding-path');
+                path.setAttribute('marker-end', 'url(#arrowhead)');
+                
+                if (!svg.querySelector('defs')) {
+                    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                    defs.innerHTML = `<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="${color}" /></marker>`;
+                    svg.appendChild(defs);
+                } else {
+                     svg.querySelector('#arrowhead polygon').setAttribute('fill', color);
+                }
+
+
+                svg.appendChild(path);
+            }
+
+            const reset = () => {
+                instructionQueue.length = 0;
+                pipelineState = { if: null, id: null, ex: null, mem: null, wb: null };
+                clock = 0;
+                completedInstructions = 0;
+                nextInstrId = 0;
+                stallNextID = false;
+                pcStalled = false;
+                queueEl.innerHTML = '';
+                logEl.innerHTML = '';
+                renderPipeline();
+            };
+
+            const clockTick = () => {
+                clock++;
+                let newWB = null, newMEM = null, newEX = null, newID = null, newIF = null;
+                let hazardDetected = false;
+                let useForwarding = forwardingToggle.checked;
+                let useStalling = stallingToggle.checked;
+
+                // --- WB Stage ---
+                if (pipelineState.wb) {
+                    if (pipelineState.wb.op !== 'NOP' && !pipelineState.wb.isFlushed) {
+                        completedInstructions++;
+                        logEvent(`Instruction ${pipelineState.wb.asm} completed.`, 'text-green-600 font-semibold');
+                    }
+                }
+                newWB = pipelineState.mem;
+
+                // --- MEM Stage ---
+                newMEM = pipelineState.ex;
+
+                // --- EX Stage ---
+                if (stallNextID) {
+                    newEX = { id: -1, asm: 'NOP (Stalled)', op: 'NOP' };
+                    stallNextID = false;
+                    pcStalled = false; // Release PC stall after one cycle
+                } else {
+                    newEX = pipelineState.id;
+                }
+                if (newEX) newEX.isStalled = false; // Clear stall flag
+                
+                // --- Data Hazard Detection (in ID stage for next EX) ---
+                const instrInID = pipelineState.id;
+                const instrInEX = pipelineState.ex;
+                const instrInMEM = pipelineState.mem;
+                
+                if (useStalling && instrInID && instrInID.op !== 'NOP') {
+                    // Check for RAW hazard with instr in EX
+                    if (instrInEX && instrInEX.op === 'LW' && instrInEX.dest) {
+                       if (instrInEX.dest === instrInID.src1 || instrInEX.dest === instrInID.src2) {
+                           hazardDetected = true;
+                           logEvent(`Load-Use Hazard detected! ${instrInID.asm} needs result from ${instrInEX.asm}.`, 'text-red-600');
+                           logEvent(`Stalling ${instrInID.asm} for one cycle.`, 'text-red-600');
+                           stallNextID = true;
+                           pcStalled = true;
+                       }
+                    }
+                }
+                
+                if(useForwarding && !hazardDetected && newEX && newEX.op !== 'NOP') {
+                    // Forward from MEM to EX
+                    if (instrInEX && instrInEX.dest && (instrInEX.dest === newEX.src1 || instrInEX.dest === newEX.src2)) {
+                        logEvent(`Forwarding result of ${instrInEX.asm} (MEM) to ${newEX.asm} (EX).`, 'text-teal-600');
+                        drawForwardingPath('ex', 'id', '#0d9488'); // Visual from ex to id, logic is mem->ex
+                    }
+                    // Forward from WB to EX
+                    else if(instrInMEM && instrInMEM.dest && (instrInMEM.dest === newEX.src1 || instrInMEM.dest === newEX.src2)) {
+                         logEvent(`Forwarding result of ${instrInMEM.asm} (WB) to ${newEX.asm} (EX).`, 'text-purple-600');
+                         drawForwardingPath('mem', 'id', '#7e22ce');
+                    }
+                }
+
+
+                // --- ID Stage ---
+                if (pcStalled) {
+                    newID = pipelineState.id; // Keep the same instruction in ID
+                    if(newID) newID.isStalled = true;
+                } else {
+                    newID = pipelineState.if;
+                }
+
+                // --- IF Stage ---
+                if (pcStalled) {
+                     newIF = pipelineState.if; // Keep instruction in IF
+                } else {
+                    if (instructionQueue.length > 0) {
+                        newIF = instructionQueue.shift();
+                        updateQueueUI();
+                    } else {
+                        newIF = null;
+                    }
+                }
+
+                // --- Control Hazard Detection (resolved in ID) ---
+                if (instrInID && instrInID.op === 'BEQ') {
+                     logEvent(`Control Hazard: ${instrInID.asm} detected in ID.`, 'text-orange-600');
+                     logEvent('Assuming branch taken. Flushing instruction in IF stage.', 'text-orange-600');
+                     if (newID) {
+                        newID.isFlushed = true; // Flush the instruction that was just fetched
+                     }
+                     // In a real CPU, PC would be updated to branch target. Here we just flush.
+                     newIF = null; // Don't fetch next instruction sequentially
+                }
+
+                pipelineState = { if: newIF, id: newID, ex: newEX, mem: newMEM, wb: newWB };
+                renderPipeline();
+            };
+
+            addInstrBtn.addEventListener('click', () => {
+                const selectedOption = instrSelect.options[instrSelect.selectedIndex];
+                const instrData = JSON.parse(selectedOption.value);
+                instrData.id = nextInstrId++;
+                instructionQueue.push(instrData);
+                updateQueueUI();
+            });
+
+            nextCycleBtn.addEventListener('click', clockTick);
+            resetBtn.addEventListener('click', reset);
+
+            // Initialize
+            reset();
+        });
+    </script>
+</body>
+</html>

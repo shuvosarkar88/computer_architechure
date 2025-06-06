@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Interactive Motherboard Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutral Harmony -->
+    <!-- Application Structure Plan: The SPA is structured around a central, interactive motherboard diagram. This visual-first approach allows users to immediately engage with the topic. Clicking on a component on the diagram or using the sticky sidebar navigation smoothly scrolls to a dedicated, detailed section. This non-linear, exploratory structure is more intuitive and engaging for learning than a traditional linear report format. It encourages discovery by linking visual representation directly to in-depth information, including text, interactive diagrams, and dynamic charts. -->
+    <!-- Visualization & Content Choices: 
+        - Motherboard Diagram (Goal: Organize/Explore): An interactive diagram built with HTML/CSS (divs) serves as the main navigation hub. Interaction: Click to navigate. Justification: Provides immediate visual context. Method: HTML/CSS with JS event listeners.
+        - Chipset Evolution (Goal: Explain Change): An animated diagram showing the shift from Northbridge/Southbridge to the modern PCH. Interaction: Button-triggered animation. Justification: Visually simplifies a complex architectural shift. Method: HTML/CSS/JS.
+        - Bus System (Goal: Explain Relationships): An animated diagram showing data, address, and control bus functions. Interaction: Button-triggered animation. Justification: Clarifies abstract concepts of data flow. Method: HTML/CSS/JS.
+        - PCIe Bandwidth (Goal: Compare): An interactive bar chart. Interaction: Users select PCIe lanes (x1, x4, x8, x16) to dynamically update the chart. Justification: Makes numerical data tangible and easy to compare. Library: Chart.js (Canvas).
+        - Form Factor Comparison (Goal: Compare): An interactive visual and bar chart. Interaction: Buttons update visuals and a chart to show relative sizes. Justification: Provides direct visual and data-driven comparison of physical specs. Library: Chart.js (Canvas) and HTML/CSS/JS.
+        - Data Tables (Goal: Inform/Organize): Interactive HTML tables for detailed specs. Interaction: Hover effects for clarity. Justification: Efficiently presents structured data from the report. Method: HTML/CSS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F5F5F4; /* stone-100 */
+            color: #292524; /* stone-800 */
+        }
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+            border-left: 3px solid transparent;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: #E7E5E4; /* stone-200 */
+            border-left-color: #60A5FA; /* blue-400 */
+            color: #1C1917; /* stone-900 */
+            transform: translateX(4px);
+        }
+        .content-section {
+            scroll-margin-top: 4rem;
+        }
+        .mobo-component {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .mobo-component:hover {
+            transform: scale(1.05);
+            background-color: rgba(96, 165, 250, 0.2);
+            border-color: rgba(96, 165, 250, 0.8);
+            z-index: 10;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 50vh;
+        }
+        .chipset-diagram-item {
+            transition: all 0.8s ease-in-out;
+        }
+        .bus-line {
+            position: absolute;
+            height: 3px;
+            background-color: #ccc;
+        }
+        .data-packet {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            transition: left 2s linear;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="max-w-screen-xl mx-auto p-4 md:p-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-stone-900">The Interactive Motherboard Explorer</h1>
+            <p class="mt-4 text-lg text-stone-600 max-w-3xl mx-auto">A visual guide to the core architecture of modern computers. Click components on the diagram or use the navigation to explore.</p>
+        </header>
+
+        <div class="flex flex-col md:flex-row gap-8">
+            <nav id="sidebar-nav" class="md:w-1/4 lg:w-1/5 md:sticky top-8 self-start bg-white/50 backdrop-blur-sm rounded-lg p-4 shadow-sm">
+                <h3 class="font-semibold mb-3 text-stone-700">Explore Sections</h3>
+                <ul class="space-y-2">
+                    <li><a href="#interactive-diagram" class="nav-link block p-2 rounded-md text-stone-600 font-medium">Interactive Diagram</a></li>
+                    <li><a href="#cpu-socket" class="nav-link block p-2 rounded-md text-stone-600">CPU Socket</a></li>
+                    <li><a href="#chipset" class="nav-link block p-2 rounded-md text-stone-600">The Chipset</a></li>
+                    <li><a href="#ram-slots" class="nav-link block p-2 rounded-md text-stone-600">RAM Slots</a></li>
+                    <li><a href="#expansion-slots" class="nav-link block p-2 rounded-md text-stone-600">Expansion Slots</a></li>
+                    <li><a href="#system-buses" class="nav-link block p-2 rounded-md text-stone-600">System Buses</a></li>
+                    <li><a href="#form-factors" class="nav-link block p-2 rounded-md text-stone-600">Form Factors</a></li>
+                    <li><a href="#power-delivery" class="nav-link block p-2 rounded-md text-stone-600">Power Delivery</a></li>
+                </ul>
+            </nav>
+
+            <main class="w-full md:w-3/4 lg:w-4/5">
+                <section id="interactive-diagram" class="content-section bg-white p-6 rounded-lg shadow-sm mb-8">
+                    <h2 class="text-2xl font-bold mb-4 text-stone-800">Visual Motherboard Layout</h2>
+                     <p class="text-stone-600 mb-6">This is a simplified, interactive representation of a standard ATX motherboard. Hover over a component to see its name, and click on it to jump to the detailed explanation below. This visual map serves as your primary tool for navigating the core concepts of motherboard architecture.</p>
+                    <div class="relative w-full max-w-2xl mx-auto aspect-[4/3] bg-stone-200 rounded-lg p-4 border-2 border-stone-300">
+                        <div data-target="cpu-socket" class="mobo-component absolute bg-stone-400" style="top: 25%; left: 45%; width: 20%; height: 20%;">
+                            <span class="absolute -top-6 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">CPU Socket</span>
+                        </div>
+                        <div data-target="ram-slots" class="mobo-component absolute bg-stone-500" style="top: 25%; left: 70%; width: 5%; height: 35%;"></div>
+                        <div data-target="ram-slots" class="mobo-component absolute bg-stone-500" style="top: 25%; left: 78%; width: 5%; height: 35%;"></div>
+                        <div data-target="chipset" class="mobo-component absolute bg-stone-600" style="top: 55%; left: 48%; width: 14%; height: 12%;">
+                             <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Chipset</span>
+                        </div>
+                        <div data-target="expansion-slots" class="mobo-component absolute bg-blue-300" style="top: 50%; left: 10%; width: 55%; height: 6%;"></div>
+                        <div data-target="expansion-slots" class="mobo-component absolute bg-blue-300" style="top: 65%; left: 10%; width: 25%; height: 5%;"></div>
+                        <div data-target="power-delivery" class="mobo-component absolute bg-yellow-400" style="top: 5%; left: 85%; width: 10%; height: 12%;">
+                            <span class="absolute -top-6 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Power</span>
+                        </div>
+                        <div class="absolute bg-green-300" style="top: 10%; left: 10%; width: 20%; height: 20%; border-radius: 50%;">
+                            <span class="absolute inset-0 flex items-center justify-center text-green-800 text-xs font-bold">I/O</span>
+                        </div>
+                    </div>
+                </section>
+                
+                <section id="cpu-socket" class="content-section bg-white p-6 rounded-lg shadow-sm mb-8">
+                    <h2 class="text-2xl font-bold mb-4 text-stone-800">The CPU Socket</h2>
+                    <p class="text-stone-600 mb-4">The CPU socket is the physical interface on the motherboard that houses the processor. It's a critical component dictating CPU compatibility. Different manufacturers (Intel and AMD) and CPU generations use different, non-interchangeable socket types like LGA (Land Grid Array) and PGA (Pin Grid Array).</p>
+                    <p class="text-stone-600">The evolution from PGA to LGA by both major manufacturers allows for a higher density of connections, supporting more complex CPUs with better power delivery and more data lanes, though it shifts the physical fragility from the CPU pins to the motherboard socket pins.</p>
+                </section>
+
+                <section id="chipset" class="content-section bg-white p-6 rounded-lg shadow-sm mb-8">
+                    <h2 class="text-2xl font-bold mb-4 text-stone-800">The Chipset: Communication Hub</h2>
+                    <p class="text-stone-600 mb-4">The chipset acts as the motherboard's traffic controller, managing data flow between the CPU, RAM, expansion slots, and peripherals. This interactive diagram illustrates the architectural shift from the older two-chip (Northbridge/Southbridge) design to the modern, more efficient single-chip Platform Controller Hub (PCH) system.</p>
+                     <button id="animate-chipset" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition mb-6">Animate Architecture Shift</button>
+                    <div class="relative h-64 border rounded-lg p-4 bg-stone-50 overflow-hidden">
+                        <div id="diag-cpu" class="chipset-diagram-item absolute top-4 left-1/2 -translate-x-1/2 bg-red-400 text-white p-2 rounded-lg font-semibold w-24 text-center">CPU</div>
+                        <div id="diag-north" class="chipset-diagram-item absolute top-1/2 -translate-y-1/2 left-1/4 -translate-x-1/2 bg-sky-400 text-white p-2 rounded-lg w-28 text-center">Northbridge</div>
+                        <div id="diag-south" class="chipset-diagram-item absolute top-1/2 -translate-y-1/2 right-1/4 translate-x-1/2 bg-green-400 text-white p-2 rounded-lg w-28 text-center">Southbridge</div>
+                        <div id="diag-ram" class="chipset-diagram-item absolute bottom-4 left-1/4 -translate-x-1/2 bg-purple-400 text-white p-2 rounded-lg w-24 text-center">RAM</div>
+                        <div id="diag-gpu" class="chipset-diagram-item absolute top-1/3 left-1/4 -translate-x-1/2 bg-gray-500 text-white p-2 rounded-lg w-24 text-center">GPU (PCIe)</div>
+                        <div id="diag-io" class="chipset-diagram-item absolute bottom-4 right-1/4 translate-x-1/2 bg-orange-400 text-white p-2 rounded-lg w-24 text-center">I/O Ports</div>
+                    </div>
+                </section>
+
+                <section id="ram-slots" class="content-section bg-white p-6 rounded-lg shadow-sm mb-8">
+                    <h2 class="text-2xl font-bold mb-4 text-stone-800">RAM Slots</h2>
+                    <p class="text-stone-600 mb-4">RAM slots connect system memory modules (DIMMs) to the CPU's integrated memory controller. Their proximity to the CPU minimizes latency. Modern motherboards support specific DDR generations (e.g., DDR4, DDR5), which are not cross-compatible. Utilizing multiple memory channels (e.g., dual-channel) by populating slots correctly can double memory bandwidth, significantly boosting system performance.</p>
+                </section>
+
+                <section id="expansion-slots" class="content-section bg-white p-6 rounded-lg shadow-sm mb-8">
+                    <h2 class="text-2xl font-bold mb-4 text-stone-800">Expansion Slots & PCIe Bandwidth</h2>
+                    <p class="text-stone-600 mb-4">Expansion slots, primarily PCI Express (PCIe), allow for adding functionality like graphics cards and high-speed storage. PCIe performance has doubled with each generation. The chart below visualizes this exponential growth. Use the buttons to see how bandwidth scales with the number of PCIe lanes for different generations.</p>
+                    <div class="flex flex-wrap justify-center gap-2 mb-4">
+                        <button class="pci-lanes-btn bg-stone-200 px-3 py-1 rounded-md" data-lanes="1">x1 Lane</button>
+                        <button class="pci-lanes-btn bg-stone-200 px-3 py-1 rounded-md" data-lanes="4">x4 Lanes</button>
+                        <button class="pci-lanes-btn bg-stone-200 px-3 py-1 rounded-md" data-lanes="8">x8 Lanes</button>
+                        <button class="pci-lanes-btn bg-blue-400 text-white px-3 py-1 rounded-md" data-lanes="16">x16 Lanes</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="pcieChart"></canvas>
+                    </div>
+                </section>
+                
+                <section id="system-buses" class="content-section bg-white p-6 rounded-lg shadow-sm mb-8">
+                    <h2 class="text-2xl font-bold mb-4 text-stone-800">System Buses Explained</h2>
+                    <p class="text-stone-600 mb-4">A bus is a communication pathway. The system bus is comprised of three parts: the Data Bus (carries data), Address Bus (specifies memory location), and Control Bus (sends commands like 'read' or 'write'). This animation demonstrates how they work together to fetch data from RAM for the CPU.</p>
+                    <button id="animate-bus" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition mb-6">Animate Data Fetch</button>
+                    <div class="relative h-48 border rounded-lg p-4 bg-stone-50 overflow-hidden">
+                        <div class="absolute top-4 left-4 bg-red-400 text-white p-2 rounded-lg font-semibold w-20 text-center">CPU</div>
+                        <div class="absolute top-4 right-4 bg-purple-400 text-white p-2 rounded-lg font-semibold w-20 text-center">RAM</div>
+                        <div class="bus-line top-1/4 w-full left-0 bg-red-500"><span class="absolute top-0 left-2 text-xs font-semibold text-red-500">Address Bus &rarr;</span></div>
+                        <div class="bus-line top-1/2 w-full left-0 bg-green-500"><span class="absolute top-0 left-2 text-xs font-semibold text-green-500">&larr; Data Bus &rarr;</span></div>
+                        <div class="bus-line top-3/4 w-full left-0 bg-blue-500"><span class="absolute top-0 left-2 text-xs font-semibold text-blue-500">Control Bus &rarr;</span></div>
+                        <div id="bus-address-packet" class="data-packet bg-red-500" style="top: calc(25% - 4px); left: 10%;"></div>
+                        <div id="bus-control-packet" class="data-packet bg-blue-500" style="top: calc(75% - 4px); left: 10%;"></div>
+                        <div id="bus-data-packet" class="data-packet bg-green-500" style="top: calc(50% - 4px); left: 90%;"></div>
+                    </div>
+                </section>
+
+                <section id="form-factors" class="content-section bg-white p-6 rounded-lg shadow-sm mb-8">
+                    <h2 class="text-2xl font-bold mb-4 text-stone-800">Motherboard Form Factors</h2>
+                    <p class="text-stone-600 mb-4">The form factor dictates a motherboard's physical dimensions, mounting hole locations, and general layout, ensuring compatibility with cases. Click the buttons to visually compare the relative sizes of the most common form factors and see their typical expansion capabilities.</p>
+                    <div class="flex flex-wrap justify-center gap-2 mb-4">
+                        <button class="form-factor-btn bg-stone-200 px-3 py-1 rounded-md" data-factor="mini-itx">Mini-ITX</button>
+                        <button class="form-factor-btn bg-stone-200 px-3 py-1 rounded-md" data-factor="micro-atx">Micro-ATX</button>
+                        <button class="form-factor-btn bg-blue-400 text-white px-3 py-1 rounded-md" data-factor="atx">ATX</button>
+                        <button class="form-factor-btn bg-stone-200 px-3 py-1 rounded-md" data-factor="e-atx">E-ATX</button>
+                    </div>
+                    <div class="flex flex-col md:flex-row items-center gap-6">
+                        <div class="w-full md:w-1/2 flex items-center justify-center bg-stone-100 rounded-lg p-4 h-64">
+                            <div id="form-factor-visual" class="relative bg-stone-300 border-2 border-stone-400 transition-all duration-500 ease-in-out">
+                                <span id="form-factor-label" class="absolute inset-0 flex items-center justify-center font-bold text-stone-700">ATX</span>
+                            </div>
+                        </div>
+                        <div class="w-full md:w-1/2">
+                           <div class="chart-container h-64 max-h-[300px]">
+                                <canvas id="formFactorChart"></canvas>
+                           </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="power-delivery" class="content-section bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-2xl font-bold mb-4 text-stone-800">Power Delivery Network (VRM)</h2>
+                    <p class="text-stone-600 mb-4">The motherboard distributes power from the PSU via standardized connectors (like the 24-pin ATX and 8-pin CPU connectors). A critical part of this is the Voltage Regulator Module (VRM), which converts the PSU's 12V supply into the precise, stable, low voltage the CPU requires.</p>
+                    <p class="text-stone-600">A high-quality VRM with more power phases and better components is crucial for system stability, especially when using high-performance CPUs or overclocking, as it can deliver clean, consistent power under heavy load without overheating and causing performance throttling.</p>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            const pcieData = {
+                'PCIe 3.0': 8,
+                'PCIe 4.0': 16,
+                'PCIe 5.0': 32,
+                'PCIe 6.0': 64,
+            };
+            const pcieLanes = {
+                1: 0.125, 4: 0.5, 8: 1, 16: 2 
+            };
+            let currentPcieLanes = 16;
+            let pcieChartInstance;
+
+            function renderPcieChart() {
+                const ctx = document.getElementById('pcieChart').getContext('2d');
+                if (pcieChartInstance) {
+                    pcieChartInstance.destroy();
+                }
+                const transferRateGTs = Object.values(pcieData);
+                const bandwidthGBs = transferRateGTs.map(rate => (rate / 8) * currentPcieLanes);
+
+                pcieChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(pcieData),
+                        datasets: [{
+                            label: `Bandwidth (GB/s) for x${currentPcieLanes}`,
+                            data: bandwidthGBs,
+                            backgroundColor: ['#A8A29E', '#78716C', '#60A5FA', '#3B82F6'],
+                            borderColor: '#F5F5F4',
+                            borderWidth: 2,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: `PCIe Bandwidth Comparison (x${currentPcieLanes})`,
+                                font: { size: 16, weight: '600' },
+                                color: '#292524'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.raw.toFixed(2)} GB/s`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: '#E7E5E4' },
+                                title: { display: true, text: 'Bandwidth (GB/s)' }
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
+
+            document.querySelectorAll('.pci-lanes-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    currentPcieLanes = parseInt(button.dataset.lanes);
+                    renderPcieChart();
+                    document.querySelectorAll('.pci-lanes-btn').forEach(btn => {
+                        btn.classList.remove('bg-blue-400', 'text-white');
+                        btn.classList.add('bg-stone-200');
+                    });
+                    button.classList.add('bg-blue-400', 'text-white');
+                    button.classList.remove('bg-stone-200');
+                });
+            });
+            
+            const formFactorData = {
+                'mini-itx': { w: 170, h: 170, slots: 1 },
+                'micro-atx': { w: 244, h: 244, slots: 4 },
+                'atx': { w: 244, h: 305, slots: 7 },
+                'e-atx': { w: 305, h: 330, slots: 8 },
+            };
+            let formFactorChartInstance;
+
+            function updateFormFactorVisual(factor) {
+                const data = formFactorData[factor];
+                const visual = document.getElementById('form-factor-visual');
+                const label = document.getElementById('form-factor-label');
+                const maxWidth = 200; 
+                const maxHeight = 200;
+                const scale = Math.min(maxWidth / formFactorData['e-atx'].w, maxHeight / formFactorData['e-atx'].h);
+                
+                visual.style.width = `${data.w * scale}px`;
+                visual.style.height = `${data.h * scale}px`;
+                label.textContent = factor.toUpperCase();
+            }
+
+            function renderFormFactorChart(selectedFactor) {
+                 const ctx = document.getElementById('formFactorChart').getContext('2d');
+                 if(formFactorChartInstance) {
+                    formFactorChartInstance.destroy();
+                 }
+                 formFactorChartInstance = new Chart(ctx, {
+                     type: 'bar',
+                     data: {
+                        labels: ['Max PCIe Slots'],
+                        datasets: Object.keys(formFactorData).map(factor => ({
+                            label: factor.toUpperCase(),
+                            data: [formFactorData[factor].slots],
+                            backgroundColor: factor === selectedFactor ? '#60A5FA' : '#A8A29E',
+                            barPercentage: 0.5,
+                            categoryPercentage: 0.5,
+                        })),
+                     },
+                     options: {
+                         indexAxis: 'y',
+                         responsive: true,
+                         maintainAspectRatio: false,
+                         plugins: {
+                            title: { display: true, text: 'Typical Max Expansion Slots' },
+                            legend: { display: false }
+                         },
+                         scales: {
+                            x: { beginAtZero: true, max: 8 },
+                         }
+                     }
+                 });
+            }
+            
+            document.querySelectorAll('.form-factor-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    const factor = button.dataset.factor;
+                    updateFormFactorVisual(factor);
+                    renderFormFactorChart(factor);
+                    document.querySelectorAll('.form-factor-btn').forEach(btn => {
+                        btn.classList.remove('bg-blue-400', 'text-white');
+                        btn.classList.add('bg-stone-200');
+                    });
+                    button.classList.add('bg-blue-400', 'text-white');
+                    button.classList.remove('bg-stone-200');
+                });
+            });
+
+
+            document.querySelectorAll('.mobo-component').forEach(el => {
+                el.addEventListener('click', () => {
+                    const targetId = el.dataset.target;
+                    const targetElement = document.getElementById(targetId);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        targetElement.classList.add('bg-blue-50', 'ring-2', 'ring-blue-400');
+                        setTimeout(() => targetElement.classList.remove('bg-blue-50', 'ring-2', 'ring-blue-400'), 2000);
+                    }
+                });
+            });
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const id = entry.target.getAttribute('id');
+                    const navLink = document.querySelector(`.nav-link[href="#${id}"]`);
+                    if (entry.isIntersecting) {
+                        document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+                        if(navLink) navLink.classList.add('active');
+                    }
+                });
+            }, { rootMargin: "-30% 0px -70% 0px" });
+
+            document.querySelectorAll('.content-section').forEach(section => {
+                observer.observe(section);
+            });
+            
+            document.getElementById('animate-chipset').addEventListener('click', () => {
+                const cpu = document.getElementById('diag-cpu');
+                const north = document.getElementById('diag-north');
+                const south = document.getElementById('diag-south');
+                const ram = document.getElementById('diag-ram');
+                const gpu = document.getElementById('diag-gpu');
+                const io = document.getElementById('diag-io');
+
+                north.style.top = '50%';
+                north.style.left = '50%';
+                north.textContent = "PCH";
+                north.style.backgroundColor = '#34D399'; /* emerald-400 */
+
+                south.style.opacity = '0';
+                south.style.transform = 'scale(0)';
+                
+                ram.style.left = '25%';
+                gpu.style.left = '75%';
+            });
+
+            document.getElementById('animate-bus').addEventListener('click', () => {
+                const addressPacket = document.getElementById('bus-address-packet');
+                const controlPacket = document.getElementById('bus-control-packet');
+                const dataPacket = document.getElementById('bus-data-packet');
+                
+                addressPacket.style.transition = 'none';
+                controlPacket.style.transition = 'none';
+                dataPacket.style.transition = 'none';
+                
+                addressPacket.style.left = '10%';
+                controlPacket.style.left = '10%';
+                dataPacket.style.left = '90%';
+
+                setTimeout(() => {
+                    addressPacket.style.transition = 'left 1s linear';
+                    controlPacket.style.transition = 'left 1s linear';
+                    addressPacket.style.left = '90%';
+                    controlPacket.style.left = '90%';
+
+                    setTimeout(() => {
+                        dataPacket.style.transition = 'left 1s linear';
+                        dataPacket.style.left = '10%';
+                    }, 1000);
+                }, 100);
+            });
+            
+            renderPcieChart();
+            updateFormFactorVisual('atx');
+            renderFormFactorChart('atx');
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The OS, Compiler & CPU Interplay: An Interactive Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutral Harmony -->
+    <!-- Application Structure Plan: The application is structured as an interactive, narrative journey called "How Your Code Actually Runs," broken into five thematic 'scenes'. This is a process-oriented flow designed for better learning and synthesis than a simple report-mirroring structure. The scenes are: 1. Code to Machine (Compiler), 2. The OS Gatekeeper (Privilege & System Calls), 3. Juggling Tasks (Context Switching), 4. The Function Lifecycle (Stack & Conventions), 5. Compiler Magic (Optimizations). This structure was chosen because it turns passive reading into an active exploration, guiding the user through the logical sequence of events from writing code to its optimized execution, making the complex relationships between the OS, compiler, and CPU tangible and easier to grasp. -->
+    <!-- Visualization & Content Choices: The application uses interactive, custom-built diagrams (using HTML/CSS) and dynamic charts (Chart.js) to explain abstract concepts. For example: An animated diagram shows the user-to-kernel mode transition for system calls, making the concept of privilege boundaries clear. A dynamic pie chart visualizes context switching overhead, responding to a slider to demonstrate the performance trade-off. An interactive stack visualizer allows users to 'call' and 'return' from functions to see how stack frames are managed. These choices aim to transform complex text descriptions from the report into engaging, hands-on learning experiences, directly supporting the process-oriented application structure. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF8; /* Warm off-white */
+            color: #4A4A4A;
+        }
+        .nav-button {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .nav-button.active {
+            color: #1E40AF; /* A strong but muted blue */
+            font-weight: 600;
+        }
+        .nav-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: #1E40AF;
+            border-radius: 2px;
+        }
+        .content-card {
+            background-color: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            padding: 1.5rem;
+            transition: all 0.3s ease-in-out;
+        }
+        .tab-button {
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .tab-button.active {
+            background-color: #3B82F6;
+            color: white;
+        }
+        .interactive-element {
+            border: 1px solid #D1D5DB;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            background-color: #F9FAFB;
+        }
+        .flow-arrow {
+            font-size: 2rem;
+            color: #9CA3AF;
+        }
+        .stack-frame {
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            transform-origin: bottom;
+        }
+        .chart-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 600px; 
+            margin-left: auto; 
+            margin-right: auto; 
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) { 
+            .chart-container { 
+                height: 350px; 
+            } 
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800">How Your Code Actually Runs</h1>
+            <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">An interactive guide to the intricate dance between the Operating System, Compiler, and CPU.</p>
+        </header>
+
+        <nav class="mb-12 flex justify-center border-b pb-2">
+            <div id="nav-buttons" class="flex flex-wrap justify-center gap-4 md:gap-8">
+            </div>
+        </nav>
+
+        <main id="main-content">
+        </main>
+    </div>
+
+    <script>
+        const scenes = [
+            { id: 'compiler', title: 'Code to Machine' },
+            { id: 'os_gatekeeper', title: 'The OS Gatekeeper' },
+            { id: 'context_switching', title: 'Juggling Tasks' },
+            { id: 'function_lifecycle', title: 'The Function Lifecycle' },
+            { id: 'optimizations', title: 'Compiler Magic' }
+        ];
+
+        let activeScene = scenes[0].id;
+        let charts = {};
+
+        const navContainer = document.getElementById('nav-buttons');
+        const mainContent = document.getElementById('main-content');
+
+        function renderNav() {
+            navContainer.innerHTML = scenes.map(scene => `
+                <button data-scene="${scene.id}" class="nav-button text-gray-500 hover:text-blue-600 px-3 py-2 text-sm md:text-base ${scene.id === activeScene ? 'active' : ''}">
+                    ${scene.title}
+                </button>
+            `).join('');
+
+            document.querySelectorAll('.nav-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    setActiveScene(button.dataset.scene);
+                });
+            });
+        }
+
+        function setActiveScene(sceneId) {
+            activeScene = sceneId;
+            renderNav();
+            renderContent();
+        }
+        
+        function destroyCharts() {
+            Object.values(charts).forEach(chart => chart.destroy());
+            charts = {};
+        }
+
+        function renderContent() {
+            destroyCharts();
+            let content = '';
+            switch(activeScene) {
+                case 'compiler':
+                    content = getCompilerContent();
+                    break;
+                case 'os_gatekeeper':
+                    content = getOsGatekeeperContent();
+                    break;
+                case 'context_switching':
+                    content = getContextSwitchingContent();
+                    break;
+                case 'function_lifecycle':
+                    content = getFunctionLifecycleContent();
+                    break;
+                case 'optimizations':
+                    content = getOptimizationsContent();
+                    break;
+            }
+            mainContent.innerHTML = content;
+            
+            // Re-initialize any dynamic elements for the new scene
+            if (activeScene === 'compiler') initCompilerScene();
+            if (activeScene === 'os_gatekeeper') initOsGatekeeperScene();
+            if (activeScene === 'context_switching') initContextSwitchingScene();
+            if (activeScene === 'function_lifecycle') initFunctionLifecycleScene();
+            if (activeScene === 'optimizations') initOptimizationsScene();
+        }
+        
+        function getCompilerContent() {
+            return `
+                <div class="content-card">
+                    <h2 class="text-3xl font-bold mb-2 text-gray-800">Scene 1: From Code to Machine</h2>
+                    <p class="text-gray-600 mb-8">This first scene explores the compiler's role as the master translator. Before your code can run on the CPU, it must be converted from a human-readable language (like C++ or Python) into the low-level machine instructions the CPU understands. This process is far more than simple translation; it's a multi-stage journey of analysis, optimization, and code generation, meticulously tailored to the target CPU's specific Instruction Set Architecture (ISA). Interact with the diagram below to see how the compiler transforms your ideas into executable reality.</p>
+                    
+                    <div class="interactive-element">
+                        <h3 class="text-xl font-semibold text-center mb-6">The Compilation Pipeline</h3>
+                        <div class="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 text-center">
+                            <div id="compiler-stage-source" class="compiler-stage p-4 border-2 border-blue-500 rounded-lg bg-blue-50 w-full md:w-auto cursor-pointer">
+                                <h4 class="font-semibold">Source Code</h4>
+                                <p class="text-sm">High-level Language</p>
+                            </div>
+                            <div class="flow-arrow">&#10230;</div>
+                            <div id="compiler-stage-frontend" class="compiler-stage p-4 border-2 border-gray-300 rounded-lg bg-gray-50 w-full md:w-auto cursor-pointer">
+                                <h4 class="font-semibold">Front End</h4>
+                                <p class="text-sm">Language-Specific</p>
+                            </div>
+                            <div class="flow-arrow">&#10230;</div>
+                             <div id="compiler-stage-middleend" class="compiler-stage p-4 border-2 border-gray-300 rounded-lg bg-gray-50 w-full md:w-auto cursor-pointer">
+                                <h4 class="font-semibold">Middle End</h4>
+                                <p class="text-sm">Target-Independent</p>
+                            </div>
+                            <div class="flow-arrow">&#10230;</div>
+                            <div id="compiler-stage-backend" class="compiler-stage p-4 border-2 border-gray-300 rounded-lg bg-gray-50 w-full md:w-auto cursor-pointer">
+                                <h4 class="font-semibold">Back End</h4>
+                                <p class="text-sm">Target-Specific</p>
+                            </div>
+                             <div class="flow-arrow">&#10230;</div>
+                            <div id="compiler-stage-machine" class="compiler-stage p-4 border-2 border-gray-300 rounded-lg bg-gray-50 w-full md:w-auto cursor-pointer">
+                                <h4 class="font-semibold">Machine Code</h4>
+                                <p class="text-sm">CPU Instructions</p>
+                            </div>
+                        </div>
+                        <div id="compiler-info" class="mt-6 p-4 bg-white rounded-lg border border-gray-200 min-h-[120px]">
+                            <p class="text-gray-700">Click on a stage to learn more about it.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function initCompilerScene() {
+            const stages = {
+                source: { title: "Source Code", content: "This is the human-readable code you write in a high-level language like C++, Java, or Rust. It expresses logic in a way that is understandable to programmers but not to the CPU directly." },
+                frontend: { title: "Front End: The Lexicographer and Grammarian", content: "The front end analyzes the source code. It performs <strong>Lexical Analysis</strong> to break code into tokens, <strong>Syntax Analysis (Parsing)</strong> to check grammar and build a structure (Abstract Syntax Tree), and <strong>Semantic Analysis</strong> to check for type errors and other logical issues. Its output is a language-independent Intermediate Representation (IR)." },
+                middleend: { title: "Middle End: The Optimizer", content: "This stage takes the IR and performs a suite of machine-independent optimizations. It eliminates redundant calculations, removes unreachable code, and restructures loops to improve efficiency, all without knowing the specifics of the target CPU." },
+                backend: { title: "Back End: The Code Generator", content: "The back end is highly target-specific. It performs <strong>Instruction Selection</strong> to choose the best CPU instructions, <strong>Register Allocation</strong> to assign variables to fast CPU registers, and <strong>Instruction Scheduling</strong> to reorder instructions to match the CPU's pipeline. This is where the code is tailored for a specific ISA (like x86-64 or ARMv8)." },
+                machine: { title: "Machine Code: The CPU's Native Tongue", content: "The final output is binary machine code. This sequence of 1s and 0s represents the specific instructions that the target CPU can execute directly. It is now ready to be run by the operating system." }
+            };
+
+            const infoBox = document.getElementById('compiler-info');
+            document.querySelectorAll('.compiler-stage').forEach(stageEl => {
+                stageEl.addEventListener('click', () => {
+                    document.querySelectorAll('.compiler-stage').forEach(el => {
+                        el.classList.remove('border-blue-500', 'bg-blue-50');
+                        el.classList.add('border-gray-300', 'bg-gray-50');
+                    });
+                    stageEl.classList.add('border-blue-500', 'bg-blue-50');
+                    stageEl.classList.remove('border-gray-300', 'bg-gray-50');
+                    const stageId = stageEl.id.split('-')[2];
+                    infoBox.innerHTML = `<h5 class="font-bold text-lg mb-2">${stages[stageId].title}</h5><p>${stages[stageId].content}</p>`;
+                });
+            });
+            document.getElementById('compiler-stage-source').click();
+        }
+        
+        function getOsGatekeeperContent() {
+            return `
+                <div class="content-card">
+                    <h2 class="text-3xl font-bold mb-2 text-gray-800">Scene 2: The OS Gatekeeper</h2>
+                    <p class="text-gray-600 mb-8">The Operating System is the ultimate guardian of the computer's resources. To prevent buggy or malicious programs from causing system-wide chaos, the CPU enforces a strict separation of privilege: unprivileged <strong>User Mode</strong> for applications and all-powerful <strong>Kernel Mode</strong> for the OS. When your application needs to perform a privileged action, like reading a file or accessing the network, it can't do so directly. It must respectfully ask the OS by making a <strong>System Call</strong>. This scene demonstrates that crucial transition.</p>
+
+                    <div class="interactive-element">
+                        <h3 class="text-xl font-semibold text-center mb-6">Visualizing a System Call</h3>
+                        <div class="relative p-4 rounded-lg">
+                            <!-- Kernel Space -->
+                            <div class="bg-red-100 border-2 border-dashed border-red-400 rounded-lg p-4 text-center">
+                                <h4 class="font-bold text-red-800">KERNEL MODE (RING 0)</h4>
+                                <p class="text-sm text-red-700">Privileged Access to All Hardware & Memory</p>
+                                <div id="kernel-action" class="mt-4 bg-white p-2 rounded shadow-md w-48 mx-auto opacity-0 transition-opacity duration-500">
+                                    Performing I/O...
+                                </div>
+                            </div>
+                            
+                            <!-- Boundary -->
+                            <div class="border-t-4 border-dotted border-gray-500 my-4 text-center relative">
+                                <span class="absolute -top-4 left-1/2 -translate-x-1/2 bg-gray-100 px-2 font-semibold text-gray-600">Privilege Boundary</span>
+                            </div>
+
+                            <!-- User Space -->
+                            <div class="bg-blue-100 border-2 border-dashed border-blue-400 rounded-lg p-4 text-center">
+                                <h4 class="font-bold text-blue-800">USER MODE (RING 3)</h4>
+                                <p class="text-sm text-blue-700">Restricted Application Environment</p>
+                            </div>
+
+                            <!-- Process Icon -->
+                            <div id="process-icon" class="absolute left-1/2 -translate-x-1/2 bg-blue-500 text-white rounded-full h-12 w-12 flex items-center justify-center font-bold shadow-lg" style="bottom: 60px; transition: all 1s ease-in-out;">
+                                APP
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex flex-col sm:flex-row justify-center items-center gap-4">
+                            <select id="syscall-selector" class="p-2 border rounded-md bg-white">
+                                <option value="read">read(file)</option>
+                                <option value="fork">fork()</option>
+                                <option value="network">send(socket)</option>
+                                <option value="time">gettimeofday()</option>
+                            </select>
+                            <button id="syscall-button" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
+                                Execute System Call
+                            </button>
+                        </div>
+                        <p id="syscall-explanation" class="text-center mt-4 text-gray-600 min-h-[40px]"></p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function initOsGatekeeperScene() {
+            const processIcon = document.getElementById('process-icon');
+            const kernelAction = document.getElementById('kernel-action');
+            const syscallButton = document.getElementById('syscall-button');
+            const syscallSelector = document.getElementById('syscall-selector');
+            const syscallExplanation = document.getElementById('syscall-explanation');
+            let isKernel = false;
+
+            const explanations = {
+                read: 'The app asks the kernel to read data from a file on the disk.',
+                fork: 'The app asks the kernel to create an exact copy of itself, creating a new process.',
+                network: 'The app asks the kernel to send data over a network connection.',
+                time: 'The app asks the kernel for the current time.'
+            };
+            
+            function updateExplanation() {
+                syscallExplanation.textContent = explanations[syscallSelector.value];
+            }
+            
+            updateExplanation();
+            syscallSelector.addEventListener('change', updateExplanation);
+
+            syscallButton.addEventListener('click', () => {
+                if(syscallButton.disabled) return;
+                
+                syscallButton.disabled = true;
+                syscallButton.textContent = "Executing...";
+                syscallButton.classList.add('opacity-50', 'cursor-not-allowed');
+
+                // 1. Trap to kernel
+                processIcon.style.transform = 'translate(-50%, -150px) scale(0.9)';
+                processIcon.style.backgroundColor = '#EF4444'; // Red
+                processIcon.textContent = 'OS';
+
+                setTimeout(() => {
+                    // 2. Kernel performs action
+                    kernelAction.style.opacity = '1';
+                    kernelAction.textContent = `Servicing '${syscallSelector.value}'...`
+                }, 1000);
+                
+                setTimeout(() => {
+                    // 3. Kernel action fades
+                    kernelAction.style.opacity = '0';
+                }, 2500);
+
+                setTimeout(() => {
+                    // 4. Return to user
+                    processIcon.style.transform = 'translate(-50%, 0px) scale(1)';
+                    processIcon.style.backgroundColor = '#3B82F6'; // Blue
+                    processIcon.textContent = 'APP';
+
+                    syscallButton.disabled = false;
+                    syscallButton.textContent = "Execute System Call";
+                    syscallButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                }, 3000);
+            });
+        }
+
+        function getContextSwitchingContent() {
+            return `
+                 <div class="content-card">
+                    <h2 class="text-3xl font-bold mb-2 text-gray-800">Scene 3: Juggling Tasks</h2>
+                    <p class="text-gray-600 mb-8">Modern operating systems create the illusion of running many programs at once on a single CPU core. The magic behind this is <strong>Context Switching</strong>. The OS gives each process a tiny slice of CPU time. When the time is up, or a process has to wait for I/O, the OS steps in. It meticulously saves the entire state (context) of the current process into its Process Control Block (PCB) and loads the state of another. This happens so fast, it feels simultaneous. However, this process is pure overhead—time not spent running your code. This scene lets you explore that trade-off.</p>
+
+                    <div class="flex flex-col lg:flex-row gap-8 items-start">
+                        <div class="interactive-element flex-grow w-full">
+                            <h3 class="text-xl font-semibold text-center mb-6">The Context Switch Dance</h3>
+                            <div class="flex justify-around items-center text-center">
+                                <div id="pcb-a" class="border-2 border-blue-500 bg-blue-50 p-4 rounded-lg w-32">
+                                    <h4 class="font-bold text-blue-800">Process A</h4>
+                                    <p class="text-sm">PCB</p>
+                                </div>
+                                <div class="relative w-32 h-32 flex items-center justify-center">
+                                    <div class="absolute inset-0 border-4 border-green-500 rounded-full animate-spin" style="animation-duration: 3s;"></div>
+                                    <div id="cpu-state" class="font-bold text-2xl text-green-700">CPU</div>
+                                </div>
+                                <div id="pcb-b" class="border-2 border-gray-400 bg-gray-50 p-4 rounded-lg w-32">
+                                    <h4 class="font-bold text-gray-800">Process B</h4>
+                                    <p class="text-sm">PCB</p>
+                                </div>
+                            </div>
+                            <div class="mt-4 text-center">
+                                <p id="context-switch-status" class="font-medium text-gray-700 h-6">CPU is executing Process A.</p>
+                                <button id="context-switch-button" class="mt-4 px-6 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75">
+                                    Trigger Context Switch
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="interactive-element w-full lg:w-1/3">
+                            <h3 class="text-xl font-semibold text-center mb-6">Overhead vs. Responsiveness</h3>
+                             <div class="chart-container">
+                                <canvas id="overheadChart"></canvas>
+                            </div>
+                            <div class="mt-6">
+                                <label for="timeslice-slider" class="block text-sm font-medium text-gray-700 text-center">Time Slice Duration</label>
+                                <input id="timeslice-slider" type="range" min="10" max="200" value="100" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                                <div class="flex justify-between text-xs text-gray-500">
+                                    <span>More Responsive</span>
+                                    <span>Less Overhead</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function initContextSwitchingScene() {
+            const status = document.getElementById('context-switch-status');
+            const button = document.getElementById('context-switch-button');
+            const pcbA = document.getElementById('pcb-a');
+            const pcbB = document.getElementById('pcb-b');
+            const cpu = document.getElementById('cpu-state');
+
+            let currentProcess = 'A';
+
+            button.addEventListener('click', () => {
+                if (button.disabled) return;
+                button.disabled = true;
+                
+                const fromPCB = currentProcess === 'A' ? pcbA : pcbB;
+                const toPCB = currentProcess === 'A' ? pcbB : pcbA;
+
+                status.textContent = `Saving context of Process ${currentProcess}...`;
+                fromPCB.classList.add('animate-pulse');
+                
+                setTimeout(() => {
+                    fromPCB.classList.remove('border-blue-500', 'bg-blue-50', 'border-green-500');
+                    fromPCB.classList.add('border-gray-400', 'bg-gray-50');
+                    fromPCB.classList.remove('animate-pulse');
+                    currentProcess = currentProcess === 'A' ? 'B' : 'A';
+                    status.textContent = `Loading context of Process ${currentProcess}...`;
+                    toPCB.classList.add('animate-pulse');
+                }, 1500);
+
+                setTimeout(() => {
+                    toPCB.classList.remove('border-gray-400', 'bg-gray-50');
+                    toPCB.classList.add('border-blue-500', 'bg-blue-50');
+                    toPCB.classList.remove('animate-pulse');
+                    status.textContent = `CPU is executing Process ${currentProcess}.`;
+                    button.disabled = false;
+                }, 3000);
+            });
+
+            const slider = document.getElementById('timeslice-slider');
+            const ctx = document.getElementById('overheadChart').getContext('2d');
+            
+            const overheadChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Time Executing Code', 'Time in Context Switch (Overhead)'],
+                    datasets: [{
+                        data: [100, 5],
+                        backgroundColor: ['#22C55E', '#EF4444'],
+                        borderColor: '#FDFBF8',
+                        borderWidth: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            charts.overhead = overheadChart;
+            
+            slider.addEventListener('input', () => {
+                // slider value: 10 (high overhead) to 200 (low overhead)
+                const overhead = 100 / slider.value; // simple inverse relationship
+                const executionTime = 100 - overhead;
+                overheadChart.data.datasets[0].data = [executionTime, overhead];
+                overheadChart.update();
+            });
+            slider.dispatchEvent(new Event('input'));
+        }
+
+        function getFunctionLifecycleContent() {
+            return `
+                <div class="content-card">
+                    <h2 class="text-3xl font-bold mb-2 text-gray-800">Scene 4: The Function Lifecycle</h2>
+                    <p class="text-gray-600 mb-8">Every time you call a function, a highly choreographed sequence of events happens at a low level. A block of memory, called a <strong>Stack Frame</strong>, is created on the call stack to store the function's local variables, arguments, and the crucial return address. The rules for how to pass arguments and who cleans up the stack are dictated by a <strong>Calling Convention</strong>. This process allows for orderly execution, even with complex nested calls and recursion. Use the controls below to build and dismantle a call stack and see this process in action.</p>
+
+                    <div class="flex flex-col lg:flex-row gap-8 items-start">
+                        <div class="interactive-element flex-grow w-full">
+                            <h3 class="text-xl font-semibold text-center mb-6">The Call Stack</h3>
+                            <div class="flex justify-center items-end h-96 bg-gray-200 rounded-lg p-2 overflow-hidden relative">
+                                <div id="stack-container" class="flex flex-col-reverse justify-start w-full">
+                                    <!-- Stack frames will be added here -->
+                                </div>
+                                <div class="absolute bottom-2 left-2 text-xs text-gray-500">Stack Bottom (High Address)</div>
+                                <div class="absolute top-2 left-2 text-xs text-gray-500">Stack Top (Low Address)</div>
+                            </div>
+                            <div class="mt-6 flex justify-center gap-4">
+                                <button id="call-func-button" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700">Call Function()</button>
+                                <button id="return-func-button" class="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700">Return from Function()</button>
+                            </div>
+                        </div>
+
+                        <div class="interactive-element w-full lg:w-1/3">
+                            <h3 class="text-xl font-semibold text-center mb-6">Calling Conventions</h3>
+                            <div class="flex justify-center bg-gray-200 rounded-lg p-1 mb-4">
+                                <button data-convention="cdecl" class="convention-tab-button flex-1 p-2 rounded-md text-sm font-medium">cdecl</button>
+                                <button data-convention="stdcall" class="convention-tab-button flex-1 p-2 rounded-md text-sm font-medium">x64 fastcall</button>
+                            </div>
+                            <div id="convention-info"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function initFunctionLifecycleScene() {
+            const stackContainer = document.getElementById('stack-container');
+            const callButton = document.getElementById('call-func-button');
+            const returnButton = document.getElementById('return-func-button');
+            let frameCount = 0;
+            const colors = ['bg-indigo-400', 'bg-purple-400', 'bg-pink-400', 'bg-teal-400'];
+
+            callButton.addEventListener('click', () => {
+                if (frameCount >= 6) return; // Limit stack depth for demo
+                frameCount++;
+                const frame = document.createElement('div');
+                frame.id = `frame-${frameCount}`;
+                frame.className = 'stack-frame border-t-4 border-gray-700 w-full p-2 text-white font-mono text-sm shadow-lg rounded-t-md opacity-0 transform scale-y-0 ' + colors[ (frameCount - 1) % colors.length];
+                frame.innerHTML = `
+                    <p class="font-bold">Frame ${frameCount}</p>
+                    <p>Return Addr: 0x...</p>
+                    <p>Local Vars: [...]</p>
+                `;
+                stackContainer.appendChild(frame);
+                
+                setTimeout(() => {
+                    frame.classList.remove('opacity-0', 'scale-y-0');
+                }, 10);
+            });
+
+            returnButton.addEventListener('click', () => {
+                if (frameCount <= 0) return;
+                const frame = document.getElementById(`frame-${frameCount}`);
+                if (frame) {
+                    frame.classList.add('opacity-0', 'scale-y-0');
+                    setTimeout(() => frame.remove(), 500);
+                }
+                frameCount--;
+            });
+
+            const conventions = {
+                cdecl: {
+                    title: "cdecl (C Declaration)",
+                    args: "Arguments passed on the stack (right to left).",
+                    cleanup: "<strong>Caller cleans the stack.</strong> This allows for variadic functions like <code>printf()</code>.",
+                    use: "Common default in 32-bit C/C++."
+                },
+                stdcall: {
+                    title: "x64 Fastcall (System V/Microsoft ABI)",
+                    args: "First 4-6 integer/pointer arguments passed in registers (e.g., RCX, RDX on Windows). Floats in XMM registers. Remaining go on stack.",
+                    cleanup: "<strong>Caller cleans the stack.</strong>",
+                    use: "Standard on virtually all modern 64-bit systems (Linux, macOS, Windows)."
+                }
+            };
+            
+            const conventionInfo = document.getElementById('convention-info');
+            function updateConvention(id) {
+                 document.querySelectorAll('.convention-tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`.convention-tab-button[data-convention="${id}"]`).classList.add('active');
+                
+                const data = conventions[id];
+                conventionInfo.innerHTML = `
+                    <h4 class="font-bold text-lg mb-2">${data.title}</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><strong>Arguments:</strong> ${data.args}</li>
+                        <li><strong>Stack Cleanup:</strong> ${data.cleanup}</li>
+                        <li><strong>Typical Use:</strong> ${data.use}</li>
+                    </ul>
+                `;
+            }
+
+            document.querySelectorAll('.convention-tab-button').forEach(btn => {
+                btn.addEventListener('click', (e) => updateConvention(e.target.dataset.convention));
+            });
+
+            updateConvention('cdecl');
+        }
+
+        function getOptimizationsContent() {
+            return `
+                 <div class="content-card">
+                    <h2 class="text-3xl font-bold mb-2 text-gray-800">Scene 5: Compiler Magic</h2>
+                    <p class="text-gray-600 mb-8">A modern compiler's job doesn't end at translation. It is also a master illusionist, applying a vast repertoire of optimizations to make your code faster, smaller, and more efficient. It can replace expensive operations with cheaper ones, eliminate redundant work, and even completely restructure loops to better suit the CPU's architecture. Often, the compiler's optimizations are far more effective than what a human could achieve manually. This final scene showcases a few of these powerful transformations. Select an optimization to see it in action.</p>
+
+                    <div class="interactive-element">
+                         <div class="mb-6">
+                            <label for="optimization-selector" class="block text-sm font-medium text-gray-700 mb-1">Select an Optimization Technique:</label>
+                            <select id="optimization-selector" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="inlining">Function Inlining</option>
+                                <option value="licm">Loop-Invariant Code Motion</option>
+                                <option value="unrolling">Loop Unrolling</option>
+                                <option value="strength">Strength Reduction</option>
+                                <option value="dce">Dead Code Elimination</option>
+                            </select>
+                        </div>
+
+                        <div id="optimization-explanation" class="mb-6 p-4 bg-gray-100 rounded-lg"></div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 font-mono text-sm">
+                            <div>
+                                <h3 class="font-sans font-semibold text-lg mb-2 text-center">Before Optimization</h3>
+                                <pre id="code-before" class="bg-gray-800 text-white p-4 rounded-lg overflow-x-auto"><code></code></pre>
+                            </div>
+                            <div>
+                                <h3 class="font-sans font-semibold text-lg mb-2 text-center">After Optimization</h3>
+                                <pre id="code-after" class="bg-green-800 text-white p-4 rounded-lg overflow-x-auto"><code></code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function initOptimizationsScene() {
+            const optimizations = {
+                inlining: {
+                    explanation: "<strong>Goal:</strong> Eliminate function call overhead. <br><strong>How:</strong> The compiler replaces the call to a small function with the actual code of that function. This saves the cost of setting up a stack frame and also exposes the function's code to further optimizations in the caller's context.",
+                    before: `int square(int num) {
+    return num * num;
+}
+
+void calculate() {
+    int result = square(10);
+}`,
+                    after: `void calculate() {
+    int result = 10 * 10;
+}`
+                },
+                licm: {
+                    explanation: "<strong>Goal:</strong> Avoid redundant calculations inside loops. <br><strong>How:</strong> The compiler identifies expressions inside a loop whose values do not change between iterations (invariants) and moves them outside the loop to be computed only once.",
+                    before: `for (int i = 0; i < 100; i++) {
+    // x*y is loop-invariant
+    array[i] = x * y + i;
+}`,
+                    after: `int temp = x * y;
+for (int i = 0; i < 100; i++) {
+    array[i] = temp + i;
+}`
+                },
+                unrolling: {
+                    explanation: "<strong>Goal:</strong> Reduce loop overhead and increase instruction-level parallelism. <br><strong>How:</strong> The compiler duplicates the loop's body, processing multiple elements per iteration. This reduces the number of branch and increment instructions.",
+                    before: `for (int i = 0; i < 4; i++) {
+    do_work(i);
+}`,
+                    after: `do_work(0);
+do_work(1);
+do_work(2);
+do_work(3);`
+                },
+                strength: {
+                    explanation: "<strong>Goal:</strong> Replace expensive operations with cheaper ones. <br><strong>How:</strong> A classic example is replacing multiplication by a power of two with a much faster bit-shift operation.",
+                    before: `int double_val = x * 2;
+int quad_val = y * 4;`,
+                    after: `int double_val = x << 1;
+int quad_val = y << 2;`
+                },
+                dce: {
+                    explanation: "<strong>Goal:</strong> Reduce code size and remove useless work. <br><strong>How:</strong> The compiler analyzes the code to find variables or entire code blocks that have no effect on the final output and removes them completely.",
+                    before: `int x = 5;
+int y = 10; // y is never used
+if (false) {
+    // This block is unreachable
+    do_something();
+}
+return x;`,
+                    after: `int x = 5;
+return x;`
+                }
+            };
+            
+            const selector = document.getElementById('optimization-selector');
+            const explanationEl = document.getElementById('optimization-explanation');
+            const beforeEl = document.querySelector('#code-before code');
+            const afterEl = document.querySelector('#code-after code');
+
+            function updateDisplay() {
+                const selected = optimizations[selector.value];
+                explanationEl.innerHTML = selected.explanation;
+                beforeEl.textContent = selected.before;
+                afterEl.textContent = selected.after;
+            }
+
+            selector.addEventListener('change', updateDisplay);
+            updateDisplay();
+        }
+
+        // Initial render
+        renderNav();
+        renderContent();
+
+    </script>
+</body>
+</html>

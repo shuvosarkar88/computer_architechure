@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: The CUDA Parallel Computing Revolution</title>
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- 
+    Application Structure Plan: 
+    The infographic follows a top-down narrative designed for easy consumption.
+    1.  Hook/Intro: A bold statement on the need for parallelism.
+    2.  The Core Problem & Solution: A visual comparison of CPU vs. GPU architectures to establish the "why."
+    3.  CUDA's Role: Introducing CUDA as the key platform.
+    4.  Core Concepts Explained: Using custom HTML/CSS diagrams (pyramid for memory, flow diagram for thread hierarchy) to simplify complex ideas. This makes abstract concepts tangible.
+    5.  Competitive Landscape: A clear table comparing CUDA and OpenCL for market context.
+    6.  The Climax - Performance Proof: A large bar chart visualizing the massive speedups, providing the "wow" factor and concrete evidence of CUDA's power.
+    7.  Conclusion: A summary of CUDA's impact.
+    This structure tells a complete story, moving from the general problem to the specific solution and its real-world impact, prioritizing understanding over report-chapter mimicry.
+    -->
+    <!--
+    Visualization & Content Choices:
+    - CPU vs. GPU: Goal: Compare. Method: Two styled cards with large text and Unicode icons (HTML/CSS), for high-impact visual distinction. No SVG.
+    - CUDA Workflow: Goal: Organize. Method: A horizontal flowchart using styled divs and borders (HTML/CSS) to show the host-device interaction. No SVG/Mermaid.
+    - Thread Hierarchy: Goal: Organize. Method: A set of nested, bordered divs (HTML/CSS) to clearly illustrate the Grid > Block > Thread structure. No SVG/Mermaid.
+    - Memory Hierarchy: Goal: Organize. Method: A pyramid diagram built with stacked, styled divs (HTML/CSS) to intuitively rank memory types by speed and size. No SVG/Mermaid.
+    - CUDA vs. OpenCL: Goal: Compare. Method: Styled HTML table for a direct, feature-by-feature comparison. No SVG.
+    - Performance Speedups: Goal: Compare. Method: A Chart.js horizontal bar chart to compellingly visualize the order-of-magnitude performance gains from the report's data. Label wrapping and custom tooltips are implemented. Justification: A bar chart is the best way to compare the magnitude of these different speedup values. Library: Chart.js (Canvas). No SVG.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F0F4F8;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 500px;
+            }
+        }
+    </style>
+</head>
+<body class="text-[#003F5C]">
+
+    <header class="bg-[#003F5C] text-white py-12 text-center">
+        <div class="container mx-auto px-6">
+            <h1 class="text-4xl md:text-6xl font-black uppercase tracking-wider">The Parallel Revolution</h1>
+            <p class="mt-4 text-lg md:text-xl max-w-3xl mx-auto text-blue-100">Single-core speed hit a wall. To get faster, we had to go wider. Discover how NVIDIA's CUDA platform unlocked the massive parallelism of GPUs to redefine high-performance computing.</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-12 md:py-16">
+
+        <section id="cpu-vs-gpu" class="mb-20">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">A Tale of Two Architectures</h2>
+            <p class="max-w-3xl mx-auto text-center text-lg text-gray-600 mb-12">CPUs and GPUs are designed for fundamentally different goals. A CPU is a master of complex, sequential tasks, while a GPU is a master of simple, simultaneous tasks. This difference is the key to GPGPU.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-xl p-8 text-center border-t-8 border-[#F95D6A]">
+                    <div class="text-6xl mb-4">🧠</div>
+                    <h3 class="text-2xl font-bold text-[#D45087] mb-2">CPU: The Latency Specialist</h3>
+                    <p class="text-gray-700">Optimized to complete one task as quickly as possible.</p>
+                    <div class="text-6xl font-black my-4 text-[#D45087]">2-64</div>
+                    <p class="font-semibold text-xl">Powerful Cores</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-xl p-8 text-center border-t-8 border-[#003F5C]">
+                    <div class="text-6xl mb-4">🚀</div>
+                    <h3 class="text-2xl font-bold text-[#2F4B7C] mb-2">GPU: The Throughput Machine</h3>
+                    <p class="text-gray-700">Designed to execute thousands of tasks all at once.</p>
+                    <div class="text-6xl font-black my-4 text-[#2F4B7C]">1000s</div>
+                    <p class="font-semibold text-xl">Simpler Cores</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="workflow" class="mb-20">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">The CUDA Workflow</h2>
+            <p class="max-w-3xl mx-auto text-center text-lg text-gray-600 mb-12">CUDA operates on a host-device model. The CPU (host) orchestrates the work, offloading the heavy, parallelizable computations to the GPU (device). This diagram illustrates the typical data flow.</p>
+            <div class="flex flex-col md:flex-row items-center justify-center gap-4 text-center font-semibold text-sm">
+                <div class="bg-white p-4 rounded-lg shadow-md w-full md:w-48">①<br>Allocate Memory on Host (CPU) & Device (GPU)</div>
+                <div class="text-2xl text-[#FFA600]">→</div>
+                <div class="bg-white p-4 rounded-lg shadow-md w-full md:w-48">②<br>Copy Input Data Host → Device</div>
+                <div class="text-2xl text-[#FFA600]">→</div>
+                <div class="bg-[#FFA600] text-white p-4 rounded-lg shadow-xl w-full md:w-48 border-2 border-[#FF7C43]">③<br>Launch Kernel on Device (GPU Computes)</div>
+                <div class="text-2xl text-[#FFA600]">→</div>
+                <div class="bg-white p-4 rounded-lg shadow-md w-full md:w-48">④<br>Copy Results Device → Host</div>
+                 <div class="text-2xl text-[#FFA600]">→</div>
+                <div class="bg-white p-4 rounded-lg shadow-md w-full md:w-48">⑤<br>Free Memory on Host & Device</div>
+            </div>
+        </section>
+
+        <section id="core-concepts" class="mb-20">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Deconstructing the CUDA Model</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div class="bg-white p-8 rounded-2xl shadow-xl">
+                    <h3 class="text-2xl font-bold text-center mb-6">The Thread Hierarchy</h3>
+                    <p class="text-center text-gray-600 mb-8">CUDA organizes its massive number of threads into a three-level hierarchy. This structure allows code to scale across GPUs with different numbers of cores.</p>
+                    <div class="p-6 border-4 border-[#665191] rounded-xl text-center font-bold">
+                        GRID
+                        <div class="mt-4 p-4 border-4 border-[#A05195] rounded-lg">
+                            BLOCK (Runs on one SM)
+                            <div class="mt-4 p-2 grid grid-cols-4 gap-2 border-4 border-[#D45087] rounded-md">
+                                <div class="bg-[#F95D6A]/50 rounded text-xs p-1">THREAD</div>
+                                <div class="bg-[#F95D6A]/50 rounded text-xs p-1">THREAD</div>
+                                <div class="bg-[#F95D6A]/50 rounded text-xs p-1">THREAD</div>
+                                <div class="bg-[#F95D6A]/50 rounded text-xs p-1">...</div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2 font-normal">Threads in a block can cooperate using fast Shared Memory.</p>
+                        </div>
+                         <p class="text-xs text-gray-500 mt-2 font-normal">Blocks in a grid execute independently.</p>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-2xl shadow-xl">
+                    <h3 class="text-2xl font-bold text-center mb-6">The Memory Hierarchy</h3>
+                     <p class="text-center text-gray-600 mb-8">Efficiently managing data across different memory spaces is the most critical skill in CUDA programming. Faster memory is smaller and closer to the cores.</p>
+                    <div class="flex flex-col items-center space-y-1 text-center font-bold text-white">
+                        <div class="w-2/12 bg-[#FF7C43] py-2 rounded-t-md text-xs">Registers (Fastest)</div>
+                        <div class="w-4/12 bg-[#F95D6A] py-2 text-sm">Shared Memory</div>
+                        <div class="w-6/12 bg-[#D45087] py-3">L1/Constant/Texture Cache</div>
+                        <div class="w-8/12 bg-[#A05195] py-3">L2 Cache</div>
+                        <div class="w-10/12 bg-[#665191] py-4 rounded-b-md">Global Memory (Slowest, Largest)</div>
+                    </div>
+                    <p class="text-center text-xs text-gray-500 mt-4">The goal is to keep data in the fastest possible memory for as long as possible, minimizing slow trips to Global Memory.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="cuda-vs-opencl" class="mb-20">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">Market Landscape: CUDA vs. OpenCL</h2>
+            <p class="max-w-3xl mx-auto text-center text-lg text-gray-600 mb-12">CUDA's primary competitor is OpenCL, an open standard for parallel programming. The choice between them involves a trade-off between performance and portability.</p>
+            <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="p-4 font-bold">Feature</th>
+                            <th class="p-4 font-bold text-[#003F5C]">CUDA</th>
+                            <th class="p-4 font-bold text-gray-600">OpenCL</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        <tr class="hover:bg-blue-50/50">
+                            <td class="p-4 font-semibold">Hardware Support</td>
+                            <td class="p-4 text-[#2F4B7C]">NVIDIA GPUs Only</td>
+                            <td class="p-4 text-gray-700">Multi-vendor (NVIDIA, AMD, Intel, etc.)</td>
+                        </tr>
+                        <tr class="hover:bg-blue-50/50">
+                            <td class="p-4 font-semibold">Ecosystem</td>
+                            <td class="p-4 text-[#2F4B7C]">Extensive, mature libraries (cuDNN, etc.) & tools</td>
+                            <td class="p-4 text-gray-700">Less mature, more fragmented</td>
+                        </tr>
+                        <tr class="hover:bg-blue-50/50">
+                            <td class="p-4 font-semibold">Performance</td>
+                            <td class="p-4 text-[#2F4B7C]">Typically highest on NVIDIA hardware</td>
+                            <td class="p-4 text-gray-700">Can be competitive, but performance varies</td>
+                        </tr>
+                         <tr class="hover:bg-blue-50/50">
+                            <td class="p-4 font-semibold">Primary Advantage</td>
+                            <td class="p-4 text-[#2F4B7C]">Maximum performance & rich ecosystem</td>
+                            <td class="p-4 text-gray-700">Portability & freedom from vendor lock-in</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="speedups" class="mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">The Proof is in the Performance</h2>
+            <p class="max-w-3xl mx-auto text-center text-lg text-gray-600 mb-12">CUDA delivers transformative speedups across diverse, computationally-intensive industries. The chart below shows reported performance gains of CUDA-accelerated applications compared to their CPU-only counterparts. These aren't just improvements; they are enablers for new discoveries.</p>
+            <div class="bg-white p-4 md:p-8 rounded-2xl shadow-xl">
+                <div class="chart-container">
+                    <canvas id="speedupChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-[#2F4B7C] text-white py-8">
+        <div class="container mx-auto px-6 text-center">
+            <h3 class="text-2xl font-bold mb-2">The Foundation of Modern Computing</h3>
+            <p class="max-w-3xl mx-auto text-blue-100">By providing a powerful, accessible bridge to the parallel power of GPUs, CUDA has become a foundational technology for the AI revolution and the future of scientific discovery. Its impact continues to grow as new hardware and software innovations push the boundaries of what is computationally possible.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const speedupData = {
+                labels: [
+                    'Non-Local Means Filter (Medical Imaging)', 
+                    'Option Pricing (Finance)', 
+                    'Algorithmic Trading (Finance)', 
+                    'Quantum Chemistry Sim.',
+                    'Fully Homomorphic Encryption (Crypto)',
+                    'Molecular Dynamics (Science)',
+                    'CFD (LBM) (Science)',
+                    'Video Segmentation (CV)',
+                    'DNN Training (AI)'
+                ],
+                values: [338, 130, 100, 34, 26, 18, 15, 13, 10]
+            };
+            
+            function wrapLabels(labels, maxWidth) {
+                return labels.map(label => {
+                    if (label.length <= maxWidth) {
+                        return label;
+                    }
+                    const words = label.split(' ');
+                    const lines = [];
+                    let currentLine = '';
+                    words.forEach(word => {
+                        if ((currentLine + ' ' + word).trim().length > maxWidth) {
+                            lines.push(currentLine.trim());
+                            currentLine = word;
+                        } else {
+                            currentLine = (currentLine + ' ' + word).trim();
+                        }
+                    });
+                    lines.push(currentLine.trim());
+                    return lines;
+                });
+            }
+
+            const processedLabels = wrapLabels(speedupData.labels, 16);
+
+            const ctx = document.getElementById('speedupChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: processedLabels,
+                    datasets: [{
+                        label: 'Speedup vs. CPU (x times faster)',
+                        data: speedupData.values,
+                        backgroundColor: ['#003F5C', '#485A88', '#816FAD', '#B985C8', '#E3A3DA', '#F95D6A', '#FF7C43', '#FFA600', '#D45087'],
+                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            type: 'logarithmic',
+                            title: {
+                                display: true,
+                                text: 'Performance Speedup Factor (Logarithmic Scale)',
+                                font: { size: 14, weight: 'bold' },
+                                color: '#003F5C'
+                            },
+                            grid: {
+                                color: 'rgba(0, 63, 92, 0.1)'
+                            },
+                            ticks: {
+                                color: '#2F4B7C'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#003F5C',
+                                font: {
+                                    weight: '600'
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Reported Performance Gains Across Industries',
+                            font: { size: 18, weight: 'bold' },
+                            color: '#003F5C',
+                            padding: { bottom: 20 }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 63, 92, 0.9)',
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 12 },
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    const item = tooltipItems[0];
+                                    let label = item.chart.data.labels[item.dataIndex];
+                                    if (Array.isArray(label)) {
+                                      return label.join(' ');
+                                    }
+                                    return label;
+                                },
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.x !== null) {
+                                        label += context.parsed.x + 'x Faster';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

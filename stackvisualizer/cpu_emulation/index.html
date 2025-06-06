@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide to CPU Emulation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Neutrals -->
+    <!-- Application Structure Plan: The SPA uses a tab-based navigation to separate high-level concepts from specific architecture deep dives. This thematic structure (Core Concepts, Emulation Cycle, CHIP-8, LC-3) allows users to learn progressively, from general theory to specific examples. This is more user-friendly than a single, long-scrolling document. Key interactions include an animated emulation cycle diagram and searchable/filterable instruction set tables, which turn passive reading into active exploration and are better suited for learning and reference. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: HLE vs LLE comparison. Goal: Compare. Viz: Styled HTML table. Justification: Direct, clear comparison of features. Library: HTML/Tailwind.
+        - Report Info: Fetch-Decode-Execute cycle. Goal: Show a process. Viz: Interactive HTML/JS diagram. Interaction: Step-through buttons update the diagram's state. Justification: Makes the abstract process tangible and demonstrates state changes. Library: JS/HTML/Tailwind.
+        - Report Info: CHIP-8/LC-3 memory layouts. Goal: Inform/Organize. Viz: Chart.js Bar Chart. Interaction: Hover tooltips. Justification: Visualizes abstract memory structure. Library: Chart.js.
+        - Report Info: CHIP-8/LC-3 instruction sets. Goal: Organize/Reference. Viz: Searchable HTML table. Interaction: Search input filters table; clicking a row shows details. Justification: Vastly improves usability over a static table for reference. Library: JS/HTML/Tailwind.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F5F2;
+            color: #3C3633;
+        }
+        .font-mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .nav-button {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-button.active {
+            border-bottom-color: #E0A75E;
+            color: #E0A75E;
+        }
+        .nav-button:hover {
+            background-color: #EFEBE8;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .card {
+            background-color: #FFFFFF;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            border: 1px solid #E5E7EB;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 40vh;
+        }
+        .instruction-table th, .instruction-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+        }
+        .instruction-table tbody tr:hover {
+            background-color: #F8F5F2;
+            cursor: pointer;
+        }
+        .instruction-detail {
+            display: none;
+        }
+        .instruction-detail.active {
+            display: table-row;
+        }
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold text-[#3C3633] mb-2">The Art of Digital Replication</h1>
+            <p class="text-lg text-gray-600">An Interactive Guide to CPU Emulation</p>
+        </header>
+
+        <nav class="flex justify-center border-b border-gray-300 mb-8 flex-wrap">
+            <button class="nav-button py-4 px-6 text-base font-medium text-gray-600 active" data-tab="concepts">Core Concepts</button>
+            <button class="nav-button py-4 px-6 text-base font-medium text-gray-600" data-tab="cycle">Emulation Cycle</button>
+            <button class="nav-button py-4 px-6 text-base font-medium text-gray-600" data-tab="chip8">CHIP-8 Deep Dive</button>
+            <button class="nav-button py-4 px-6 text-base font-medium text-gray-600" data-tab="lc3">LC-3 Deep Dive</button>
+        </nav>
+
+        <main>
+            <!-- Core Concepts Section -->
+            <section id="concepts" class="content-section active">
+                <div class="space-y-12">
+                    <div class="card p-6 md:p-8">
+                        <h2 class="text-2xl font-bold mb-4">What is CPU Emulation?</h2>
+                        <p class="text-gray-700 leading-relaxed">
+                            A CPU emulator is a software program that replicates the functionality of a hardware CPU (the "target") on a different computer (the "host"). It's more than just running software; it's about recreating the entire hardware environment—memory, I/O, and graphics—that the original software expects to find. This allows us to preserve digital history, develop software for new platforms, and provides a powerful educational tool for understanding computer architecture.
+                        </p>
+                    </div>
+
+                    <div class="card p-6 md:p-8">
+                        <h2 class="text-2xl font-bold mb-4">High-Level (HLE) vs. Low-Level (LLE) Emulation</h2>
+                        <p class="text-gray-700 leading-relaxed mb-6">
+                            Emulators use different strategies to mimic hardware, each with trade-offs in accuracy, performance, and complexity. Low-Level Emulation (LLE) aims to simulate the hardware components in precise detail, while High-Level Emulation (HLE) simulates the *behavior* of system functions, often translating calls directly to the host machine's capabilities.
+                        </p>
+                        <div class="overflow-x-auto">
+                            <table class="w-full border-collapse">
+                                <thead>
+                                    <tr class="border-b bg-gray-50">
+                                        <th class="p-3 font-semibold text-left">Feature</th>
+                                        <th class="p-3 font-semibold text-left">Low-Level Emulation (LLE)</th>
+                                        <th class="p-3 font-semibold text-left">High-Level Emulation (HLE)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b">
+                                        <td class="p-3 font-medium">Primary Goal</td>
+                                        <td class="p-3 text-gray-600">Hardware component mimicry</td>
+                                        <td class="p-3 text-gray-600">Behavioral/functional mimicry</td>
+                                    </tr>
+                                    <tr class="border-b bg-gray-50">
+                                        <td class="p-3 font-medium">Accuracy</td>
+                                        <td class="p-3 text-gray-600">Very high, potentially cycle-accurate</td>
+                                        <td class="p-3 text-gray-600">Variable, focuses on functional equivalence</td>
+                                    </tr>
+                                    <tr class="border-b">
+                                        <td class="p-3 font-medium">Performance</td>
+                                        <td class="p-3 text-gray-600">Slower, more computationally intensive</td>
+                                        <td class="p-3 text-gray-600">Faster, leverages host capabilities</td>
+                                    </tr>
+                                    <tr class="border-b bg-gray-50">
+                                        <td class="p-3 font-medium">Use Case</td>
+                                        <td class="p-3 text-gray-600">Classic consoles, systems needing precise timing</td>
+                                        <td class="p-3 text-gray-600">Modern consoles (GPU/OS), performance-critical parts</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Emulation Cycle Section -->
+            <section id="cycle" class="content-section">
+                <div class="card p-6 md:p-8">
+                    <h2 class="text-2xl font-bold mb-2">The Fetch-Decode-Execute Cycle</h2>
+                    <p class="text-gray-700 leading-relaxed mb-8">
+                        The core of any CPU is the instruction cycle. An emulator replicates this fundamental loop in software: it fetches an instruction from memory, decodes it to understand the operation, and executes the required action. Use the controls below to step through a simplified visual representation of this process and see how the CPU's state changes at each stage.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+                        <div class="md:col-span-2 space-y-4">
+                            <div class="flex justify-around items-center p-4">
+                                <div id="fetch-stage" class="text-center p-4 rounded-lg border-2 border-transparent transition-all duration-300">
+                                    <div class="text-4xl">📥</div>
+                                    <div class="font-bold mt-2">1. FETCH</div>
+                                </div>
+                                <div class="text-2xl text-gray-400 font-mono">→</div>
+                                <div id="decode-stage" class="text-center p-4 rounded-lg border-2 border-transparent transition-all duration-300">
+                                    <div class="text-4xl">🔍</div>
+                                    <div class="font-bold mt-2">2. DECODE</div>
+                                </div>
+                                <div class="text-2xl text-gray-400 font-mono">→</div>
+                                <div id="execute-stage" class="text-center p-4 rounded-lg border-2 border-transparent transition-all duration-300">
+                                    <div class="text-4xl">⚙️</div>
+                                    <div class="font-bold mt-2">3. EXECUTE</div>
+                                </div>
+                            </div>
+                             <div class="bg-gray-100 p-4 rounded-lg">
+                                <h3 class="font-bold mb-2">Description</h3>
+                                <p id="cycle-description" class="text-gray-600 text-sm">Click 'Next Step' to begin the cycle.</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-800 text-white p-4 rounded-lg font-mono text-sm space-y-3">
+                            <h3 class="text-lg font-bold text-yellow-400 border-b border-gray-600 pb-2">CPU State</h3>
+                            <div>PC: <span id="cycle-pc" class="text-green-400">0x200</span></div>
+                            <div>IR: <span id="cycle-ir" class="text-green-400">0x0000</span></div>
+                            <div>R1: <span id="cycle-r1" class="text-green-400">0x00</span></div>
+                            <div>Memory[0x350]: <span id="cycle-mem" class="text-green-400">0x00</span></div>
+                        </div>
+                    </div>
+                     <div class="flex justify-center mt-8 space-x-4">
+                        <button id="cycle-next-btn" class="bg-[#E0A75E] text-white font-bold py-2 px-6 rounded-lg hover:bg-opacity-90 transition-all">Next Step</button>
+                        <button id="cycle-reset-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-opacity-90 transition-all">Reset</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CHIP-8 Section -->
+            <section id="chip8" class="content-section">
+                <div class="card p-6 md:p-8">
+                    <h2 class="text-2xl font-bold mb-2">CHIP-8: A Beginner's Virtual Machine</h2>
+                    <p class="text-gray-700 leading-relaxed mb-8">
+                        Developed in the 1970s, CHIP-8 is an interpreted language and virtual machine specification designed for simple 8-bit microcomputers. Its straightforward architecture, small instruction set, and well-defined components make it a perfect first project for aspiring emulator developers. This section explores its core components and its complete instruction set.
+                    </p>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div>
+                             <h3 class="text-xl font-bold mb-4">Memory Layout (4KB)</h3>
+                             <div class="chart-container">
+                                <canvas id="chip8-memory-chart"></canvas>
+                             </div>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold mb-4">Key Registers & Components</h3>
+                            <div class="space-y-3">
+                                <div class="p-3 bg-gray-50 rounded-lg"><strong>16 x 8-bit Registers (V0-VF):</strong> General-purpose data storage. VF is used as a flag.</div>
+                                <div class="p-3 bg-gray-50 rounded-lg"><strong>16-bit Index Register (I):</strong> Stores memory addresses for sprite/data operations.</div>
+                                <div class="p-3 bg-gray-50 rounded-lg"><strong>16-bit Program Counter (PC):</strong> Points to the next instruction. Starts at `0x200`.</div>
+                                <div class="p-3 bg-gray-50 rounded-lg"><strong>64x32 Monochrome Display:</strong> For all graphics output.</div>
+                                <div class="p-3 bg-gray-50 rounded-lg"><strong>Two 8-bit Timers:</strong> A Delay Timer and a Sound Timer, both decrementing at 60Hz.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-12">
+                        <h3 class="text-xl font-bold mb-4">Instruction Set (35 Opcodes)</h3>
+                        <p class="text-gray-700 mb-4">Each CHIP-8 instruction is 2 bytes long. Use the search bar to filter instructions by name or function. Click any instruction to see a detailed breakdown.</p>
+                        <input type="text" id="chip8-search" placeholder="Search instructions (e.g., 'jump', 'draw', '8XY4')..." class="w-full p-3 border border-gray-300 rounded-lg mb-4">
+                        <div class="overflow-x-auto border rounded-lg">
+                            <table class="w-full text-sm instruction-table" id="chip8-instruction-table">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th>Opcode</th>
+                                        <th>Mnemonic</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- LC-3 Section -->
+            <section id="lc3" class="content-section">
+                 <div class="card p-6 md:p-8">
+                    <h2 class="text-2xl font-bold mb-2">LC-3: An Educational Architecture</h2>
+                    <p class="text-gray-700 leading-relaxed mb-8">
+                        The Little Computer 3 (LC-3) is a model architecture designed specifically for teaching computer science. It's more complex than CHIP-8, introducing concepts like multiple addressing modes, condition codes, and a trap system for OS calls, yet remains simple enough to be fully understood. This section details its 16-bit architecture and instruction set.
+                    </p>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div>
+                             <h3 class="text-xl font-bold mb-4">Memory Layout (64K words)</h3>
+                             <div class="chart-container">
+                                <canvas id="lc3-memory-chart"></canvas>
+                             </div>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold mb-4">Key Registers & Components</h3>
+                            <div class="space-y-3">
+                                <div class="p-3 bg-gray-50 rounded-lg"><strong>8 x 16-bit Registers (R0-R7):</strong> General-purpose data storage.</div>
+                                <div class="p-3 bg-gray-50 rounded-lg"><strong>16-bit Program Counter (PC):</strong> Points to the next instruction.</div>
+                                <div class="p-3 bg-gray-50 rounded-lg"><strong>Processor Status Register (PSR):</strong> Holds privilege mode and condition codes.</div>
+                                <div class="p-3 bg-gray-50 rounded-lg"><strong>Condition Codes (N, Z, P):</strong> 3 flags (Negative, Zero, Positive) set after data modification, used for conditional branches.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-12">
+                        <h3 class="text-xl font-bold mb-4">Instruction Set (15 Opcodes)</h3>
+                        <p class="text-gray-700 mb-4">Each LC-3 instruction is 16 bits (1 word) long. Use the search bar to filter by name or addressing mode. Click any instruction to see its format and behavior.</p>
+                        <input type="text" id="lc3-search" placeholder="Search instructions (e.g., 'ADD', 'PC-Relative', 'TRAP')..." class="w-full p-3 border border-gray-300 rounded-lg mb-4">
+                        <div class="overflow-x-auto border rounded-lg">
+                            <table class="w-full text-sm instruction-table" id="lc3-instruction-table">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th>Opcode</th>
+                                        <th>Name</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const tabs = document.querySelectorAll('.nav-button');
+    const sections = document.querySelectorAll('.content-section');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            sections.forEach(s => s.classList.remove('active'));
+
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab).classList.add('active');
+        });
+    });
+
+    const chip8Instructions = [
+        { op: '00E0', mn: 'CLS', desc: 'Clear the display.', detail: 'Sets all pixels on the 64x32 display to off (0).' },
+        { op: '00EE', mn: 'RET', desc: 'Return from a subroutine.', detail: 'Sets the program counter to the address at the top of the stack, then decrements the stack pointer.' },
+        { op: '1NNN', mn: 'JP addr', desc: 'Jump to location NNN.', detail: 'Sets the program counter to NNN.' },
+        { op: '2NNN', mn: 'CALL addr', desc: 'Call subroutine at NNN.', detail: 'Increments stack pointer, puts current PC on stack, then sets PC to NNN.' },
+        { op: '3XNN', mn: 'SE Vx, byte', desc: 'Skip next instruction if Vx = NN.', detail: 'Compares register Vx to NN and increments the PC by 4 if equal, by 2 if not.' },
+        { op: '4XNN', mn: 'SNE Vx, byte', desc: 'Skip next instruction if Vx != NN.', detail: 'Compares register Vx to NN and increments the PC by 4 if not equal, by 2 if equal.' },
+        { op: '5XY0', mn: 'SE Vx, Vy', desc: 'Skip next instruction if Vx = Vy.', detail: 'Compares registers Vx and Vy, increments PC by 4 if equal, by 2 if not.' },
+        { op: '6XNN', mn: 'LD Vx, byte', desc: 'Set register Vx = NN.', detail: 'Puts the value NN into register Vx.' },
+        { op: '7XNN', mn: 'ADD Vx, byte', desc: 'Set Vx = Vx + NN.', detail: 'Adds NN to Vx. VF is not affected.' },
+        { op: '8XY0', mn: 'LD Vx, Vy', desc: 'Set Vx = Vy.', detail: 'Stores the value of register Vy in register Vx.' },
+        { op: '8XY1', mn: 'OR Vx, Vy', desc: 'Set Vx = Vx OR Vy.', detail: 'Performs a bitwise OR on Vx and Vy, stores result in Vx.' },
+        { op: '8XY2', mn: 'AND Vx, Vy', desc: 'Set Vx = Vx AND Vy.', detail: 'Performs a bitwise AND on Vx and Vy, stores result in Vx.' },
+        { op: '8XY3', mn: 'XOR Vx, Vy', desc: 'Set Vx = Vx XOR Vy.', detail: 'Performs a bitwise XOR on Vx and Vy, stores result in Vx.' },
+        { op: '8XY4', mn: 'ADD Vx, Vy', desc: 'Set Vx = Vx + Vy, set VF = carry.', detail: 'Adds Vy to Vx. VF is set to 1 if there is a carry, 0 otherwise.' },
+        { op: '8XY5', mn: 'SUB Vx, Vy', desc: 'Set Vx = Vx - Vy, set VF = NOT borrow.', detail: 'Subtracts Vy from Vx. VF is 1 if there is no borrow, 0 if there is.' },
+        { op: '8XY6', mn: 'SHR Vx', desc: 'Set Vx = Vx SHR 1.', detail: 'Shifts Vx right by one. VF is set to the value of the LSB of Vx before the shift.' },
+        { op: '8XY7', mn: 'SUBN Vx, Vy', desc: 'Set Vx = Vy - Vx, set VF = NOT borrow.', detail: 'Subtracts Vx from Vy. VF is 1 if there is no borrow, 0 if there is.' },
+        { op: '8XYE', mn: 'SHL Vx', desc: 'Set Vx = Vx SHL 1.', detail: 'Shifts Vx left by one. VF is set to the value of the MSB of Vx before the shift.' },
+        { op: '9XY0', mn: 'SNE Vx, Vy', desc: 'Skip next instruction if Vx != Vy.', detail: 'Compares registers Vx and Vy, increments PC by 4 if not equal, by 2 if equal.' },
+        { op: 'ANNN', mn: 'LD I, addr', desc: 'Set I = NNN.', detail: 'The value of register I is set to NNN.' },
+        { op: 'BNNN', mn: 'JP V0, addr', desc: 'Jump to location NNN + V0.', detail: 'PC is set to NNN plus the value of V0.' },
+        { op: 'CXNN', mn: 'RND Vx, byte', desc: 'Set Vx = random byte AND NN.', detail: 'Generates a random number from 0 to 255, which is then ANDed with NN. Result is stored in Vx.' },
+        { op: 'DXYN', mn: 'DRW Vx, Vy, nibble', desc: 'Display N-byte sprite.', detail: 'Draws a sprite at coordinate (Vx, Vy). Sprites are N bytes tall and 8 pixels wide. Pixels are XORed. VF is set to 1 if a collision occurs.' },
+        { op: 'EX9E', mn: 'SKP Vx', desc: 'Skip next instruction if key with value of Vx is pressed.', detail: 'Checks keyboard, and if the key corresponding to Vx is down, PC is incremented by 4.' },
+        { op: 'EXA1', mn: 'SKNP Vx', desc: 'Skip next instruction if key with value of Vx is not pressed.', detail: 'Checks keyboard, and if the key corresponding to Vx is up, PC is incremented by 4.' },
+        { op: 'FX07', mn: 'LD Vx, DT', desc: 'Set Vx = delay timer value.', detail: 'The value of the delay timer is placed into register Vx.' },
+        { op: 'FX0A', mn: 'LD Vx, K', desc: 'Wait for a key press, store value in Vx.', detail: 'All execution stops until a key is pressed, then the key value is stored in Vx.' },
+        { op: 'FX15', mn: 'LD DT, Vx', desc: 'Set delay timer = Vx.', detail: 'The delay timer is set to the value of Vx.' },
+        { op: 'FX18', mn: 'LD ST, Vx', desc: 'Set sound timer = Vx.', detail: 'The sound timer is set to the value of Vx.' },
+        { op: 'FX1E', mn: 'ADD I, Vx', desc: 'Set I = I + Vx.', detail: 'The values of I and Vx are added, and the results are stored in I.' },
+        { op: 'FX29', mn: 'LD F, Vx', desc: 'Set I = location of sprite for digit Vx.', detail: 'Sets I to the location for the hexadecimal sprite corresponding to the value of Vx.' },
+        { op: 'FX33', mn: 'LD B, Vx', desc: 'Store BCD representation of Vx in memory.', detail: 'Takes the decimal value of Vx and places the hundreds digit in memory at I, tens at I+1, and ones at I+2.' },
+        { op: 'FX55', mn: 'LD [I], Vx', desc: 'Store registers V0 through Vx in memory.', detail: 'Copies the values of registers V0 through Vx into memory, starting at the address in I.' },
+        { op: 'FX65', mn: 'LD Vx, [I]', desc: 'Read registers V0 through Vx from memory.', detail: 'Reads values from memory starting at address I into registers V0 through Vx.' },
+    ];
+
+    const lc3Instructions = [
+        { op: '0001', name: 'ADD', desc: 'Add register or immediate value.', detail: 'Modes: Register, Immediate. Sets DR = SR1 + SR2 or DR = SR1 + SEXT(imm5). Affects N,Z,P flags.' },
+        { op: '0101', name: 'AND', desc: 'Bitwise AND register or immediate value.', detail: 'Modes: Register, Immediate. Sets DR = SR1 & SR2 or DR = SR1 & SEXT(imm5). Affects N,Z,P flags.' },
+        { op: '0000', name: 'BR', desc: 'Branch if condition is met.', detail: 'Mode: PC-Relative. If the specified N,Z,P flag is set, PC = PC + SEXT(PCoffset9). Does not affect flags.' },
+        { op: '1100', name: 'JMP', desc: 'Jump to address in register. (RET is JMP R7)', detail: 'Mode: Register Direct. Sets PC = BaseR. Does not affect flags.' },
+        { op: '0100', name: 'JSR/JSRR', desc: 'Jump to subroutine.', detail: 'Modes: PC-Relative (JSR), Register Direct (JSRR). Saves PC to R7, then jumps to target address. Does not affect flags.' },
+        { op: '0010', name: 'LD', desc: 'Load from memory.', detail: 'Mode: PC-Relative. DR = Mem[PC + SEXT(PCoffset9)]. Affects N,Z,P flags.' },
+        { op: '1010', name: 'LDI', desc: 'Load indirect from memory.', detail: 'Mode: Indirect. DR = Mem[Mem[PC + SEXT(PCoffset9)]]. Affects N,Z,P flags.' },
+        { op: '0110', name: 'LDR', desc: 'Load from memory using base + offset.', detail: 'Mode: Base+Offset. DR = Mem[BaseR + SEXT(offset6)]. Affects N,Z,P flags.' },
+        { op: '1110', name: 'LEA', desc: 'Load effective address.', detail: 'Mode: PC-Relative. DR = PC + SEXT(PCoffset9). *Does not access memory for operand*. Affects N,Z,P flags.' },
+        { op: '1001', name: 'NOT', desc: 'Bitwise NOT.', detail: 'Mode: Register. DR = ~SR. Affects N,Z,P flags.' },
+        { op: '1000', name: 'RTI', desc: 'Return from interrupt.', detail: 'Restores PC and PSR from supervisor stack. Affects N,Z,P flags (restored).' },
+        { op: '0011', name: 'ST', desc: 'Store to memory.', detail: 'Mode: PC-Relative. Mem[PC + SEXT(PCoffset9)] = SR. Does not affect flags.' },
+        { op: '1011', name: 'STI', desc: 'Store indirect to memory.', detail: 'Mode: Indirect. Mem[Mem[PC + SEXT(PCoffset9)]] = SR. Does not affect flags.' },
+        { op: '0111', name: 'STR', desc: 'Store to memory using base + offset.', detail: 'Mode: Base+Offset. Mem[BaseR + SEXT(offset6)] = SR. Does not affect flags.' },
+        { op: '1111', name: 'TRAP', desc: 'Execute a system call.', detail: 'Mode: Trap Vector. Saves PC to R7, jumps to routine specified by trapvect8. Does not affect flags.' },
+    ];
+    
+    function populateInstructionTable(tableId, searchId, data) {
+        const tableBody = document.querySelector(`#${tableId} tbody`);
+        const searchInput = document.getElementById(searchId);
+        let activeDetailRow = null;
+
+        function renderTable(filter = '') {
+            tableBody.innerHTML = '';
+            const lowerFilter = filter.toLowerCase();
+            const filteredData = data.filter(item => 
+                item.op.toLowerCase().includes(lowerFilter) ||
+                (item.mn && item.mn.toLowerCase().includes(lowerFilter)) ||
+                (item.name && item.name.toLowerCase().includes(lowerFilter)) ||
+                item.desc.toLowerCase().includes(lowerFilter) ||
+                (item.detail && item.detail.toLowerCase().includes(lowerFilter))
+            );
+
+            filteredData.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="font-mono">${item.op || item.name}</td>
+                    <td>${item.mn || item.name}</td>
+                    <td>${item.desc}</td>
+                `;
+                row.dataset.index = index;
+                tableBody.appendChild(row);
+
+                const detailRow = document.createElement('tr');
+                detailRow.classList.add('instruction-detail');
+                detailRow.innerHTML = `
+                    <td colspan="3" class="p-4 bg-yellow-50 border-l-4 border-yellow-400">
+                        <p class="font-bold text-gray-800">Details for <span class="font-mono">${item.op || item.name}</span>:</p>
+                        <p class="text-gray-700 mt-1">${item.detail}</p>
+                    </td>
+                `;
+                detailRow.dataset.index = index;
+                tableBody.appendChild(detailRow);
+
+                row.addEventListener('click', () => {
+                    if (activeDetailRow && activeDetailRow !== detailRow) {
+                         activeDetailRow.classList.remove('active');
+                    }
+                    detailRow.classList.toggle('active');
+                    activeDetailRow = detailRow.classList.contains('active') ? detailRow : null;
+                });
+            });
+        }
+        
+        searchInput.addEventListener('input', (e) => renderTable(e.target.value));
+        renderTable();
+    }
+
+    populateInstructionTable('chip8-instruction-table', 'chip8-search', chip8Instructions);
+    populateInstructionTable('lc3-instruction-table', 'lc3-search', lc3Instructions);
+
+    const chartOptions = {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return `${context.dataset.label}: ${context.raw.x[0].toString(16).toUpperCase()}-${context.raw.x[1].toString(16).toUpperCase()}`;
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                stacked: true,
+                ticks: {
+                    callback: function(value) { return '0x' + value.toString(16).toUpperCase(); }
+                }
+            },
+            y: {
+                stacked: true
+            }
+        }
+    };
+    
+    new Chart('chip8-memory-chart', {
+        type: 'bar',
+        data: {
+            labels: ['Memory'],
+            datasets: [
+                { label: 'Interpreter / Font Set', data: [{x: [0, 0x1FF], y: 0}], backgroundColor: '#7A9D54' },
+                { label: 'Program ROM Area', data: [{x: [0x200, 0xFFF], y: 0}], backgroundColor: '#E0A75E' },
+            ]
+        },
+        options: chartOptions
+    });
+
+    new Chart('lc3-memory-chart', {
+        type: 'bar',
+        data: {
+            labels: ['Memory'],
+            datasets: [
+                { label: 'Trap Vector Table', data: [{x: [0x0000, 0x00FF], y: 0}], backgroundColor: '#60A5FA' },
+                { label: 'OS & Stack', data: [{x: [0x0200, 0x2FFF], y: 0}], backgroundColor: '#FBBF24' },
+                { label: 'User Program Space', data: [{x: [0x3000, 0xFDFF], y: 0}], backgroundColor: '#7A9D54' },
+                { label: 'Memory-Mapped I/O', data: [{x: [0xFE00, 0xFFFF], y: 0}], backgroundColor: '#F87171' },
+            ]
+        },
+        options: chartOptions
+    });
+    
+    // Emulation Cycle Logic
+    const cycleState = {
+        pc: 0x200,
+        ir: 0x0000,
+        r1: 0x0A,
+        mem: 0x15
+    };
+    const initialCycleState = {...cycleState};
+    let currentStage = 0; // 0: reset, 1: fetch, 2: decode, 3: execute
+    const stages = [
+        document.getElementById('fetch-stage'),
+        document.getElementById('decode-stage'),
+        document.getElementById('execute-stage')
+    ];
+    const descriptions = [
+        "Click 'Next Step' to begin the cycle.",
+        "The CPU fetches the next instruction (e.g., 6115, 'LD R1, 0x15') from memory at the address in the Program Counter (PC). The PC is then incremented, and the instruction is loaded into the Instruction Register (IR).",
+        "The control unit decodes the instruction in the IR (6115) to understand the operation (LD - Load) and its operands (register R1 and the immediate value 0x15).",
+        "The operation is performed. The value 0x15 is loaded into register R1. The cycle is now complete and ready to begin again for the next instruction."
+    ];
+
+    const cyclePcEl = document.getElementById('cycle-pc');
+    const cycleIrEl = document.getElementById('cycle-ir');
+    const cycleR1El = document.getElementById('cycle-r1');
+    const cycleMemEl = document.getElementById('cycle-mem');
+    const cycleDescEl = document.getElementById('cycle-description');
+    
+    function updateCycleUI() {
+        cyclePcEl.textContent = '0x' + cycleState.pc.toString(16).toUpperCase();
+        cycleIrEl.textContent = '0x' + cycleState.ir.toString(16).toUpperCase();
+        cycleR1El.textContent = '0x' + cycleState.r1.toString(16).toUpperCase();
+        cycleMemEl.textContent = '0x' + cycleState.mem.toString(16).toUpperCase();
+        cycleDescEl.textContent = descriptions[currentStage];
+        
+        stages.forEach((el, index) => {
+            if(index === currentStage - 1) {
+                el.classList.add('border-[#E0A75E]', 'bg-yellow-50');
+            } else {
+                el.classList.remove('border-[#E0A75E]', 'bg-yellow-50');
+            }
+        });
+    }
+
+    document.getElementById('cycle-next-btn').addEventListener('click', () => {
+        currentStage = (currentStage % 3) + 1;
+        switch(currentStage) {
+            case 1: // Fetch
+                cycleState.pc = initialCycleState.pc + 2;
+                cycleState.ir = 0x6115;
+                break;
+            case 2: // Decode
+                // No state change, just description change
+                break;
+            case 3: // Execute
+                cycleState.r1 = cycleState.mem;
+                break;
+        }
+        updateCycleUI();
+    });
+
+    document.getElementById('cycle-reset-btn').addEventListener('click', () => {
+        Object.assign(cycleState, initialCycleState);
+        currentStage = 0;
+        updateCycleUI();
+    });
+
+    updateCycleUI();
+
+});
+</script>
+
+</body>
+</html>

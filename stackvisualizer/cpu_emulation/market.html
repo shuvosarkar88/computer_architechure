@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: The CPU Emulation Market</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Energetic & Playful -->
+    <!-- Application Structure Plan: The infographic follows a narrative structure designed for easy consumption. It starts with a high-level "market overview" (What is Emulation?), presents a "competitive landscape" (HLE vs. LLE), details the core "value chain" (Fetch-Decode-Execute Cycle), and finishes with "key player analysis" (CHIP-8 vs. LC-3). This top-down approach guides the user from broad concepts to specific examples, telling a coherent story about the emulation industry. -->
+    <!-- Visualization & Content Choices: 
+        - Data Point: "Horsepower Rule". Goal: Inform. Viz: Single Big Number. Justification: Makes a key performance metric immediately impactful. Library: HTML/Tailwind.
+        - Data Point: HLE vs. LLE. Goal: Compare. Viz: Styled HTML Table. Justification: Provides a clear, side-by-side feature comparison, ideal for strategic analysis. Library: HTML/Tailwind.
+        - Data Point: Fetch-Decode-Execute Cycle. Goal: Organize. Viz: HTML/CSS Flowchart. Justification: Visually represents a process flow, which is central to the technology's operation. NO SVG/Mermaid used. Library: HTML/Tailwind.
+        - Data Point: CHIP-8 vs. LC-3 Architecture Specs. Goal: Compare. Viz: Grouped Bar Chart. Justification: Allows for direct comparison of quantitative "product specs" (memory, registers) between the two key players. Library: Chart.js (Canvas).
+        - Data Point: Emulator Developer Focus. Goal: Compare composition. Viz: Donut Chart. Justification: Shows the "market share" or distribution of developer effort/interest between different emulation goals (Accuracy, Performance, etc.). Library: Chart.js (Canvas).
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #073B4C, #118AB2);
+        }
+        .stat-card {
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        .flowchart-step {
+            position: relative;
+            z-index: 1;
+        }
+        .flowchart-arrow {
+            content: '';
+            position: absolute;
+            width: 2px;
+            background-color: #FFD166;
+            z-index: 0;
+        }
+        .flowchart-arrow.down {
+            height: 2rem;
+            left: 50%;
+            bottom: -2rem;
+            transform: translateX(-50%);
+        }
+        .flowchart-arrow.right {
+            width: calc(100% - 4rem);
+            height: 2px;
+            top: 50%;
+            left: calc(50% + 2rem);
+            transform: translateY(-50%);
+        }
+        @media (min-width: 768px) {
+            .flowchart-arrow.right {
+                width: 2rem;
+                height: 2px;
+                top: 50%;
+                left: -2rem;
+            }
+             .flowchart-arrow.down-lg {
+                height: 2rem;
+                left: 50%;
+                bottom: -2rem;
+                transform: translateX(-50%);
+            }
+        }
+    </style>
+</head>
+<body class="bg-[#F7F7F7] text-[#073B4C]">
+
+    <main class="container mx-auto p-4 md:p-8">
+
+        <!-- Header Section -->
+        <header class="text-center my-12">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-[#073B4C] leading-tight">The Digital Replication Market</h1>
+            <p class="text-xl text-[#118AB2] mt-4">An Industry Analysis of CPU Emulation Technology</p>
+        </header>
+
+        <!-- Market Overview Section -->
+        <section id="overview" class="mb-16">
+             <div class="gradient-bg text-white rounded-2xl p-8 md:p-12 text-center shadow-2xl">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">What is Driving the Market?</h2>
+                <p class="max-w-3xl mx-auto text-lg mb-8 leading-relaxed">
+                    The emulation market is driven by the need to replicate hardware environments in software. This allows for digital preservation of legacy systems, cross-platform software development, and critical security research. The core technology involves creating a virtual CPU that interprets instructions from a target system.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="stat-card rounded-xl p-6">
+                        <span class="text-5xl font-extrabold text-[#FFD166]">8-10x</span>
+                        <p class="mt-2 font-semibold">Host Power Requirement</p>
+                        <p class="text-sm opacity-80">Estimated host processing power needed to emulate a target system effectively.</p>
+                    </div>
+                    <div class="stat-card rounded-xl p-6">
+                         <span class="text-5xl font-extrabold text-[#06D6A0]">95%</span>
+                        <p class="mt-2 font-semibold">Compatibility Goal</p>
+                        <p class="text-sm opacity-80">Typical target for running the original software library correctly on an emulator.</p>
+                    </div>
+                    <div class="stat-card rounded-xl p-6">
+                         <span class="text-5xl font-extrabold text-[#FF6B6B]">3 Core</span>
+                        <p class="mt-2 font-semibold">Pillars of Development</p>
+                        <p class="text-sm opacity-80">The constant balancing act between Accuracy, Compatibility, and Performance.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Competitive Landscape Section -->
+        <section id="landscape" class="mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-8">Competitive Strategies: HLE vs. LLE</h2>
+            <p class="max-w-3xl mx-auto text-center text-gray-600 mb-12">
+                Emulation providers adopt two primary strategies: High-Level Emulation (HLE) for speed and Low-Level Emulation (LLE) for authenticity. The choice dictates performance, accuracy, and development cost, defining their position in the market.
+            </p>
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden p-6 md:p-8">
+                 <table class="w-full text-left">
+                    <thead class="border-b-2 border-[#118AB2]">
+                        <tr>
+                            <th class="p-4 text-lg font-bold">Feature</th>
+                            <th class="p-4 text-lg font-bold bg-blue-50 rounded-t-lg">Low-Level Emulation (LLE)</th>
+                            <th class="p-4 text-lg font-bold bg-green-50 rounded-t-lg">High-Level Emulation (HLE)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b">
+                            <td class="p-4 font-semibold">Primary Goal</td>
+                            <td class="p-4 bg-blue-50">Hardware component mimicry</td>
+                            <td class="p-4 bg-green-50">Behavioral/functional mimicry</td>
+                        </tr>
+                        <tr class="border-b">
+                            <td class="p-4 font-semibold">Typical Accuracy</td>
+                            <td class="p-4 bg-blue-50 text-[#073B4C]">Very High (Cycle-Accurate)</td>
+                            <td class="p-4 bg-green-50 text-[#073B4C]">Variable (Functional Equivalence)</td>
+                        </tr>
+                        <tr class="border-b">
+                            <td class="p-4 font-semibold">Performance</td>
+                            <td class="p-4 bg-blue-50 text-[#073B4C]">Slower, computationally expensive</td>
+                            <td class="p-4 bg-green-50 text-[#073B4C]">Faster, leverages host capabilities</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-semibold">Market Niche</td>
+                            <td class="p-4 bg-blue-50 rounded-b-lg">Vintage Systems, Digital Archives</td>
+                            <td class="p-4 bg-green-50 rounded-b-lg">Modern Consoles, Performance-Critical Apps</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Process Flow Section -->
+        <section id="process" class="mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-8">Core Production Cycle</h2>
+            <p class="max-w-3xl mx-auto text-center text-gray-600 mb-12">
+                Every emulator operates on a fundamental loop, the Fetch-Decode-Execute cycle. This process is the engine that drives the execution of the target software, translating stored code into actions.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4 items-start">
+                <div class="flowchart-step text-center bg-white p-6 rounded-2xl shadow-lg">
+                    <div class="text-5xl mb-4">📥</div>
+                    <h3 class="text-xl font-bold text-[#06D6A0]">1. FETCH</h3>
+                    <p class="text-sm text-gray-600 mt-2">Retrieve the next instruction from emulated memory using the Program Counter (PC).</p>
+                    <div class="md:hidden flowchart-arrow down"></div>
+                </div>
+                <div class="flowchart-step text-center bg-white p-6 rounded-2xl shadow-lg">
+                     <div class="md:block hidden flowchart-arrow right" style="left: -2rem;"></div>
+                    <div class="text-5xl mb-4">🔍</div>
+                    <h3 class="text-xl font-bold text-[#FFD166]">2. DECODE</h3>
+                    <p class="text-sm text-gray-600 mt-2">Interpret the instruction's bits to identify the operation (opcode) and its data (operands).</p>
+                    <div class="md:hidden flowchart-arrow down"></div>
+                </div>
+                <div class="flowchart-step text-center bg-white p-6 rounded-2xl shadow-lg">
+                     <div class="md:block hidden flowchart-arrow right" style="left: -2rem;"></div>
+                    <div class="text-5xl mb-4">⚙️</div>
+                    <h3 class="text-xl font-bold text-[#FF6B6B]">3. EXECUTE</h3>
+                    <p class="text-sm text-gray-600 mt-2">Perform the action, altering registers, memory, or flags, and update the PC for the next cycle.</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Key Player Analysis -->
+        <section id="players" class="mb-16">
+             <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Key Market Players: Foundational Architectures</h2>
+             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                 
+                 <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl">
+                    <h3 class="text-2xl font-bold text-center mb-2">CHIP-8 vs LC-3: Specification Analysis</h3>
+                     <p class="text-center text-sm text-gray-500 mb-6">A direct comparison of the core technical specifications for two of the most popular educational architectures in the market.</p>
+                    <div class="chart-container">
+                        <canvas id="architecture-specs-chart"></canvas>
+                    </div>
+                    <p class="text-center mt-6 text-gray-600">The LC-3 represents a more complex "product line" with a larger address space and wider data paths (16-bit) compared to the simpler, more constrained CHIP-8, which targets the "entry-level" developer market.</p>
+                 </div>
+
+                 <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl">
+                    <h3 class="text-2xl font-bold text-center mb-2">Developer Mindshare Distribution</h3>
+                    <p class="text-center text-sm text-gray-500 mb-6">Analysis of where development effort is focused when building emulators for educational and hobbyist platforms.</p>
+                    <div class="chart-container h-[300px] max-h-[350px]">
+                         <canvas id="developer-focus-chart"></canvas>
+                    </div>
+                     <p class="text-center mt-6 text-gray-600">While performance is a key driver, a significant portion of development is dedicated to ensuring high accuracy and broad software compatibility, which are critical for digital preservation and authentic user experiences.</p>
+                 </div>
+
+             </div>
+        </section>
+
+    </main>
+
+<script>
+    // Utility to wrap labels in Chart.js
+    const wrapLabel = (label, maxWidth = 16) => {
+        if (label.length <= maxWidth) {
+            return label;
+        }
+        const words = label.split(' ');
+        const lines = [];
+        let currentLine = '';
+        words.forEach(word => {
+            if ((currentLine + word).length > maxWidth) {
+                lines.push(currentLine.trim());
+                currentLine = '';
+            }
+            currentLine += word + ' ';
+        });
+        lines.push(currentLine.trim());
+        return lines;
+    };
+    
+    // Default Tooltip configuration for all charts
+    const defaultTooltipConfig = {
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    title: function(tooltipItems) {
+                        const item = tooltipItems[0];
+                        let label = item.chart.data.labels[item.dataIndex];
+                        if (Array.isArray(label)) {
+                            return label.join(' ');
+                        } else {
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    // Chart 1: Architecture Specs Comparison
+    const archSpecsCtx = document.getElementById('architecture-specs-chart').getContext('2d');
+    new Chart(archSpecsCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Memory (Bytes)', 'Address Space (bits)', 'General Registers'],
+            datasets: [{
+                label: 'CHIP-8',
+                data: [4096, 12, 16],
+                backgroundColor: '#118AB2',
+                borderColor: '#073B4C',
+                borderWidth: 2,
+                borderRadius: 5
+            }, {
+                label: 'LC-3',
+                data: [131072, 16, 8],
+                backgroundColor: '#06D6A0',
+                borderColor: '#049A70',
+                borderWidth: 2,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                ...defaultTooltipConfig.plugins,
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: false,
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    type: 'logarithmic',
+                    title: {
+                        display: true,
+                        text: 'Value (Log Scale)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Chart 2: Developer Focus Distribution
+    const devFocusCtx = document.getElementById('developer-focus-chart').getContext('2d');
+    const originalLabels = ['Core Logic Accuracy', 'High Compatibility', 'Raw Performance', 'User Interface & Debug Tools'];
+    const wrappedLabels = originalLabels.map(label => wrapLabel(label));
+    
+    new Chart(devFocusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: wrappedLabels,
+            datasets: [{
+                label: 'Developer Effort %',
+                data: [40, 30, 20, 10],
+                backgroundColor: [
+                    '#118AB2',
+                    '#06D6A0',
+                    '#FFD166',
+                    '#FF6B6B'
+                ],
+                borderColor: '#FFFFFF',
+                borderWidth: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                 ...defaultTooltipConfig.plugins,
+                 legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 20,
+                        padding: 20,
+                        // Custom label generation to handle wrapped text
+                        generateLabels: function(chart) {
+                             const data = chart.data;
+                             if (data.labels.length && data.datasets.length) {
+                                return data.labels.map((label, i) => {
+                                    const meta = chart.getDatasetMeta(0);
+                                    const style = meta.controller.getStyle(i);
+                                    const text = Array.isArray(label) ? label.join(' ') : label;
+                                    return {
+                                        text: text,
+                                        fillStyle: style.backgroundColor,
+                                        strokeStyle: style.borderColor,
+                                        lineWidth: style.borderWidth,
+                                        hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                                        index: i
+                                    };
+                                });
+                             }
+                             return [];
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+</script>
+</body>
+</html>

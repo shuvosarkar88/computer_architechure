@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: The Architecture of Modern Computing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Energetic & Playful -->
+    <!-- Application Structure Plan: The infographic follows a narrative structure to guide the user from high-level concepts to specific details and future outlooks. Sections include: 1) A hook explaining the ISA's role. 2) The core philosophical battle (RISC vs. CISC). 3) Market landscape analysis showing market share and growth. 4) A competitive deep-dive comparing key architectures. 5) A process flow showing how code becomes execution. 6) A forward-looking summary of trends. This structure is designed for logical flow and easy comprehension in a single, scrollable page. -->
+    <!-- Visualization & Content Choices: The infographic uses a mix of visualizations chosen for their suitability to the data, with a strict no-SVG/Mermaid policy. What is an ISA? -> Goal: Inform -> Method: HTML/CSS diagram for conceptual clarity. RISC vs CISC -> Goal: Compare -> Method: HTML/CSS side-by-side cards for direct comparison. Market Share -> Goal: Compare -> Method: Chart.js Donut chart to show composition. Architecture Growth -> Goal: Change -> Method: Chart.js Line chart to show trends. Player Comparison -> Goal: Compare -> Method: Chart.js Radar chart for multi-faceted comparison. Code Lifecycle -> Goal: Organize -> Method: HTML/CSS flowchart to show a process. Future Trends -> Goal: Inform -> Method: HTML/CSS cards for scannable insights. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F0F9FF; /* A very light blue from the palette's family */
+            color: #003554;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 53, 84, 0.1), 0 10px 10px -5px rgba(0, 53, 84, 0.04);
+            transition: all 0.3s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 30px -10px rgba(0, 53, 84, 0.15), 0 10px 15px -5px rgba(0, 53, 84, 0.08);
+        }
+        .flowchart-step {
+            border: 2px dashed #0582CA;
+            padding: 1rem 1.5rem;
+            border-radius: 1rem;
+            text-align: center;
+            font-weight: 600;
+            background-color: #E0F2FE;
+            color: #006494;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .flowchart-arrow {
+            font-size: 2.5rem;
+            color: #0582CA;
+            align-self: center;
+            margin: 0.5rem 0;
+            font-weight: 900;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 py-12 md:py-20 max-w-6xl">
+
+        <!-- Header Section -->
+        <header class="text-center mb-16 md:mb-24">
+            <h1 class="text-5xl md:text-7xl font-black text-[#003554] tracking-tighter">THE ARCHITECTURE OF COMPUTING</h1>
+            <p class="mt-4 text-xl md:text-2xl text-[#0582CA] font-medium">Inside the Instruction Set Architecture: The Invisible Language Shaping Our Digital World</p>
+        </header>
+
+        <!-- Section 1: What is an ISA? -->
+        <section class="mb-16 md:mb-24">
+            <div class="card text-center">
+                <h2 class="text-3xl font-bold mb-4">What is an Instruction Set Architecture (ISA)?</h2>
+                <p class="text-lg text-gray-700 max-w-3xl mx-auto mb-8">The ISA is the rulebook for a processor. It's a critical contract that translates software commands into hardware actions, defining everything from the operations a CPU can perform to how it accesses memory. This abstraction allows companies like Apple and Intel to design wildly different chips that can still run the same application software seamlessly.</p>
+                <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-6">
+                    <div class="text-center">
+                        <div class="text-6xl mb-2">💻</div>
+                        <div class="font-bold text-lg">High-Level Software</div>
+                        <p class="text-sm text-gray-500">(Apps, OS)</p>
+                    </div>
+                    <div class="text-5xl font-extrabold text-[#00A6FB] animate-pulse">&harr;</div>
+                    <div class="p-6 rounded-2xl bg-[#006494] text-white shadow-xl">
+                        <div class="font-bold text-2xl">THE ISA</div>
+                        <p class="text-sm opacity-80">The Universal Translator</p>
+                    </div>
+                    <div class="text-5xl font-extrabold text-[#00A6FB] animate-pulse">&harr;</div>
+                    <div class="text-center">
+                        <div class="text-6xl mb-2">⚙️</div>
+                        <div class="font-bold text-lg">Physical Hardware</div>
+                        <p class="text-sm text-gray-500">(Microarchitecture)</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: RISC vs CISC -->
+        <section class="mb-16 md:mb-24">
+             <div class="text-center mb-10">
+                <h2 class="text-4xl font-bold">A Tale of Two Philosophies</h2>
+                <p class="mt-2 text-lg text-gray-700">Processor design is dominated by two competing strategies: speed through simplicity (RISC) vs. power through complexity (CISC).</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="card p-8">
+                    <h3 class="text-3xl font-bold text-[#00A6FB] mb-4">RISC</h3>
+                    <p class="font-semibold text-lg mb-4">Reduced Instruction Set Computing</p>
+                    <p class="text-gray-600 mb-6">Focus on a small set of simple, fast instructions. The compiler does the heavy lifting to combine them into complex tasks.</p>
+                    <ul class="space-y-3 text-gray-700">
+                        <li class="flex items-center"><span class="text-2xl mr-3">⚡️</span> Fixed-length, single-cycle instructions</li>
+                        <li class="flex items-center"><span class="text-2xl mr-3">📦</span> Load/Store architecture (memory access is separate)</li>
+                        <li class="flex items-center"><span class="text-2xl mr-3">🔋</span> Generally higher power efficiency</li>
+                        <li class="flex items-center"><span class="text-2xl mr-3">📱</span> Dominant in Mobile & Embedded (e.g., ARM)</li>
+                    </ul>
+                </div>
+                <div class="card p-8">
+                     <h3 class="text-3xl font-bold text-[#003554] mb-4">CISC</h3>
+                    <p class="font-semibold text-lg mb-4">Complex Instruction Set Computing</p>
+                    <p class="text-gray-600 mb-6">Provide powerful, multi-step instructions to reduce the number of commands needed for a task.</p>
+                     <ul class="space-y-3 text-gray-700">
+                        <li class="flex items-center"><span class="text-2xl mr-3">🧩</span> Variable-length, multi-cycle instructions</li>
+                        <li class="flex items-center"><span class="text-2xl mr-3">💾</span> Instructions can directly access memory</li>
+                        <li class="flex items-center"><span class="text-2xl mr-3"> Dense code, fewer instructions per task</li>
+                        <li class="flex items-center"><span class="text-2xl mr-3">💻</span> Dominant in Desktops & Servers (e.g., x86)</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Market Landscape -->
+        <section class="mb-16 md:mb-24">
+            <div class="text-center mb-10">
+                <h2 class="text-4xl font-bold">The Processor Market Landscape</h2>
+                <p class="mt-2 text-lg text-gray-700">Different philosophies have carved out distinct territories in the global chip market.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="card">
+                    <h3 class="text-2xl font-bold text-center mb-4">Mobile & Embedded Market Share</h3>
+                    <p class="text-center text-gray-600 mb-4">In the power-sensitive mobile world, the efficiency of RISC architectures like ARM is overwhelmingly dominant.</p>
+                    <div class="chart-container h-72 md:h-96">
+                        <canvas id="marketShareChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="text-2xl font-bold text-center mb-4">RISC Architecture Growth Projections</h3>
+                     <p class="text-center text-gray-600 mb-4">RISC-based designs are rapidly expanding beyond mobile into new, high-growth areas like automotive, IoT, and data centers.</p>
+                    <div class="chart-container h-72 md:h-96">
+                        <canvas id="growthChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Player Deep Dive -->
+        <section class="mb-16 md:mb-24">
+            <div class="card">
+                 <div class="text-center mb-8">
+                    <h2 class="text-4xl font-bold">Architecture Deep Dive</h2>
+                    <p class="mt-2 text-lg text-gray-700">A look at two influential RISC ISAs reveals different design trade-offs.</p>
+                </div>
+                <div class="chart-container mx-auto" style="max-width: 600px; height: 400px; max-height: 500px;">
+                    <canvas id="playerComparisonChart"></canvas>
+                </div>
+                 <p class="mt-6 text-center text-gray-600 max-w-2xl mx-auto">While MIPS represents a classic, streamlined RISC design, ARM's pragmatic inclusion of features like the "Thumb" instruction set for better code density and powerful addressing modes has propelled it to market dominance.</p>
+            </div>
+        </section>
+
+        <!-- Section 5: Instruction Lifecycle -->
+        <section class="mb-16 md:mb-24">
+            <div class="text-center mb-10">
+                <h2 class="text-4xl font-bold">From Code to Execution</h2>
+                <p class="mt-2 text-lg text-gray-700">How your program becomes actions the processor can understand.</p>
+            </div>
+            <div class="flex flex-col md:flex-row items-stretch justify-between w-full space-y-4 md:space-y-0 md:space-x-4">
+                <div class="flowchart-step md:w-1/5">High-Level Code<br>(e.g., Python, C++)</div>
+                <div class="flowchart-arrow transform md:-rotate-90">⬇</div>
+                <div class="flowchart-step md:w-1/5">Compiler</div>
+                <div class="flowchart-arrow transform md:-rotate-90">⬇</div>
+                <div class="flowchart-step bg-[#00A6FB] text-white border-[#00A6FB] md:w-1/5">Assembly Code<br>(Human-readable ISA)</div>
+                <div class="flowchart-arrow transform md:-rotate-90">⬇</div>
+                <div class="flowchart-step md:w-1/5">Assembler</div>
+                <div class="flowchart-arrow transform md:-rotate-90">⬇</div>
+                <div class="flowchart-step md:w-1/5">Machine Code<br>(Binary ISA)</div>
+            </div>
+        </section>
+
+        <!-- Section 6: Future Trends -->
+        <section>
+            <div class="text-center mb-10">
+                <h2 class="text-4xl font-bold">The Future of the ISA</h2>
+                <p class="mt-2 text-lg text-gray-700">The instruction set is evolving to meet new demands.</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="card text-center p-8">
+                    <div class="text-5xl mb-4">🧠</div>
+                    <h3 class="text-2xl font-bold mb-2">Domain-Specific Architectures</h3>
+                    <p class="text-gray-600">Custom ISAs for specific tasks like AI and graphics (e.g., Google TPUs) are providing massive performance boosts.</p>
+                </div>
+                <div class="card text-center p-8">
+                    <div class="text-5xl mb-4">🌍</div>
+                    <h3 class="text-2xl font-bold mb-2">Open ISAs</h3>
+                    <p class="text-gray-600">Open-source standards like RISC-V are democratizing chip design, enabling innovation without licensing fees.</p>
+                </div>
+                <div class="card text-center p-8">
+                    <div class="text-5xl mb-4">🛡️</div>
+                    <h3 class="text-2xl font-bold mb-2">Hardware-Level Security</h3>
+                    <p class="text-gray-600">New ISAs are embedding security features directly into the silicon to protect against advanced threats.</p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+<script>
+    const tooltipCallback = {
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    title: function(tooltipItems) {
+                        const item = tooltipItems[0];
+                        let label = item.chart.data.labels[item.dataIndex];
+                        if (Array.isArray(label)) {
+                            return label.join(' ');
+                        } else {
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    };
+    
+    function wrapLabels(label) {
+        const maxLen = 16;
+        if (typeof label !== 'string' || label.length <= maxLen) return label;
+        
+        const words = label.split(' ');
+        const lines = [];
+        let currentLine = '';
+        
+        for (const word of words) {
+            if ((currentLine + ' ' + word).trim().length > maxLen) {
+                if(currentLine) lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = (currentLine + ' ' + word).trim();
+            }
+        }
+        if(currentLine) lines.push(currentLine);
+        return lines;
+    }
+
+    const marketShareChartCtx = document.getElementById('marketShareChart').getContext('2d');
+    new Chart(marketShareChartCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['ARM (RISC)', 'x86 (CISC)', 'Other RISC', 'Other'],
+            datasets: [{
+                label: 'Market Share',
+                data: [90, 5, 3, 2],
+                backgroundColor: ['#00A6FB', '#003554', '#0582CA', '#006494'],
+                borderColor: 'white',
+                borderWidth: 4,
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                ...tooltipCallback.plugins,
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        font: { size: 14 }
+                    }
+                }
+            },
+            cutout: '60%'
+        }
+    });
+
+    const growthChartCtx = document.getElementById('growthChart').getContext('2d');
+    new Chart(growthChartCtx, {
+        type: 'line',
+        data: {
+            labels: ['2022', '2023', '2024', '2025 (Proj.)', '2026 (Proj.)', '2027 (Proj.)'],
+            datasets: [{
+                label: 'RISC-based Data Center Penetration (%)',
+                data: [5, 8, 13, 20, 28, 35],
+                borderColor: '#00A6FB',
+                backgroundColor: 'rgba(0, 166, 251, 0.1)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                ...tooltipCallback.plugins,
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) { return value + '%' }
+                    }
+                }
+            }
+        }
+    });
+
+    const playerComparisonChartCtx = document.getElementById('playerComparisonChart').getContext('2d');
+    new Chart(playerComparisonChartCtx, {
+        type: 'radar',
+        data: {
+            labels: ['Power Efficiency', 'Performance', 'Code Density', 'Ecosystem Support', 'Simplicity'].map(wrapLabels),
+            datasets: [
+                {
+                    label: 'ARM',
+                    data: [9, 8, 7, 9, 6],
+                    backgroundColor: 'rgba(0, 166, 251, 0.2)',
+                    borderColor: '#00A6FB',
+                    pointBackgroundColor: '#00A6FB',
+                    borderWidth: 2
+                },
+                {
+                    label: 'MIPS (Classic)',
+                    data: [6, 7, 5, 6, 9],
+                    backgroundColor: 'rgba(0, 53, 84, 0.2)',
+                    borderColor: '#003554',
+                    pointBackgroundColor: '#003554',
+                    borderWidth: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            ...tooltipCallback,
+            scales: {
+                r: {
+                    angleLines: { color: 'rgba(0, 53, 84, 0.1)' },
+                    grid: { color: 'rgba(0, 53, 84, 0.1)' },
+                    pointLabels: {
+                        font: { size: 12, weight: 'bold' },
+                        color: '#003554'
+                    },
+                    ticks: {
+                        backdropColor: 'white',
+                        color: '#006494',
+                        stepSize: 2
+                    },
+                    min: 0,
+                    max: 10
+                }
+            },
+             plugins: {
+                ...tooltipCallback.plugins,
+                legend: {
+                    position: 'bottom',
+                     labels: {
+                        font: { size: 14 }
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>

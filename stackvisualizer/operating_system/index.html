@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive OS Concepts Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: "Subtle Harmony" - A calming palette with warm neutrals (alabaster, slate gray) and a muted teal/blue accent for focus and interaction. -->
+    <!-- Application Structure Plan: The SPA is designed as a tab-based dashboard. A top navigation bar with icons acts as the main controller, allowing users to switch between focused sections (Core Concepts, Execution, Memory, Storage, System Interface). This hub-and-spoke model prevents overwhelming the user with a long scrollable page. Each section is a self-contained "slide" that uses interactive elements like clickable diagrams, filterable lists, and simple simulations to explain concepts. This structure was chosen to break down the dense report into manageable, thematic learning modules, promoting active exploration over passive reading. -->
+    <!-- Visualization & Content Choices: 
+        - Process vs. Thread: Report Info -> Comparison table. Goal -> Compare. Viz -> Interactive side-by-side card display updated by clicking on features. Justification -> More engaging than a static table. Library/Method -> HTML/CSS/JS.
+        - CPU Scheduling: Report Info -> Comparison table of algorithms. Goal -> Compare & Understand flow. Viz -> Dropdown to select an algorithm, updating a details card and a conceptual bar chart that animates a simplified job queue. Justification -> Visualizing the job order makes the algorithm's logic intuitive. Library/Method -> Chart.js.
+        - Process States: Report Info -> List of states. Goal -> Organize & show flow. Viz -> Clickable state diagram made of styled divs. Justification -> Visually represents the lifecycle and makes it interactive. Library/Method -> HTML/CSS/JS.
+        - Memory Allocation: Report Info -> Description of First-fit, Best-fit, Worst-fit. Goal -> Compare strategies. Viz -> Simple visual simulation where users "allocate" memory and see which block each algorithm chooses. Justification -> Makes the abstract allocation logic concrete and easy to see. Library/Method -> HTML/CSS/JS.
+        - User/Kernel Transition: Report Info -> Explanation of mode switching. Goal -> Show process flow. Viz -> Animated diagram showing a "System Call" crossing a boundary between User and Kernel space. Justification -> Clarifies the concept of a protected boundary and controlled transition. Library/Method -> HTML/CSS/JS.
+        - File Systems: Report Info -> Comparison table. Goal -> Compare. Viz -> Dropdown to filter and display info cards for each file system type. Justification -> Efficiently presents detailed information without a large table. Library/Method -> HTML/CSS/JS.
+        CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+        .tab-btn.active {
+            background-color: #0891b2;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .concept-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .concept-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 40vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .state-diagram-node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .state-diagram-node.highlight {
+            background-color: #0891b2 !important;
+            color: white !important;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(8, 145, 178, 0.5);
+        }
+        .process-thread-feature.active {
+            background-color: #cffafe;
+            color: #0e7490;
+        }
+        .memory-block {
+            transition: all 0.3s ease-in-out;
+        }
+        .arrow {
+            position: absolute;
+            background-color: #6b7280;
+            height: 2px;
+            width: 50px;
+        }
+        .arrow::after {
+            content: '';
+            position: absolute;
+            right: -1px;
+            top: -3px;
+            border: solid #6b7280;
+            border-width: 0 2px 2px 0;
+            display: inline-block;
+            padding: 3px;
+            transform: rotate(-45deg);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-slate-900">Interactive OS Concepts Explorer</h1>
+            <p class="mt-2 text-lg text-slate-600">A visual guide to the fundamentals of Operating Systems.</p>
+        </header>
+
+        <nav class="flex flex-wrap justify-center gap-2 md:gap-4 mb-8">
+            <button class="tab-btn active flex items-center gap-2 py-2 px-4 bg-white rounded-full shadow-md" data-tab="core">
+                <span class="text-xl">🏛️</span> Core Concepts
+            </button>
+            <button class="tab-btn flex items-center gap-2 py-2 px-4 bg-white rounded-full shadow-md" data-tab="execution">
+                <span class="text-xl">🏃</span> Execution
+            </button>
+            <button class="tab-btn flex items-center gap-2 py-2 px-4 bg-white rounded-full shadow-md" data-tab="memory">
+                <span class="text-xl">🧠</span> Memory
+            </button>
+            <button class="tab-btn flex items-center gap-2 py-2 px-4 bg-white rounded-full shadow-md" data-tab="storage">
+                <span class="text-xl">🗄️</span> Storage
+            </button>
+            <button class="tab-btn flex items-center gap-2 py-2 px-4 bg-white rounded-full shadow-md" data-tab="interface">
+                <span class="text-xl">🌉</span> System Interface
+            </button>
+        </nav>
+
+        <main>
+            <!-- Core Concepts Section -->
+            <section id="core" class="content-section active">
+                 <div class="text-center mb-8 max-w-3xl mx-auto">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-2">What is an Operating System?</h2>
+                    <p class="text-slate-600">This section introduces the fundamental role of an Operating System (OS). Think of it as the computer's manager, responsible for coordinating hardware, running software, and providing essential services. Here we'll explore its main responsibilities and the core purpose it serves as the bridge between you and your computer's hardware.</p>
+                </div>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="concept-card lg:col-span-2">
+                        <h3 class="text-xl font-semibold mb-2 text-cyan-700">The Conductor of the Computer</h3>
+                        <p>An Operating System (OS) is the most crucial software that runs on a computer. It manages all of the hardware and software, acting as an intermediary between the user and the computer hardware. You can think of it as a government for the computer, allocating resources, managing tasks, and ensuring everything runs smoothly and securely without interfering with each other.</p>
+                    </div>
+                    <div class="concept-card">
+                        <h3 class="text-xl font-semibold mb-2 text-cyan-700">Abstraction Layer</h3>
+                        <p>A key role of the OS is to provide abstraction. It hides the complex, raw details of hardware from application developers. A program simply asks the OS to "save a file," without needing to know how to control the specific model of SSD installed. This simplifies development and allows hardware to evolve independently of software.</p>
+                    </div>
+                    <div class="concept-card md:col-span-2 lg:col-span-3">
+                        <h3 class="text-xl font-semibold mb-2 text-cyan-700">Core Responsibilities</h3>
+                        <ul class="list-disc list-inside space-y-2 text-slate-700">
+                            <li><strong>Process Management:</strong> Manages the lifecycle of applications, from starting to ending them.</li>
+                            <li><strong>Memory Management:</strong> Allocates and deallocates RAM to ensure processes have the memory they need.</li>
+                            <li><strong>File System Management:</strong> Organizes data into files and folders on storage drives like HDDs and SSDs.</li>
+                            <li><strong>Device Management:</strong> Controls hardware devices like printers, keyboards, and webcams through drivers.</li>
+                            <li><strong>Security:</strong> Protects system resources from unauthorized access and ensures data integrity.</li>
+                            <li><strong>User Interface:</strong> Provides a way for users to interact with the computer (e.g., GUI or Command Line).</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Execution Section -->
+            <section id="execution" class="content-section">
+                <div class="text-center mb-12 max-w-3xl mx-auto">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-2">Execution Management</h2>
+                    <p class="text-slate-600">This section explores how the OS manages running programs. We'll differentiate between a 'process' (an application) and a 'thread' (a task within an application). You'll see how the OS schedules which task gets to use the CPU and when, and how it juggles multiple tasks at once through a process called context switching.</p>
+                </div>
+
+                <div class="grid lg:grid-cols-2 gap-8 items-start">
+                    <div class="concept-card">
+                        <h3 class="text-2xl font-semibold mb-4 text-center text-cyan-700">Process vs. Thread</h3>
+                        <p class="text-center text-slate-600 mb-6">A process is a program running, while threads are the individual tasks that make up that program. Click on a feature below to compare them.</p>
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <div class="flex-1 space-y-2">
+                                <button class="process-thread-feature w-full text-left p-2 rounded-lg border" data-feature="definition">Definition</button>
+                                <button class="process-thread-feature w-full text-left p-2 rounded-lg border" data-feature="memory">Memory Space</button>
+                                <button class="process-thread-feature w-full text-left p-2 rounded-lg border" data-feature="communication">Communication</button>
+                                <button class="process-thread-feature w-full text-left p-2 rounded-lg border" data-feature="failure">Failure Impact</button>
+                            </div>
+                            <div class="flex-1 p-4 bg-slate-100 rounded-lg">
+                                <h4 class="font-bold">Process</h4>
+                                <p id="process-feature-text" class="text-sm text-slate-700 min-h-[60px]">Select a feature to see details.</p>
+                            </div>
+                            <div class="flex-1 p-4 bg-slate-100 rounded-lg">
+                                <h4 class="font-bold">Thread</h4>
+                                <p id="thread-feature-text" class="text-sm text-slate-700 min-h-[60px]">Select a feature to see details.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="concept-card">
+                        <h3 class="text-2xl font-semibold mb-4 text-center text-cyan-700">Process State Lifecycle</h3>
+                        <p class="text-center text-slate-600 mb-4">A process moves through several states. Click a state to learn more.</p>
+                        <div class="relative h-64 flex items-center justify-center">
+                            <div class="state-diagram-node bg-slate-200 p-2 rounded-lg absolute" style="left: 0; top: 50%; transform: translateY(-50%);" data-state="new">New</div>
+                            <div class="state-diagram-node bg-slate-200 p-2 rounded-lg absolute" style="left: 25%; top: 50%; transform: translateY(-50%);" data-state="ready">Ready</div>
+                            <div class="state-diagram-node bg-slate-200 p-2 rounded-lg absolute" style="left: 50%; top: 20%; transform: translateY(-50%);" data-state="running">Running</div>
+                            <div class="state-diagram-node bg-slate-200 p-2 rounded-lg absolute" style="left: 50%; top: 80%; transform: translateY(-50%);" data-state="waiting">Waiting</div>
+                            <div class="state-diagram-node bg-slate-200 p-2 rounded-lg absolute" style="right: 0; top: 50%; transform: translateY(-50%);" data-state="terminated">Terminated</div>
+                        </div>
+                         <p id="state-info" class="text-center mt-4 min-h-[40px] text-slate-600">Click a state to see its description.</p>
+                    </div>
+
+                    <div class="concept-card lg:col-span-2">
+                        <h3 class="text-2xl font-semibold mb-4 text-center text-cyan-700">CPU Scheduling Algorithms</h3>
+                        <p class="text-center text-slate-600 mb-6">The OS must decide which ready process gets the CPU. Select an algorithm to see how it works and a conceptual visualization.</p>
+                        <div class="flex justify-center mb-4">
+                            <select id="scheduling-algo-select" class="p-2 border rounded-lg bg-white">
+                                <option value="fcfs">First-Come, First-Served (FCFS)</option>
+                                <option value="sjf">Shortest Job First (SJF)</option>
+                                <option value="rr">Round Robin (RR)</option>
+                                <option value="priority">Priority Scheduling</option>
+                            </select>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-6 items-center">
+                            <div>
+                                <h4 id="algo-name" class="font-bold text-lg mb-2">First-Come, First-Served (FCFS)</h4>
+                                <p id="algo-desc" class="text-sm text-slate-600 mb-4">The simplest algorithm. Processes are handled in the order they arrive, like a queue at a bank.</p>
+                                <div class="text-xs space-y-1">
+                                    <p><strong>Pros:</strong> <span id="algo-pros">Simple and fair in a basic sense.</span></p>
+                                    <p><strong>Cons:</strong> <span id="algo-cons">Short processes can get stuck behind long ones.</span></p>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="scheduling-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Memory Section -->
+            <section id="memory" class="content-section">
+                <div class="text-center mb-12 max-w-3xl mx-auto">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-2">Memory Management</h2>
+                    <p class="text-slate-600">Memory (RAM) is a finite resource. This section covers how the OS allocates memory to processes. Explore techniques like paging and segmentation, understand the concept of virtual memory which creates the illusion of infinite RAM, and see how the OS handles memory allocation requests.</p>
+                </div>
+                <div class="grid lg:grid-cols-2 gap-8 items-start">
+                    <div class="concept-card">
+                        <h3 class="text-2xl font-semibold mb-4 text-center text-cyan-700">Logical vs. Physical Address</h3>
+                        <p class="text-slate-600">A process uses a <strong class="text-cyan-600">logical address</strong>, which is its own private view of memory. The OS, with help from the Memory Management Unit (MMU) hardware, translates this into a <strong class="text-cyan-600">physical address</strong>, which is the actual location in the RAM chips. This separation is key to protection and virtual memory.</p>
+                    </div>
+                     <div class="concept-card">
+                        <h3 class="text-2xl font-semibold mb-4 text-center text-cyan-700">Virtual Memory</h3>
+                        <p class="text-slate-600">Virtual memory allows a program to run even if it's larger than the available physical RAM. The OS keeps only the actively used parts of the program in RAM, while the rest is stored on the hard disk. When a needed part is not in RAM, a <strong class="text-cyan-600">page fault</strong> occurs, and the OS loads it from the disk.</p>
+                    </div>
+                    <div class="concept-card lg:col-span-2">
+                        <h3 class="text-2xl font-semibold mb-4 text-center text-cyan-700">Memory Allocation Simulation</h3>
+                        <p class="text-center text-slate-600 mb-4">How does the OS find a free block of memory for a new process? See how different strategies work. The goal is to fit a new process of size <strong>40KB</strong>.</p>
+                        <div class="flex justify-center gap-2 mb-6">
+                            <button class="mem-algo-btn p-2 border rounded-lg" data-mem-algo="first">First-Fit</button>
+                            <button class="mem-algo-btn p-2 border rounded-lg" data-mem-algo="best">Best-Fit</button>
+                            <button class="mem-algo-btn p-2 border rounded-lg" data-mem-algo="worst">Worst-Fit</button>
+                        </div>
+                        <div class="bg-gray-200 p-2 rounded-lg flex gap-2 items-end h-48" id="memory-container">
+                        </div>
+                        <p id="mem-algo-info" class="text-center mt-4 min-h-[40px] text-slate-600">Select an algorithm to see which block it chooses.</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Storage Section -->
+            <section id="storage" class="content-section">
+                <div class="text-center mb-12 max-w-3xl mx-auto">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-2">Storage & File Systems</h2>
+                    <p class="text-slate-600">Data needs a permanent home. This section explains how the OS manages long-term storage on devices like SSDs and HDDs. Learn about files, directories, and different file system types (like NTFS, ext4, APFS) that organize data and keep track of where everything is.</p>
+                </div>
+                <div class="grid lg:grid-cols-2 gap-8">
+                     <div class="concept-card">
+                        <h3 class="text-2xl font-semibold mb-4 text-center text-cyan-700">Files and Directories</h3>
+                        <p class="text-slate-600">A <strong class="text-cyan-600">file</strong> is a named collection of related information. A <strong class="text-cyan-600">directory</strong> (or folder) is a structure used to organize files. Modern systems use a tree-like hierarchical directory structure, allowing you to nest folders within folders to keep data organized.</p>
+                    </div>
+                    <div class="concept-card">
+                        <h3 class="text-2xl font-semibold mb-4 text-center text-cyan-700">Metadata (Inodes)</h3>
+                        <p class="text-slate-600">Metadata is "data about data." For every file, the OS stores information like its size, owner, creation date, and permissions. In Unix-like systems, this is stored in an <strong class="text-cyan-600">inode</strong>. This metadata is crucial for locating and managing the file's actual content on the disk.</p>
+                    </div>
+                    <div class="concept-card lg:col-span-2">
+                        <h3 class="text-2xl font-semibold mb-4 text-center text-cyan-700">Common File Systems</h3>
+                        <p class="text-center text-slate-600 mb-6">Different OSes use different file systems. Select one to learn about its features.</p>
+                         <div class="flex justify-center mb-4">
+                            <select id="fs-select" class="p-2 border rounded-lg bg-white">
+                                <option value="fat32">FAT32</option>
+                                <option value="ntfs">NTFS</option>
+                                <option value="ext4">ext4</option>
+                                <option value="apfs">APFS</option>
+                            </select>
+                        </div>
+                        <div class="p-4 bg-slate-100 rounded-lg min-h-[120px]">
+                            <h4 id="fs-name" class="font-bold text-lg">FAT32</h4>
+                            <p id="fs-desc" class="text-slate-700">Description will appear here.</p>
+                            <p class="text-sm mt-2"><strong>Typical Use:</strong> <span id="fs-use"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- System Interface Section -->
+            <section id="interface" class="content-section">
+                <div class="text-center mb-12 max-w-3xl mx-auto">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-2">The System Interface</h2>
+                    <p class="text-slate-600">How do applications talk to the OS and hardware? This section covers the critical boundary between "user space" and "kernel space." You'll see how applications use "system calls" to request services from the OS, and how drivers, interrupts, and DMA allow the OS to control hardware efficiently.</p>
+                </div>
+                <div class="grid lg:grid-cols-2 gap-8 items-start">
+                    <div class="concept-card">
+                        <h3 class="text-2xl font-semibold mb-4 text-center text-cyan-700">User Space vs. Kernel Space</h3>
+                         <div class="h-64 relative border-t-4 border-dashed border-slate-400 mt-8">
+                             <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-slate-50 px-2 text-slate-500 font-semibold">Boundary</div>
+                             <div class="text-center absolute top-4 left-0 right-0">
+                                 <h4 class="font-bold text-lg text-blue-600">User Space</h4>
+                                 <p class="text-sm">(Applications Run Here)</p>
+                                 <div id="user-app" class="mt-4 p-4 bg-blue-100 rounded-lg inline-block">My Web Browser</div>
+                             </div>
+                             <div class="text-center absolute bottom-4 left-0 right-0">
+                                 <h4 class="font-bold text-lg text-red-600">Kernel Space</h4>
+                                 <p class="text-sm">(OS Core Runs Here)</p>
+                                 <div class="mt-4 p-4 bg-red-100 rounded-lg inline-block">OS Kernel & Drivers</div>
+                             </div>
+                         </div>
+                        <p class="text-slate-600 mt-4">The OS separates memory into two zones. <strong class="text-blue-600">User Space</strong> is where your applications run with restricted permissions. <strong class="text-red-600">Kernel Space</strong> is where the OS core runs with full, unrestricted access to hardware. This separation protects the OS from crashing due to application errors.</p>
+                    </div>
+
+                    <div class="concept-card">
+                        <h3 class="text-2xl font-semibold mb-4 text-center text-cyan-700">System Call & Interrupts</h3>
+                        <p class="text-slate-600 mb-4">An application in user space can't directly access hardware. To perform a privileged action like reading a file, it must ask the kernel via a <strong class="text-cyan-600">System Call</strong>. This triggers a controlled switch from user mode to kernel mode.
+                        <br/><br/>
+                        Hardware devices use <strong class="text-cyan-600">Interrupts</strong> to get the CPU's attention (e.g., when you click the mouse). This also causes a switch to kernel mode so the OS can handle the event.</p>
+                    </div>
+
+                     <div class="concept-card lg:col-span-2">
+                        <h3 class="text-2xl font-semibold mb-4 text-center text-cyan-700">Device Drivers and DMA</h3>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="p-4 bg-slate-100 rounded-lg">
+                                <h4 class="font-bold">Device Drivers</h4>
+                                <p class="text-sm text-slate-700">A driver is a piece of software that acts as a translator between the OS and a specific hardware device. The OS gives a generic command like "print this page," and the printer driver translates it into signals the specific printer model understands.</p>
+                            </div>
+                            <div class="p-4 bg-slate-100 rounded-lg">
+                                <h4 class="font-bold">Direct Memory Access (DMA)</h4>
+                                <p class="text-sm text-slate-700">For transferring large amounts of data (e.g., from a hard drive), it's inefficient for the CPU to manage every byte. DMA is a hardware feature that lets the device transfer data directly to/from RAM, freeing up the CPU to do other work. It sends an interrupt only when the entire transfer is complete.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    
+    const tabs = document.querySelectorAll('.tab-btn');
+    const sections = document.querySelectorAll('.content-section');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            sections.forEach(s => s.classList.remove('active'));
+
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab).classList.add('active');
+        });
+    });
+
+    // Execution Section Logic
+    const processThreadFeatures = {
+        definition: {
+            process: "An instance of a program in execution; an independent unit of work.",
+            thread: "A segment of a process; a basic unit of CPU utilization."
+        },
+        memory: {
+            process: "Each process has its own separate, private memory address space.",
+            thread: "Threads within the same process share the same memory address space."
+        },
+        communication: {
+            process: "Slower and more complex, requires Inter-Process Communication (IPC) mechanisms like pipes or sockets.",
+            thread: "Faster and simpler, can be done via shared memory and variables."
+        },
+        failure: {
+            process: "Failure in one process generally does not affect other processes.",
+            thread: "Failure in one thread can crash the entire process, affecting all its other threads."
+        }
+    };
+
+    const processFeatureText = document.getElementById('process-feature-text');
+    const threadFeatureText = document.getElementById('thread-feature-text');
+    const ptFeatureButtons = document.querySelectorAll('.process-thread-feature');
+    
+    ptFeatureButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            ptFeatureButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            const feature = button.dataset.feature;
+            processFeatureText.textContent = processThreadFeatures[feature].process;
+            threadFeatureText.textContent = processThreadFeatures[feature].thread;
+        });
+    });
+    // Set initial state
+    ptFeatureButtons[0].click();
+
+    // Process State Diagram Logic
+    const stateNodes = document.querySelectorAll('.state-diagram-node');
+    const stateInfo = document.getElementById('state-info');
+    const stateDescriptions = {
+        new: "The process is being created.",
+        ready: "The process is waiting to be assigned to a processor.",
+        running: "Instructions are being executed by the CPU.",
+        waiting: "The process is waiting for some event to occur (e.g., I/O completion).",
+        terminated: "The process has finished execution."
+    };
+    stateNodes.forEach(node => {
+        node.addEventListener('click', () => {
+            stateNodes.forEach(n => n.classList.remove('highlight'));
+            node.classList.add('highlight');
+            stateInfo.textContent = stateDescriptions[node.dataset.state];
+        });
+    });
+
+    // CPU Scheduling Logic
+    const schedulingData = {
+        fcfs: { name: 'First-Come, First-Served (FCFS)', desc: 'Processes are handled in the order they arrive.', pros: 'Simple and fair in a basic sense.', cons: 'Short processes can get stuck behind long ones (convoy effect).', jobs: [{p: 'P1', t: 5}, {p: 'P2', t: 2}, {p: 'P3', t: 3}] },
+        sjf: { name: 'Shortest Job First (SJF)', desc: 'The process with the smallest execution time is selected next.', pros: 'Optimal in minimizing average waiting time.', cons: 'Hard to predict future burst time; can starve long processes.', jobs: [{p: 'P2', t: 2}, {p: 'P3', t: 3}, {p: 'P1', t: 5}] },
+        rr: { name: 'Round Robin (RR)', desc: 'Each process gets a small time slice. If not done, it goes to the back of the queue.', pros: 'Fair, good for interactive systems.', cons: 'Performance depends on time slice size; high context switch overhead.', jobs: [{p: 'P1', t: 2}, {p: 'P2', t: 2}, {p: 'P3', t: 2}, {p: 'P1', t: 2}, {p: 'P3', t: 1}, {p: 'P1', t: 1}] },
+        priority: { name: 'Priority Scheduling', desc: 'The CPU is allocated to the process with the highest priority.', pros: 'Allows important jobs to run first.', cons: 'Can starve low-priority processes (can be fixed with aging).', jobs: [{p: 'P3 (High)', t: 3}, {p: 'P1 (Med)', t: 5}, {p: 'P2 (Low)', t: 2}]}
+    };
+    const algoSelect = document.getElementById('scheduling-algo-select');
+    const algoName = document.getElementById('algo-name');
+    const algoDesc = document.getElementById('algo-desc');
+    const algoPros = document.getElementById('algo-pros');
+    const algoCons = document.getElementById('algo-cons');
+
+    let schedulingChart = null;
+    function updateSchedulingChart(algo) {
+        const data = schedulingData[algo];
+        algoName.textContent = data.name;
+        algoDesc.textContent = data.desc;
+        algoPros.textContent = data.pros;
+        algoCons.textContent = data.cons;
+
+        const ctx = document.getElementById('scheduling-chart').getContext('2d');
+        if (schedulingChart) {
+            schedulingChart.destroy();
+        }
+        schedulingChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.jobs.map(j => j.p),
+                datasets: [{
+                    label: 'CPU Time Units',
+                    data: data.jobs.map(j => j.t),
+                    backgroundColor: 'rgba(8, 145, 178, 0.6)',
+                    borderColor: 'rgba(8, 145, 178, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: { display: true, text: `Conceptual Execution Order for ${data.name}` },
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Job Duration' }
+                    },
+                    x: {
+                        title: { display: true, text: 'Execution Sequence' }
+                    }
+                }
+            }
+        });
+    }
+    algoSelect.addEventListener('change', (e) => updateSchedulingChart(e.target.value));
+    updateSchedulingChart('fcfs');
+
+    // Memory Allocation Logic
+    const memContainer = document.getElementById('memory-container');
+    const memAlgoInfo = document.getElementById('mem-algo-info');
+    const memAlgoBtns = document.querySelectorAll('.mem-algo-btn');
+    const initialMemBlocks = [
+        { size: 50, used: true },
+        { size: 30, used: false },
+        { size: 100, used: true },
+        { size: 60, used: false },
+        { size: 20, used: true },
+        { size: 45, used: false },
+        { size: 80, used: false }
+    ];
+
+    function renderMemoryBlocks(highlightIndex = -1, algoName = '') {
+        memContainer.innerHTML = '';
+        initialMemBlocks.forEach((block, index) => {
+            const div = document.createElement('div');
+            div.style.width = `${block.size * 1.5}px`;
+            div.style.height = `${block.size * 1.5}px`;
+            div.classList.add('memory-block', 'flex', 'items-center', 'justify-center', 'text-xs', 'text-white', 'font-bold', 'rounded');
+            div.textContent = `${block.size}K`;
+            if(block.used) {
+                div.classList.add('bg-slate-500');
+            } else {
+                div.classList.add('bg-green-500');
+            }
+            if (index === highlightIndex) {
+                div.classList.remove('bg-green-500');
+                div.classList.add('bg-cyan-500', 'ring-4', 'ring-cyan-300');
+                div.style.transform = 'scale(1.1)';
+            }
+            memContainer.appendChild(div);
+        });
+
+        if(algoName) {
+            memAlgoInfo.textContent = `${algoName} chooses this block.`;
+        } else {
+            memAlgoInfo.textContent = `Select an algorithm to see which block it chooses.`;
+        }
+    }
+
+    memAlgoBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const algo = btn.dataset.memAlgo;
+            const requestSize = 40;
+            let foundIndex = -1;
+
+            if (algo === 'first') {
+                foundIndex = initialMemBlocks.findIndex(b => !b.used && b.size >= requestSize);
+                memAlgoInfo.textContent = `First-Fit scans from the start and picks the first hole that's big enough.`;
+            } else if (algo === 'best') {
+                let bestFitIndex = -1;
+                let smallestHole = Infinity;
+                initialMemBlocks.forEach((b, i) => {
+                    if (!b.used && b.size >= requestSize && b.size < smallestHole) {
+                        smallestHole = b.size;
+                        bestFitIndex = i;
+                    }
+                });
+                foundIndex = bestFitIndex;
+                 memAlgoInfo.textContent = `Best-Fit scans all holes and picks the one that is closest in size, minimizing leftover space.`;
+            } else if (algo === 'worst') {
+                let worstFitIndex = -1;
+                let largestHole = -1;
+                 initialMemBlocks.forEach((b, i) => {
+                    if (!b.used && b.size >= requestSize && b.size > largestHole) {
+                        largestHole = b.size;
+                        worstFitIndex = i;
+                    }
+                });
+                foundIndex = worstFitIndex;
+                 memAlgoInfo.textContent = `Worst-Fit scans all holes and picks the largest one, leaving a large (hopefully usable) hole.`;
+            }
+            renderMemoryBlocks(foundIndex);
+        });
+    });
+    renderMemoryBlocks();
+
+    // Storage Section Logic
+    const fsData = {
+        fat32: { name: 'FAT32', desc: 'An older but highly compatible file system. Simple and supported by nearly all devices.', use: 'USB drives, SD cards for broad compatibility.'},
+        ntfs: { name: 'NTFS (New Technology File System)', desc: 'The modern default for Windows. Supports journaling for reliability, file permissions, compression, and encryption.', use: 'Windows internal and external drives.'},
+        ext4: { name: 'ext4 (Fourth Extended Filesystem)', desc: 'The common default for Linux distributions. It\'s a journaling file system known for reliability, performance, and support for very large files and volumes.', use: 'Linux internal and external drives.'},
+        apfs: { name: 'APFS (Apple File System)', desc: 'Apple\'s modern file system, optimized for Solid-State Drives (SSDs). Features strong encryption, space sharing, and snapshots.', use: 'macOS, iOS, and other Apple devices.'}
+    };
+    const fsSelect = document.getElementById('fs-select');
+    const fsName = document.getElementById('fs-name');
+    const fsDesc = document.getElementById('fs-desc');
+    const fsUse = document.getElementById('fs-use');
+    
+    function updateFSInfo(fs) {
+        const data = fsData[fs];
+        fsName.textContent = data.name;
+        fsDesc.textContent = data.desc;
+        fsUse.textContent = data.use;
+    }
+    fsSelect.addEventListener('change', (e) => updateFSInfo(e.target.value));
+    updateFSInfo('fat32');
+});
+</script>
+</body>
+</html>

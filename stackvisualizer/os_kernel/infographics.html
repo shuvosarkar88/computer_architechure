@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The OS Kernel: An Interactive Infographic</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: A single-page, top-to-bottom scrolling narrative infographic. This structure tells a story, starting with a high-level introduction ("What is a Kernel?"), moving to a comparative analysis of different types ("Architectural Blueprints"), then diving into key functional areas ("Core Components & Operations"), and concluding with a foundational concept ("The Protection Boundary"). This logical flow allows users to build their understanding progressively. Each section is a self-contained card, making the information modular and easy to digest. -->
+    <!-- Visualization & Content Choices:
+        - Report Info: Kernel's fundamental roles -> Goal: Inform -> Viz: Donut charts -> Justification: Quickly convey the main areas of responsibility (Memory, Process, Device, etc.) in a visually balanced way. -> Library: Chart.js (Canvas).
+        - Report Info: Architectural comparison (Monolithic, Microkernel, Hybrid) -> Goal: Compare -> Viz: Radar chart -> Justification: A radar chart is optimal for comparing multiple entities across several common quantitative metrics (Performance, Modularity, Security, etc.), providing a quick, holistic view of their trade-offs. -> Library: Chart.js (Canvas).
+        - Report Info: Process states (New, Ready, Running, etc.) -> Goal: Organize -> Viz: HTML/CSS Flowchart -> Justification: A flowchart is the most intuitive way to represent a state machine or process flow. This is implemented with styled HTML divs and borders to adhere to the NO SVG/Mermaid rule. -> Library/Method: HTML/CSS with Tailwind.
+        - Report Info: Scheduling algorithm goals -> Goal: Compare -> Viz: Bar chart -> Justification: A bar chart effectively compares the performance characteristics (e.g., fairness, throughput) of different scheduling algorithms, making their abstract goals concrete. -> Library: Chart.js (Canvas).
+        - Report Info: Kernel mode vs. User mode -> Goal: Organize -> Viz: HTML/CSS Diagram -> Justification: A clear, two-sided diagram is the best way to illustrate this fundamental, non-negotiable boundary, showing the privileged divide and the mechanisms (system calls, interrupts) that cross it. -> Library/Method: HTML/CSS with Tailwind.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .infographic-card {
+            background-color: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            border: 1px solid #e2e8f0;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 45vh;
+            max-height: 400px;
+        }
+        .flowchart-node {
+            border: 2px solid #93c5fd;
+            background-color: #eff6ff;
+            color: #1e40af;
+            border-radius: 0.75rem;
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            text-align: center;
+        }
+        .flowchart-arrow {
+            position: relative;
+            color: #60a5fa;
+            font-weight: bold;
+        }
+        .flowchart-arrow::after {
+            content: '➤';
+            position: absolute;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+
+        <header class="text-center my-8 md:my-12">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-blue-800">The Core of Control</h1>
+            <p class="text-lg md:text-xl text-blue-600 mt-2">A Visual Guide to Operating System Kernels</p>
+        </header>
+
+        <section class="infographic-card p-6 md:p-8 mb-12">
+            <h2 class="text-3xl font-bold text-blue-900 text-center mb-2">What is the Kernel?</h2>
+            <p class="text-center text-gray-600 max-w-3xl mx-auto mb-8">The kernel is the foundational layer of an operating system, acting as the ultimate mediator between hardware and software. It manages 100% of the system's resources, ensuring applications can run smoothly, securely, and efficiently without conflict. Think of it as the system's central nervous system.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+                <div>
+                    <div class="chart-container h-48 max-h-48">
+                        <canvas id="processChart"></canvas>
+                    </div>
+                    <h3 class="text-xl font-bold mt-4 text-blue-800">Process Management</h3>
+                    <p class="text-sm text-gray-500">Creates, schedules, and terminates all application processes.</p>
+                </div>
+                <div>
+                    <div class="chart-container h-48 max-h-48">
+                        <canvas id="memoryChart"></canvas>
+                    </div>
+                    <h3 class="text-xl font-bold mt-4 text-blue-800">Memory Management</h3>
+                    <p class="text-sm text-gray-500">Allocates and protects memory for every program.</p>
+                </div>
+                <div>
+                    <div class="chart-container h-48 max-h-48">
+                        <canvas id="deviceChart"></canvas>
+                    </div>
+                    <h3 class="text-xl font-bold mt-4 text-blue-800">Device Control</h3>
+                    <p class="text-sm text-gray-500">Manages all hardware through specialized drivers.</p>
+                </div>
+                <div>
+                    <div class="chart-container h-48 max-h-48">
+                        <canvas id="securityChart"></canvas>
+                    </div>
+                    <h3 class="text-xl font-bold mt-4 text-blue-800">Security & Access</h3>
+                    <p class="text-sm text-gray-500">Enforces protection boundaries and permissions.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="infographic-card p-6 md:p-8 mb-12">
+            <h2 class="text-3xl font-bold text-blue-900 text-center mb-2">Architectural Blueprints</h2>
+            <p class="text-center text-gray-600 max-w-3xl mx-auto mb-8">Kernel design involves critical trade-offs between speed, security, and stability. The three main architectures—Monolithic, Microkernel, and Hybrid—represent different philosophies in solving this challenge. The chart below visualizes their relative strengths and weaknesses.</p>
+            <div class="chart-container h-[50vh] max-h-[450px]">
+                <canvas id="architectureChart"></canvas>
+            </div>
+             <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                <div class="p-4 bg-blue-50 rounded-xl">
+                    <h4 class="font-bold text-blue-800">Monolithic (e.g., Linux)</h4>
+                    <p class="text-gray-600 mt-1">All services run in one space. <strong class="text-green-600">Pro:</strong> Extremely fast. <strong class="text-red-600">Con:</strong> A single driver crash can halt the system.</p>
+                </div>
+                 <div class="p-4 bg-blue-50 rounded-xl">
+                    <h4 class="font-bold text-blue-800">Microkernel (e.g., QNX)</h4>
+                    <p class="text-gray-600 mt-1">Only essential services are in-kernel. <strong class="text-green-600">Pro:</strong> Very secure and stable. <strong class="text-red-600">Con:</strong> Slower due to message passing.</p>
+                </div>
+                 <div class="p-4 bg-blue-50 rounded-xl">
+                    <h4 class="font-bold text-blue-800">Hybrid (e.g., Windows, macOS)</h4>
+                    <p class="text-gray-600 mt-1">A pragmatic mix of both worlds. <strong class="text-green-600">Pro:</strong> Good balance of performance and stability. <strong class="text-red-600">Con:</strong> Highly complex design.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="infographic-card p-6 md:p-8 mb-12">
+            <h2 class="text-3xl font-bold text-blue-900 text-center mb-2">Core Components & Operations</h2>
+            <p class="text-center text-gray-600 max-w-3xl mx-auto mb-8">Inside the kernel, several components work together. Process management is key, guiding each program through a lifecycle of distinct states. This flowchart illustrates the journey every process takes from creation to termination.</p>
+            <h3 class="text-2xl font-semibold text-blue-800 text-center mb-6">A Process's Lifecycle</h3>
+             <div class="flex flex-col items-center space-y-4">
+                <div class="flowchart-node">New</div>
+                <div class="flowchart-arrow h-8 w-px bg-blue-300"></div>
+                <div class="flowchart-node">Ready</div>
+                <div class="flex items-center w-full max-w-md">
+                    <div class="flowchart-arrow h-px w-full bg-blue-300 transform -translate-y-4"></div>
+                    <div class="flowchart-node mx-4 flex-shrink-0">Running</div>
+                    <div class="flowchart-arrow h-px w-full bg-blue-300 transform -translate-y-4"></div>
+                </div>
+                <div class="flex justify-between w-full max-w-lg">
+                     <div class="flowchart-arrow h-8 w-px bg-blue-300 transform translate-x-1/2"></div>
+                     <div class="flowchart-arrow h-8 w-px bg-blue-300 transform -translate-x-1/2"></div>
+                </div>
+                 <div class="flex justify-between w-full max-w-2xl text-center">
+                    <div class="flex flex-col items-center">
+                        <div class="flowchart-node">Waiting / Blocked<br/><span class="text-xs font-normal">(e.g., I/O)</span></div>
+                        <div class="flowchart-arrow h-8 w-px bg-blue-300"></div>
+                        <p class="text-sm text-blue-500 -mt-2 transform -rotate-90">➤</p>
+                    </div>
+                    <div class="flex flex-col items-center">
+                         <div class="flowchart-node">Terminated</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section class="infographic-card p-6 md:p-8 mb-12">
+            <h2 class="text-3xl font-bold text-blue-900 text-center mb-2">The Scheduler's Dilemma</h2>
+            <p class="text-center text-gray-600 max-w-3xl mx-auto mb-8">The kernel's scheduler decides which process runs next, balancing conflicting goals. Should it prioritize fairness, raw speed, or user responsiveness? Different algorithms provide different answers, as shown in this comparison of key objectives.</p>
+            <div class="chart-container h-[50vh] max-h-[400px]">
+                <canvas id="schedulingChart"></canvas>
+            </div>
+        </section>
+        
+        <section class="infographic-card p-6 md:p-8">
+            <h2 class="text-3xl font-bold text-blue-900 text-center mb-2">The Protection Boundary</h2>
+            <p class="text-center text-gray-600 max-w-3xl mx-auto mb-8">The most important security feature of an OS is the strict separation between User Mode and Kernel Mode, enforced by the CPU itself. Applications run in the restricted User Mode, while the kernel runs in the all-powerful Kernel Mode. This prevents faulty or malicious applications from crashing the system.</p>
+            <div class="w-full bg-blue-50 p-6 rounded-2xl border-2 border-blue-200">
+                <div class="grid grid-cols-1 md:grid-cols-3 items-center gap-4 text-center">
+                    <div class="p-4 bg-white rounded-xl border border-gray-200">
+                        <h3 class="text-xl font-bold text-blue-700">USER MODE</h3>
+                        <p class="text-sm mt-1">Applications (Browser, Games, etc.)</p>
+                        <p class="mt-2 text-3xl">🔒</p>
+                        <p class="text-xs text-gray-500">Restricted Access</p>
+                    </div>
+                    <div class="font-semibold text-blue-600">
+                        <p>System Calls ➤</p>
+                        <p class="my-2">↕️</p>
+                        <p class="text-red-500">◀ Interrupts/Exceptions</p>
+                    </div>
+                    <div class="p-4 bg-red-100 rounded-xl border-2 border-red-300">
+                        <h3 class="text-xl font-bold text-red-800">KERNEL MODE</h3>
+                        <p class="text-sm mt-1">OS Kernel & Drivers</p>
+                        <p class="mt-2 text-3xl">👑</p>
+                        <p class="text-xs text-red-600">Full Hardware Access</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+    </div>
+
+<script>
+    const CHART_DEFAULTS = {
+        plugins: {
+            legend: {
+                labels: {
+                    color: '#1e293b',
+                    font: {
+                        family: "'Inter', sans-serif",
+                        size: 14
+                    }
+                }
+            },
+            tooltip: {
+                enabled: true,
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleFont: { size: 16, weight: 'bold', family: "'Inter', sans-serif" },
+                bodyFont: { size: 14, family: "'Inter', sans-serif" },
+                callbacks: {
+                    title: function(tooltipItems) {
+                        const item = tooltipItems[0];
+                        let label = item.chart.data.labels[item.dataIndex];
+                        if (Array.isArray(label)) {
+                            return label.join(' ');
+                        }
+                        return label;
+                    }
+                }
+            }
+        }
+    };
+
+    function wrapLabel(str, max_width) {
+        if (str.length <= max_width) return str;
+        let wrapped = [];
+        let words = str.split(' ');
+        let current_line = '';
+        words.forEach(word => {
+            if ((current_line + ' ' + word).length > max_width && current_line.length > 0) {
+                wrapped.push(current_line);
+                current_line = '';
+            }
+            current_line += (current_line.length === 0 ? '' : ' ') + word;
+        });
+        wrapped.push(current_line);
+        return wrapped;
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        const donutChartOptions = {
+            ...CHART_DEFAULTS,
+            cutout: '70%',
+            plugins: {
+                ...CHART_DEFAULTS.plugins,
+                legend: { display: false },
+                tooltip: { enabled: false }
+            }
+        };
+
+        const createDonut = (ctx, label, color) => new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: [label],
+                datasets: [{
+                    data: [100],
+                    backgroundColor: [color],
+                    borderColor: ['#ffffff'],
+                    borderWidth: 4
+                }]
+            },
+            options: donutChartOptions
+        });
+
+        createDonut(document.getElementById('processChart').getContext('2d'), 'Process', '#3b82f6');
+        createDonut(document.getElementById('memoryChart').getContext('2d'), 'Memory', '#2563eb');
+        createDonut(document.getElementById('deviceChart').getContext('2d'), 'Device', '#1d4ed8');
+        createDonut(document.getElementById('securityChart').getContext('2d'), 'Security', '#1e40af');
+
+        new Chart(document.getElementById('architectureChart').getContext('2d'), {
+            type: 'radar',
+            data: {
+                labels: ['Performance', 'Stability', 'Security', 'Modularity', 'Complexity'],
+                datasets: [
+                    {
+                        label: 'Monolithic',
+                        data: [9, 4, 5, 5, 7],
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                    },
+                    {
+                        label: 'Microkernel',
+                        data: [4, 9, 9, 9, 5],
+                        backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                        borderColor: 'rgba(34, 197, 94, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(34, 197, 94, 1)',
+                    },
+                    {
+                        label: 'Hybrid',
+                        data: [7, 7, 7, 7, 9],
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(239, 68, 68, 1)',
+                    }
+                ]
+            },
+            options: {
+                ...CHART_DEFAULTS,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                        grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                        pointLabels: { 
+                            font: { size: 12, weight: '600' },
+                            color: '#334155'
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 10,
+                        ticks: {
+                            display: false,
+                            stepSize: 2
+                        }
+                    }
+                },
+            }
+        });
+
+        const schedulingLabels = [
+            'Fairness for All Processes', 
+            'Overall System Throughput', 
+            'Interactive Responsiveness'
+        ].map(label => wrapLabel(label, 16));
+
+        new Chart(document.getElementById('schedulingChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: schedulingLabels,
+                datasets: [
+                    {
+                        label: 'Round Robin',
+                        data: [9, 6, 9],
+                        backgroundColor: '#3b82f6',
+                    },
+                    {
+                        label: 'First-Come, First-Served',
+                        data: [3, 5, 2],
+                        backgroundColor: '#60a5fa',
+                    },
+                    {
+                        label: 'Shortest Job First',
+                        data: [2, 9, 4],
+                        backgroundColor: '#93c5fd',
+                    }
+                ]
+            },
+            options: {
+                ...CHART_DEFAULTS,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 10,
+                        ticks: { color: '#475569' }
+                    },
+                    x: {
+                        ticks: { color: '#1e3a8a', font: { weight: 'bold' } }
+                    }
+                },
+                plugins: {
+                    ...CHART_DEFAULTS.plugins,
+                    tooltip: {
+                         ...CHART_DEFAULTS.plugins.tooltip,
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                let label = tooltipItems[0].label;
+                                if (Array.isArray(label)) {
+                                    return label.join(' ');
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+    });
+</script>
+
+</body>
+</html>

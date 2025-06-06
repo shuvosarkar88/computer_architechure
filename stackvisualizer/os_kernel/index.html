@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide to OS Kernels</title>
+    <!-- Chosen Palette: Warm Harmony Neutrals -->
+    <!-- Application Structure Plan: A single-page application with a fixed sidebar navigation. This structure allows users to jump between key thematic concepts (Architectures, Components, Operations, Security) rather than following the linear flow of the original report. This non-linear, exploratory approach is better for learning and comparing complex technical topics. Key interactions include: 1) A comparative chart for architectures, dynamically updated by user selection. 2) Tabbed views for core components to reduce cognitive load. 3) Simple animations and interactive charts to visualize dynamic operations like scheduling and context switching. 4) Clear, diagrammatic layouts for foundational concepts like kernel/user mode separation. This design prioritizes user-driven exploration and visual learning over passive reading. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Kernel Architecture Comparison -> Goal: Compare -> Viz: Interactive Radar Chart & Text Blocks -> Interaction: Buttons to select architecture, updating both chart and text -> Justification: Visually contrasting multiple attributes (performance, security, etc.) is more effective than a static table. -> Library: Chart.js, Vanilla JS.
+        - Report Info: Core Components (Process, Memory, etc.) -> Goal: Organize/Inform -> Viz: Tabbed Interface -> Interaction: Click tabs to reveal component details -> Justification: Breaks down a large, dense section into manageable, user-selectable chunks. -> Library: Vanilla JS.
+        - Report Info: Scheduling Algorithms -> Goal: Compare -> Viz: Bar Chart -> Interaction: Dropdown to select algorithm, updating chart to show process execution -> Justification: Makes the abstract impact of different algorithms tangible and easy to compare. -> Library: Chart.js, Vanilla JS.
+        - Report Info: Context Switching -> Goal: Show Change -> Viz: HTML/CSS Diagram -> Interaction: "Play" button triggers a CSS animation -> Justification: Animation is ideal for illustrating a time-based process like swapping contexts. -> Library: Vanilla JS for trigger.
+        - Report Info: Kernel vs User Mode -> Goal: Organize/Inform -> Viz: HTML/CSS Diagram -> Interaction: Static visual -> Justification: A clear, static diagram is the best way to represent this fundamental, non-changing boundary. -> Library: HTML/CSS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 40vh;
+            max-height: 400px;
+        }
+        .nav-link.active {
+            background-color: #0d9488;
+            color: #ffffff;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .tab-button.active {
+            border-color: #0d9488;
+            background-color: #ccfbf1;
+            color: #134e4a;
+        }
+        .architecture-btn.active {
+            background-color: #0d9488;
+            color: #ffffff;
+            transform: scale(1.05);
+        }
+        @keyframes context-switch-animation {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-110%); }
+            50% { transform: translateX(-110%); }
+            75% { transform: translateX(0); }
+        }
+        .context-switch-animate .pcb-a {
+            animation: context-switch-animation 4s ease-in-out;
+        }
+        @keyframes context-switch-animation-b {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(110%); }
+            50% { transform: translateX(110%); }
+            75% { transform: translateX(0); }
+        }
+        .context-switch-animate .pcb-b {
+            animation: context-switch-animation-b 4s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800">
+
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <nav id="main-nav" class="bg-teal-700 text-white w-full md:w-64 p-4 md:p-6 space-y-4 flex-shrink-0">
+            <h1 class="text-2xl font-bold text-center">OS Kernel Explorer</h1>
+            <ul class="space-y-2">
+                <li><a href="#overview" class="nav-link block w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600 transition-colors duration-200">Welcome</a></li>
+                <li><a href="#architectures" class="nav-link block w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600 transition-colors duration-200">Architectures</a></li>
+                <li><a href="#components" class="nav-link block w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600 transition-colors duration-200">Core Components</a></li>
+                <li><a href="#operations" class="nav-link block w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600 transition-colors duration-200">Kernel in Action</a></li>
+                <li><a href="#security" class="nav-link block w-full text-left px-4 py-2 rounded-lg hover:bg-teal-600 transition-colors duration-200">Security & Protection</a></li>
+            </ul>
+        </nav>
+
+        <main class="flex-1 p-6 md:p-10 overflow-y-auto">
+
+            <section id="overview" class="content-section">
+                <h2 class="text-4xl font-bold text-teal-800 mb-4">The Heart of the System: An Introduction</h2>
+                <div class="prose max-w-none text-stone-700">
+                    <p class="text-lg">Welcome to this interactive guide to Operating System Kernels. The kernel is the most fundamental part of an OS, acting as the bridge between your software and the computer's hardware. It manages everything from CPU time and memory to your keyboard and mouse. Its job is to provide a safe, stable, and efficient environment for applications to run.</p>
+                    <p>This application is designed to help you explore the complex world of kernels in a more visual and interactive way. Instead of just reading, you can click, compare, and see concepts in action. Use the navigation on the left to jump between topics: compare different kernel architectures, dive into the core components that make up a kernel, see key operations visualized, and understand the critical role the kernel plays in system security. The goal is to make these foundational computer science concepts more intuitive and easier to grasp.</p>
+                </div>
+
+                <div class="mt-8 p-6 bg-teal-50 border border-teal-200 rounded-2xl">
+                    <h3 class="text-2xl font-semibold text-teal-700 mb-2">Fundamental Roles</h3>
+                    <ul class="list-disc list-inside space-y-2 text-stone-700">
+                        <li><strong>Resource Management:</strong> Arbitrates access to CPU, memory, and I/O devices.</li>
+                        <li><strong>Process Management:</strong> Oversees the entire lifecycle of applications (processes).</li>
+                        <li><strong>Memory Management:</strong> Allocates and protects memory for the kernel and applications.</li>
+                        <li><strong>Hardware Abstraction:</strong> Provides a consistent interface for software, hiding hardware complexity.</li>
+                        <li><strong>Security Enforcement:</strong> Establishes and enforces protection boundaries.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="architectures" class="content-section">
+                <h2 class="text-4xl font-bold text-teal-800 mb-4">Kernel Architectural Designs</h2>
+                <div class="prose max-w-none text-stone-700 mb-6">
+                    <p>The architectural design of a kernel defines how its components are organized and interact. This choice has profound consequences for the system's performance, stability, and security. The three main architectures—Monolithic, Microkernel, and Hybrid—represent different philosophies in the trade-off between speed and modularity. Use the buttons below to explore each design and see how their characteristics compare on the chart.</p>
+                </div>
+                <div class="flex justify-center space-x-2 md:space-x-4 mb-8">
+                    <button class="architecture-btn px-4 py-2 rounded-lg font-semibold bg-white border border-stone-300 hover:bg-teal-50 transition-all duration-200" data-arch="monolithic">Monolithic</button>
+                    <button class="architecture-btn px-4 py-2 rounded-lg font-semibold bg-white border border-stone-300 hover:bg-teal-50 transition-all duration-200" data-arch="microkernel">Microkernel</button>
+                    <button class="architecture-btn px-4 py-2 rounded-lg font-semibold bg-white border border-stone-300 hover:bg-teal-50 transition-all duration-200" data-arch="hybrid">Hybrid</button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <div id="architecture-details" class="p-6 bg-white rounded-2xl shadow-sm border border-stone-200">
+                        <!-- Content will be injected by JS -->
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="architectureChart"></canvas>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="components" class="content-section">
+                <h2 class="text-4xl font-bold text-teal-800 mb-4">Core Kernel Components</h2>
+                <div class="prose max-w-none text-stone-700 mb-6">
+                    <p>Regardless of its architecture, every kernel is built from a set of fundamental components that manage different aspects of the system. These modules work together to provide the essential services upon which all other software relies. Click through the tabs below to get an overview of each key component and its responsibilities, from managing the applications you run to handling the files on your disk.</p>
+                </div>
+                <div class="border-b border-stone-200">
+                    <nav id="components-tabs" class="flex space-x-2 -mb-px" aria-label="Tabs">
+                        <button class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="process">Process Management</button>
+                        <button class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="memory">Memory Management</button>
+                        <button class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="filesystem">File Systems</button>
+                        <button class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="drivers">Device Drivers</button>
+                        <button class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="syscalls">System Calls</button>
+                    </nav>
+                </div>
+
+                <div id="components-content" class="mt-6">
+                    <div id="tab-process" class="tab-content prose max-w-none">
+                        <h3 class="text-2xl font-semibold text-teal-700">Process Management</h3>
+                        <p>A process is an instance of a running program. The kernel's process manager handles the entire lifecycle of a process: creation, scheduling CPU time, suspension, and termination. It keeps track of every process using a data structure called the Process Control Block (PCB).</p>
+                        <div class="my-4 p-4 border border-stone-200 bg-stone-50 rounded-lg">
+                            <h4 class="font-bold text-lg text-center text-stone-700">Process Control Block (PCB)</h4>
+                            <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
+                                <div class="bg-teal-100 p-2 rounded">Process ID (PID)</div>
+                                <div class="bg-teal-100 p-2 rounded">Process State (Running, Ready...)</div>
+                                <div class="bg-teal-100 p-2 rounded">Program Counter</div>
+                                <div class="bg-teal-100 p-2 rounded">CPU Registers</div>
+                                <div class="bg-teal-100 p-2 rounded">Memory Pointers</div>
+                                <div class="bg-teal-100 p-2 rounded">Open Files List</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="tab-memory" class="tab-content prose max-w-none">
+                        <h3 class="text-2xl font-semibold text-teal-700">Memory Management</h3>
+                        <p>The memory manager is responsible for allocating and deallocating memory space for the kernel and all user processes. It provides protection and isolation using a technique called <strong>virtual memory</strong>. This gives each process its own private address space and allows the system to use more memory than is physically available by "swapping" data to disk.</p>
+                        <div class="my-4 p-4 border border-stone-200 bg-stone-50 rounded-lg">
+                            <h4 class="font-bold text-lg text-center text-stone-700">Virtual to Physical Address Translation</h4>
+                            <div class="flex items-center justify-around text-center">
+                                <div class="p-3 bg-indigo-100 rounded-lg"><span>Process A<br>Virtual Address</span></div>
+                                <div class="text-2xl text-teal-600 font-mono">&rarr;</div>
+                                <div class="p-3 bg-teal-100 rounded-lg"><span>Kernel + MMU<br>(Page Tables)</span></div>
+                                <div class="text-2xl text-teal-600 font-mono">&rarr;</div>
+                                <div class="p-3 bg-emerald-100 rounded-lg"><span>Physical RAM<br>Address</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="tab-filesystem" class="tab-content prose max-w-none">
+                        <h3 class="text-2xl font-semibold text-teal-700">File Systems</h3>
+                        <p>The file system component organizes data on persistent storage like hard drives or SSDs. It provides the familiar hierarchical structure of files and directories. A key feature in modern kernels is the <strong>Virtual File System (VFS)</strong>, an abstraction layer that allows the OS to support many different types of file systems (e.g., NTFS, ext4, APFS) through a single, consistent interface.</p>
+                        <div class="my-4 p-4 border border-stone-200 bg-stone-50 rounded-lg">
+                             <h4 class="font-bold text-lg text-center text-stone-700">VFS Abstraction Layer</h4>
+                             <div class="text-center space-y-2">
+                                <div class="p-2 bg-blue-100 rounded">Application (e.g., Text Editor)</div>
+                                <div class="font-mono text-teal-600">&darr; <span class="text-sm italic text-stone-600">open(), read()</span> &darr;</div>
+                                <div class="p-2 bg-teal-100 rounded font-semibold">Virtual File System (VFS)</div>
+                                <div class="font-mono text-teal-600">&darr; &darr; &darr;</div>
+                                <div class="flex justify-around">
+                                    <div class="p-2 bg-green-100 rounded">NTFS Driver</div>
+                                    <div class="p-2 bg-yellow-100 rounded">ext4 Driver</div>
+                                    <div class="p-2 bg-purple-100 rounded">Network FS Driver</div>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                    <div id="tab-drivers" class="tab-content prose max-w-none">
+                         <h3 class="text-2xl font-semibold text-teal-700">Device Drivers</h3>
+                         <p>Device drivers are software modules that act as translators, allowing the kernel to communicate with specific hardware peripherals like graphics cards, network adapters, and printers. Each device has a unique command language, and the driver's job is to abstract these details away, presenting a standardized interface to the rest of the kernel. This modular approach is essential for supporting the vast ecosystem of computer hardware.</p>
+                    </div>
+                    <div id="tab-syscalls" class="tab-content prose max-w-none">
+                        <h3 class="text-2xl font-semibold text-teal-700">System Calls</h3>
+                        <p>A system call is the main gateway for a user-space application to request a service from the kernel. Since applications cannot directly access hardware or protected memory, they must ask the kernel to perform privileged actions on their behalf. When an application makes a system call, the CPU switches from user mode to kernel mode, the kernel performs the requested task (like writing to a file), and then returns control to the application in user mode.</p>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="operations" class="content-section">
+                <h2 class="text-4xl font-bold text-teal-800 mb-4">Kernel in Action: Core Operations</h2>
+                 <div class="prose max-w-none text-stone-700 mb-8">
+                    <p>Beyond its structural components, the kernel is constantly performing dynamic operations to manage the system. This section provides a glimpse into these activities, from the rapid context switching that enables multitasking to the complex algorithms that decide which process runs next. These operations are the lifeblood of a modern, responsive operating system.</p>
+                </div>
+                <div class="space-y-12">
+                    <div>
+                        <h3 class="text-2xl font-semibold text-teal-700 mb-4">Context Switching</h3>
+                        <p class="mb-4 text-stone-600">To create the illusion of running many programs at once, the kernel rapidly switches the CPU between different processes. This involves saving the entire state (context) of the current process and loading the state of the next one. Click the button to see a simplified animation.</p>
+                        <div id="context-switch-visual" class="relative w-full h-32 bg-stone-100 border border-stone-200 rounded-lg overflow-hidden p-4">
+                            <div class="absolute inset-y-0 left-1/2 -ml-16 w-32 h-full flex items-center justify-center bg-teal-100 border border-teal-300 rounded-lg">
+                                <span class="font-bold text-teal-800">CPU</span>
+                            </div>
+                            <div class="pcb-a absolute left-1/2 -ml-64 w-32 h-full flex items-center justify-center bg-blue-100 border border-blue-300 rounded-lg shadow-md">
+                                <span class="font-semibold text-blue-800">Process A Context</span>
+                            </div>
+                            <div class="pcb-b absolute left-1/2 ml-32 w-32 h-full flex items-center justify-center bg-purple-100 border border-purple-300 rounded-lg shadow-md">
+                                <span class="font-semibold text-purple-800">Process B Context</span>
+                            </div>
+                        </div>
+                        <button id="animate-switch-btn" class="mt-4 px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-colors">Animate Switch</button>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-2xl font-semibold text-teal-700 mb-4">Scheduling Algorithms</h3>
+                        <p class="mb-4 text-stone-600">The scheduler decides which ready process gets to run on the CPU next. Different algorithms have different goals (e.g., fairness, responsiveness, throughput). Select an algorithm below to see how it would schedule a simple set of processes.</p>
+                        <div class="mb-4">
+                            <label for="scheduler-select" class="block text-sm font-medium text-stone-700">Select Algorithm:</label>
+                            <select id="scheduler-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-stone-300 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm rounded-md">
+                                <option value="fcfs">First-Come, First-Served (FCFS)</option>
+                                <option value="sjf">Shortest Job First (SJF)</option>
+                                <option value="rr">Round Robin (RR)</option>
+                            </select>
+                        </div>
+                        <div class="chart-container h-64 max-h-64">
+                            <canvas id="schedulingChart"></canvas>
+                        </div>
+                         <p id="scheduler-desc" class="mt-4 text-sm text-stone-600 italic"></p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="security" class="content-section">
+                <h2 class="text-4xl font-bold text-teal-800 mb-4">Security & Protection</h2>
+                <div class="prose max-w-none text-stone-700 mb-8">
+                    <p>A primary role of the kernel is to act as a security gatekeeper. It achieves this through a strict separation of privileges, enforced directly by the computer's hardware. This section explores the fundamental concept of User Mode vs. Kernel Mode and other mechanisms the kernel uses to protect the system from buggy or malicious software.</p>
+                </div>
+                <div class="p-6 bg-stone-100 border border-stone-200 rounded-2xl">
+                    <h3 class="text-2xl font-semibold text-center text-teal-700 mb-4">User Mode vs. Kernel Mode</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                        <div class="p-4 bg-white border-2 border-blue-300 rounded-lg">
+                            <h4 class="font-bold text-lg text-blue-800">User Mode (Less Privileged)</h4>
+                            <p class="mt-2 text-sm text-stone-600">Where applications run. Access to hardware and memory is restricted.</p>
+                             <ul class="mt-2 list-disc list-inside text-sm space-y-1">
+                                <li>Browser, Word Processor, Games</li>
+                                <li>Private virtual address space</li>
+                                <li>Cannot directly access hardware</li>
+                             </ul>
+                        </div>
+                        <div class="relative flex items-center justify-center p-4">
+                            <div class="text-center">
+                                <span class="font-bold text-teal-600">System Call</span>
+                                <div class="font-mono text-3xl my-2 text-teal-500">&harr;</div>
+                                <span class="font-bold text-red-600">Interrupt / Exception</span>
+                            </div>
+                        </div>
+                         <div class="p-4 bg-white border-2 border-red-300 rounded-lg">
+                            <h4 class="font-bold text-lg text-red-800">Kernel Mode (Most Privileged)</h4>
+                            <p class="mt-2 text-sm text-stone-600">Where the OS kernel runs. Has complete access to all hardware and memory.</p>
+                             <ul class="mt-2 list-disc list-inside text-sm space-y-1">
+                                 <li>Scheduler, Memory Manager, Drivers</li>
+                                 <li>Full access to physical memory</li>
+                                 <li>Can execute any CPU instruction</li>
+                             </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8">
+                     <h3 class="text-2xl font-semibold text-teal-700 mb-4">Key Protection Mechanisms</h3>
+                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="p-4 bg-white rounded-lg border border-stone-200 shadow-sm">
+                            <h4 class="font-semibold text-teal-800">Memory Protection</h4>
+                            <p class="text-sm mt-1 text-stone-600">Using the MMU, the kernel ensures one process cannot access another's memory.</p>
+                        </div>
+                        <div class="p-4 bg-white rounded-lg border border-stone-200 shadow-sm">
+                            <h4 class="font-semibold text-teal-800">Data Execution Prevention (DEP)</h4>
+                            <p class="text-sm mt-1 text-stone-600">Marks memory areas like the stack and heap as non-executable to prevent code injection attacks.</p>
+                        </div>
+                         <div class="p-4 bg-white rounded-lg border border-stone-200 shadow-sm">
+                            <h4 class="font-semibold text-teal-800">Address Space Layout Randomization (ASLR)</h4>
+                            <p class="text-sm mt-1 text-stone-600">Randomizes memory locations to make exploits harder to write.</p>
+                        </div>
+                        <div class="p-4 bg-white rounded-lg border border-stone-200 shadow-sm">
+                            <h4 class="font-semibold text-teal-800">Access Control (MAC/DAC)</h4>
+                            <p class="text-sm mt-1 text-stone-600">Enforces policies on which users/processes can access which files/resources.</p>
+                        </div>
+                        <div class="p-4 bg-white rounded-lg border border-stone-200 shadow-sm">
+                            <h4 class="font-semibold text-teal-800">Code Signing</h4>
+                            <p class="text-sm mt-1 text-stone-600">Ensures that only trusted, digitally signed drivers and kernel modules can be loaded.</p>
+                        </div>
+                         <div class="p-4 bg-white rounded-lg border border-stone-200 shadow-sm">
+                            <h4 class="font-semibold text-teal-800">Sandboxing</h4>
+                            <p class="text-sm mt-1 text-stone-600">Restricts applications to a very limited set of system calls and resources (e.g., seccomp).</p>
+                        </div>
+                     </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const navLinks = document.querySelectorAll('.nav-link');
+    const contentSections = document.querySelectorAll('.content-section');
+
+    function navigateTo(hash) {
+        if (!hash) hash = '#overview';
+        
+        contentSections.forEach(section => {
+            if ('#' + section.id === hash) {
+                section.classList.add('active');
+            } else {
+                section.classList.remove('active');
+            }
+        });
+
+        navLinks.forEach(link => {
+            if (link.getAttribute('href') === hash) {
+                link.classList.add('active');
+            } else {
+                link.classList.remove('active');
+            }
+        });
+    }
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = e.currentTarget.getAttribute('href');
+            history.pushState(null, null, targetId);
+            navigateTo(targetId);
+        });
+    });
+
+    window.addEventListener('popstate', () => {
+        navigateTo(location.hash);
+    });
+
+    navigateTo(location.hash || '#overview');
+
+    const architectureData = {
+        monolithic: {
+            title: "Monolithic Kernel",
+            description: "All core OS services—process and memory management, file systems, device drivers, and networking—run in a single, large program in kernel space. Communication between components is very fast as it's just a function call.",
+            pros: ["High performance due to direct communication.", "Conceptually simpler initial design."],
+            cons: ["A bug in one component (like a driver) can crash the entire system.", "Difficult to maintain and update as the codebase grows.", "Large security attack surface."],
+            example: "Linux, FreeBSD, MS-DOS",
+            chartData: [9, 4, 3, 5, 8]
+        },
+        microkernel: {
+            title: "Microkernel",
+            description: "Only the most fundamental services (IPC, basic scheduling, memory management) run in the kernel. Other services like drivers, file systems, and networking run as separate user-space processes (servers).",
+            pros: ["High modularity and stability; a crashing driver won't crash the OS.", "More secure due to smaller kernel attack surface.", "Easier to extend and debug individual components."],
+            cons: ["Lower performance due to IPC overhead between user-space servers and the kernel.", "Design of efficient IPC is complex."],
+            example: "QNX, Minix, L4",
+            chartData: [4, 9, 9, 8, 4]
+        },
+        hybrid: {
+            title: "Hybrid Kernel",
+            description: "A compromise between monolithic and microkernel designs. More services run in kernel space than a microkernel for performance, but it still maintains some structural separation and message passing for other components.",
+            pros: ["Good balance between performance and modularity.", "More flexible design choices."],
+            cons: ["Can inherit the drawbacks of both designs.", "More complex to design and manage the kernel/user boundary."],
+            example: "Windows NT, macOS (XNU)",
+            chartData: [7, 7, 7, 7, 6]
+        }
+    };
+
+    let architectureChart;
+    const archChartCtx = document.getElementById('architectureChart').getContext('2d');
+    const architectureDetails = document.getElementById('architecture-details');
+    const archButtons = document.querySelectorAll('.architecture-btn');
+
+    function createArchitectureChart() {
+        architectureChart = new Chart(archChartCtx, {
+            type: 'radar',
+            data: {
+                labels: ['Performance', 'Modularity', 'Fault Isolation', 'Extensibility', 'Complexity'],
+                datasets: [{
+                    label: 'Characteristics',
+                    data: [0,0,0,0,0],
+                    backgroundColor: 'rgba(13, 148, 136, 0.2)',
+                    borderColor: 'rgb(13, 148, 136)',
+                    pointBackgroundColor: 'rgb(13, 148, 136)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(13, 148, 136)'
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                        grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                        pointLabels: { font: { size: 12 } },
+                        suggestedMin: 0,
+                        suggestedMax: 10
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+
+    function updateArchitectureView(archKey) {
+        const data = architectureData[archKey];
+        if (!data) return;
+
+        architectureDetails.innerHTML = `
+            <h3 class="text-2xl font-bold text-teal-700 mb-2">${data.title}</h3>
+            <p class="text-stone-600 mb-4">${data.description}</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                    <h4 class="font-semibold text-green-700">Advantages</h4>
+                    <ul class="list-disc list-inside mt-1 space-y-1 text-stone-600">${data.pros.map(p => `<li>${p}</li>`).join('')}</ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-red-700">Disadvantages</h4>
+                    <ul class="list-disc list-inside mt-1 space-y-1 text-stone-600">${data.cons.map(c => `<li>${c}</li>`).join('')}</ul>
+                </div>
+            </div>
+            <p class="mt-4 text-sm text-stone-500"><strong>Examples:</strong> ${data.example}</p>
+        `;
+
+        architectureChart.data.datasets[0].data = data.chartData;
+        architectureChart.data.datasets[0].label = data.title;
+        architectureChart.update();
+        
+        archButtons.forEach(btn => {
+            if(btn.dataset.arch === archKey) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+
+    createArchitectureChart();
+    updateArchitectureView('monolithic');
+
+    archButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            updateArchitectureView(e.currentTarget.dataset.arch);
+        });
+    });
+
+    const tabs = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            const targetId = e.currentTarget.dataset.tab;
+            
+            tabs.forEach(t => t.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            
+            tabContents.forEach(content => {
+                content.style.display = content.id === 'tab-' + targetId ? 'block' : 'none';
+            });
+        });
+    });
+    document.querySelector('.tab-button[data-tab="process"]').click();
+
+    document.getElementById('animate-switch-btn').addEventListener('click', (e) => {
+        const visual = document.getElementById('context-switch-visual');
+        visual.classList.remove('context-switch-animate');
+        void visual.offsetWidth; 
+        visual.classList.add('context-switch-animate');
+    });
+
+    const schedulingProcesses = {
+        fcfs: {
+            labels: ['P1 (10ms)', 'P2 (3ms)', 'P3 (5ms)'],
+            data: [10, 3, 5],
+            order: 'P1 -> P2 -> P3',
+            desc: "First-Come, First-Served: Processes are executed in the order they arrive. Simple, but short processes can get stuck behind long ones."
+        },
+        sjf: {
+            labels: ['P2 (3ms)', 'P3 (5ms)', 'P1 (10ms)'],
+            data: [3, 5, 10],
+            order: 'P2 -> P3 -> P1',
+            desc: "Shortest Job First: The process with the shortest execution time runs next. Optimal for average wait time, but can starve long jobs."
+        },
+        rr: {
+            labels: ['P1', 'P2', 'P3', 'P1', 'P3', 'P1'],
+            data: [4, 3, 4, 4, 1, 2],
+            order: 'P1 -> P2 -> P3 -> P1 -> P3 -> P1',
+            desc: "Round Robin (Quantum=4ms): Each process gets a small time slice. Fair and responsive, but has overhead from context switching."
+        }
+    };
+    
+    let schedulingChart;
+    const schedChartCtx = document.getElementById('schedulingChart').getContext('2d');
+    const schedulerSelect = document.getElementById('scheduler-select');
+    const schedulerDesc = document.getElementById('scheduler-desc');
+
+    function createSchedulingChart() {
+         schedulingChart = new Chart(schedChartCtx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Execution Time (ms)',
+                    data: [],
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.6)',
+                        'rgba(139, 92, 246, 0.6)',
+                        'rgba(236, 72, 153, 0.6)',
+                        'rgba(59, 130, 246, 0.6)',
+                        'rgba(236, 72, 153, 0.6)',
+                        'rgba(59, 130, 246, 0.6)',
+                    ],
+                    borderColor: [
+                         'rgb(59, 130, 246)',
+                         'rgb(139, 92, 246)',
+                         'rgb(236, 72, 153)',
+                         'rgb(59, 130, 246)',
+                         'rgb(236, 72, 153)',
+                         'rgb(59, 130, 246)',
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: { stacked: true, grid: { display: false } },
+                    y: { stacked: true, grid: { display: false } }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ` Run time: ${context.raw}ms`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateSchedulerView(type) {
+        const data = schedulingProcesses[type];
+        if(!data) return;
+
+        schedulingChart.data.labels = data.labels;
+        schedulingChart.data.datasets[0].data = data.data;
+        schedulingChart.update();
+        schedulerDesc.textContent = data.desc;
+    }
+
+    createSchedulingChart();
+    updateSchedulerView('fcfs');
+    schedulerSelect.addEventListener('change', (e) => {
+        updateSchedulerView(e.target.value);
+    });
+});
+</script>
+
+</body>
+</html>

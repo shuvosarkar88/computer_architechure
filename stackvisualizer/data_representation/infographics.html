@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Digital Universe: An Infographic on Data Representation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .section-title {
+            color: #006494;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            padding: 1.5rem;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .flowchart {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .flowchart-item {
+            padding: 1rem 1.5rem;
+            border: 2px solid #0582CA;
+            border-radius: 0.5rem;
+            background-color: #FFFFFF;
+            text-align: center;
+        }
+        .flowchart-arrow {
+            font-size: 2.5rem;
+            color: #006494;
+            font-weight: bold;
+        }
+        .bit-block {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-size: 1.1rem;
+            color: white;
+            text-align: center;
+        }
+        .sign-bit { background-color: #F26419; }
+        .exponent-bit { background-color: #FDBC42; }
+        .fraction-bit { background-color: #0582CA; }
+    </style>
+    <!-- Chosen Palette: Energetic & Playful -->
+    <!-- Application Structure Plan: A single, scrollable webpage presenting a narrative journey from foundational concepts to specific implementations. The structure is: 1. Hook/Intro, 2. Number Systems, 3. Integer Representation, 4. Floating-Point, 5. Character Encoding, 6. Error Detection, 7. Conclusion. This narrative structure was chosen to make complex, interrelated topics more understandable for a general audience by building knowledge progressively, rather than mirroring the report's academic structure. It tells a story of how computers solve representation problems layer by layer. -->
+    <!-- Visualization & Content Choices:
+        - Number Systems: Goal: Compare. Viz: Styled cards. Justification: Cleaner and more visually appealing than a table for high-level comparison. Library: HTML/CSS. NO SVG.
+        - Integer Range: Goal: Compare. Viz: Bar chart. Justification: Visually demonstrates the trade-off in range between unsigned and signed integers for the same number of bits. Library: Chart.js. NO SVG.
+        - Floating-Point Bit Allocation: Goal: Inform (composition). Viz: Donut chart. Justification: Effectively shows the proportion of bits for sign, exponent, and fraction. Library: Chart.js. NO SVG.
+        - Floating-Point Deconstruction: Goal: Organize (process). Viz: Styled HTML blocks. Justification: Makes the abstract IEEE 754 structure tangible and easy to understand. Library: HTML/CSS. NO SVG.
+        - Character Encoding Flow: Goal: Organize (process). Viz: HTML/CSS flowchart. Justification: Clearly illustrates the multi-step process from character to binary bytes without complex libraries. Library: HTML/CSS. NO SVG.
+        - UTF-8 Web Usage: Goal: Inform. Viz: Large number stat. Justification: High-impact way to show the dominance of UTF-8. Library: HTML/CSS. NO SVG.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="text-gray-800">
+
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    
+        <header class="text-center mb-16">
+            <h1 class="text-5xl md:text-6xl font-black" style="color: #006494;">The Digital Universe</h1>
+            <p class="mt-4 text-xl md:text-2xl text-gray-600">How Computers Translate Our World into 1s and 0s</p>
+        </header>
+
+        <section id="number-systems" class="mb-20">
+            <h2 class="text-4xl font-bold text-center mb-2 section-title">The Three Core Languages</h2>
+            <p class="text-lg text-center max-w-3xl mx-auto mb-10 text-gray-600">
+                At the heart of all computing lies the number system. While computers think in binary, we interact in decimal, and developers often use hexadecimal as a convenient shorthand. Each system has a specific role based on its strengths.
+            </p>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="card text-center">
+                    <h3 class="text-2xl font-bold mb-2" style="color: #0582CA;">Decimal (Base-10)</h3>
+                    <p class="text-7xl font-black text-gray-300">10</p>
+                    <p class="text-gray-700"><strong>Symbols:</strong> 0-9</p>
+                    <p class="mt-4 font-medium">The human interface. We use it for input and reading output because it's familiar.</p>
+                </div>
+                <div class="card text-center">
+                    <h3 class="text-2xl font-bold mb-2" style="color: #0582CA;">Binary (Base-2)</h3>
+                    <p class="text-7xl font-black text-gray-300">2</p>
+                    <p class="text-gray-700"><strong>Symbols:</strong> 0, 1</p>
+                    <p class="mt-4 font-medium">The machine's native tongue. The 0s and 1s correspond to the on/off states of transistors.</p>
+                </div>
+                <div class="card text-center">
+                    <h3 class="text-2xl font-bold mb-2" style="color: #0582CA;">Hexadecimal (Base-16)</h3>
+                    <p class="text-7xl font-black text-gray-300">16</p>
+                    <p class="text-gray-700"><strong>Symbols:</strong> 0-9, A-F</p>
+                    <p class="mt-4 font-medium">The developer's shorthand. It compactly represents long binary strings, like memory addresses.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="integers" class="mb-20">
+            <h2 class="text-4xl font-bold text-center mb-2 section-title">Representing Whole Numbers</h2>
+            <p class="text-lg text-center max-w-3xl mx-auto mb-10 text-gray-600">
+                Integers are used for counting, indexing, and controlling programs. The method used to store them determines the range of available values. The modern standard, Two's Complement, is efficient because it has one representation for zero and simplifies CPU logic.
+            </p>
+            <div class="card">
+                <h3 class="text-2xl font-bold mb-4 text-center" style="color: #0582CA;">The Range Trade-Off: 8-Bit Integers</h3>
+                <p class="text-center text-gray-600 mb-6">Using a bit to represent a sign (+) or (-) cuts the maximum positive value in half but opens up a range of negative values.</p>
+                <div class="chart-container">
+                    <canvas id="integerRangeChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="floating-point" class="mb-20">
+            <h2 class="text-4xl font-bold text-center mb-2 section-title">Handling Fractions & Vast Scales</h2>
+            <p class="text-lg text-center max-w-3xl mx-auto mb-10 text-gray-600">
+                For real numbers, science, and graphics, computers use a "floating point" system defined by the IEEE 754 standard. It breaks a number into a sign, an exponent (for scale), and a fraction (for precision), allowing for an enormous range of values.
+            </p>
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="card">
+                    <h3 class="text-2xl font-bold mb-4 text-center" style="color: #0582CA;">Single Precision (32-Bit) Allocation</h3>
+                    <p class="text-center text-gray-600 mb-6">This shows how the 32 bits are divided to represent a floating-point number.</p>
+                    <div class="chart-container" style="height: 300px; max-height: 300px;">
+                        <canvas id="floatPieChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="text-2xl font-bold mb-2 text-center" style="color: #0582CA;">Deconstructing -12.375</h3>
+                    <p class="text-center text-gray-600 mb-6">Here's how the number -12.375 is stored in a 32-bit single-precision format.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <p class="font-bold">Sign (1 bit)</p>
+                            <div class="bit-block sign-bit">1</div>
+                            <p class="text-sm text-gray-600">1 means the number is negative.</p>
+                        </div>
+                        <div>
+                            <p class="font-bold">Exponent (8 bits)</p>
+                            <div class="bit-block exponent-bit">10000010</div>
+                            <p class="text-sm text-gray-600">Represents the scale or magnitude.</p>
+                        </div>
+                        <div>
+                            <p class="font-bold">Fraction (23 bits)</p>
+                            <div class="bit-block fraction-bit break-all">10001100000000000000000</div>
+                            <p class="text-sm text-gray-600">Stores the number's significant digits for precision.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="characters" class="mb-20">
+            <h2 class="text-4xl font-bold text-center mb-2 section-title">Encoding Human Language</h2>
+            <p class="text-lg text-center max-w-3xl mx-auto mb-10 text-gray-600">
+                Text is represented by mapping each character, symbol, and emoji to a number (a "code point") via the universal Unicode standard. An encoding scheme like UTF-8 then translates this number into a sequence of binary bytes.
+            </p>
+            <div class="card mb-10">
+                 <h3 class="text-2xl font-bold mb-6 text-center" style="color: #0582CA;">From Character to Binary: The Journey of '€'</h3>
+                 <div class="flowchart">
+                    <div class="flowchart-item">
+                        <p class="text-4xl">€</p>
+                        <p class="font-bold">Character</p>
+                    </div>
+                    <div class="flowchart-arrow">&rarr;</div>
+                    <div class="flowchart-item">
+                        <p class="text-xl font-mono">U+20AC</p>
+                        <p class="font-bold">Unicode Code Point</p>
+                    </div>
+                    <div class="flowchart-arrow">&rarr;</div>
+                    <div class="flowchart-item">
+                        <p class="text-base font-mono break-all">11100010 10000010 10101100</p>
+                        <p class="font-bold">UTF-8 Binary (3 Bytes)</p>
+                    </div>
+                 </div>
+            </div>
+            <div class="card text-center bg-gradient-to-r from-[#00A6FB] to-[#0582CA] text-white">
+                <p class="text-2xl font-medium">UTF-8 is the dominant encoding on the web, used by over</p>
+                <p class="text-8xl font-black my-2">98%</p>
+                <p class="text-2xl font-medium">of all websites, ensuring global compatibility.</p>
+            </div>
+        </section>
+        
+        <footer class="text-center mt-16 pt-8 border-t border-gray-300">
+            <p class="text-gray-600">This infographic provides a visual summary of the core concepts of data representation in computer systems.</p>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const integerRangeCtx = document.getElementById('integerRangeChart').getContext('2d');
+            new Chart(integerRangeCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['8-Bit Unsigned', ['8-Bit Two\'s', 'Complement']],
+                    datasets: [{
+                        label: 'Value Range',
+                        data: [255, 255],
+                        backgroundColor: ['#FDBC42', '#00A6FB'],
+                        borderColor: ['#FDBC42', '#00A6FB'],
+                        borderWidth: 1,
+                        borderRadius: 5,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            min: -128,
+                            max: 256,
+                            ticks: {
+                                color: '#374151'
+                            },
+                             grid: {
+                                color: '#e5e7eb'
+                            }
+                        },
+                        y: {
+                             ticks: {
+                                color: '#374151',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            },
+                             grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    const item = tooltipItems[0];
+                                    let label = item.chart.data.labels[item.dataIndex];
+                                    if (Array.isArray(label)) {
+                                      return label.join(' ');
+                                    } else {
+                                      return label;
+                                    }
+                                },
+                                label: function(context) {
+                                    if (context.dataIndex === 0) return 'Range: 0 to 255';
+                                    if (context.dataIndex === 1) return 'Range: -128 to 127';
+                                    return '';
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'customBaseLine',
+                    beforeDatasetsDraw(chart, args, options) {
+                        const { ctx, data, chartArea: { top, bottom, left, right }, scales: { x, y } } = chart;
+                        ctx.save();
+                        data.datasets[0].data = [255, 127];
+                        data.datasets[0].base = [0, -128];
+                    }
+                }]
+            });
+            
+            const floatPieCtx = document.getElementById('floatPieChart').getContext('2d');
+            new Chart(floatPieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Fraction (Precision)', 'Exponent (Scale)', 'Sign'],
+                    datasets: [{
+                        data: [23, 8, 1],
+                        backgroundColor: ['#0582CA', '#FDBC42', '#F26419'],
+                        borderColor: '#ffffff',
+                        borderWidth: 4,
+                        hoverBorderColor: '#f0f4f8'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                             labels: {
+                                color: '#374151',
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    const item = tooltipItems[0];
+                                    let label = item.chart.data.labels[item.dataIndex];
+                                    if (Array.isArray(label)) {
+                                      return label.join(' ');
+                                    } else {
+                                      return label;
+                                    }
+                                },
+                                label: function(context) {
+                                    return `${context.raw} bits`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

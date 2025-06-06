@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Logic: An Infographic</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: A single-page, top-to-bottom narrative infographic. The structure guides the user from the most fundamental concept (binary) through increasingly complex topics: basic gates, circuit construction, logic types, and finally physical hardware. This linear flow is ideal for educational content, building knowledge step-by-step. Navigation is supported by a sticky header for quick jumps between thematic sections. This structure was chosen over a dashboard because the content has a clear, hierarchical learning path that a narrative infographic can present effectively. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Binary States. -> Goal: Inform. -> Viz/Method: "Big Number" text. Justification: High-impact way to introduce the core concept. Method: HTML/CSS.
+        - Report Info: Gate Categories (Basic, Universal, Other). -> Goal: Compare. -> Viz/Method: Donut Chart. Justification: Shows part-to-whole relationship of gate types. Library: Chart.js (Canvas).
+        - Report Info: Transistor count per gate. -> Goal: Compare. -> Viz/Method: Bar Chart. Justification: Provides a tangible metric for gate complexity. Library: Chart.js (Canvas).
+        - Report Info: Full Adder circuit structure. -> Goal: Organize/Process Flow. -> Viz/Method: HTML/CSS diagram. Justification: Visually explains how simpler components build a complex one without using prohibited SVG/Mermaid. Method: HTML/CSS with Tailwind.
+        - Report Info: Synchronous vs. Asynchronous timing. -> Goal: Compare/Change. -> Viz/Method: Line Chart. Justification: Visualizes the abstract concept of clock-controlled vs. immediate state changes over time. Library: Chart.js (Canvas).
+        - Report Info: CMOS gate composition. -> Goal: Compare/Composition. -> Viz/Method: Stacked Bar Chart. Justification: Clearly shows the PMOS/NMOS transistor breakdown for each gate. Library: Chart.js (Canvas).
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f9ff;
+        }
+        .header-card {
+            background: linear-gradient(135deg, #005F73 0%, #0A9396 100%);
+        }
+        .stat-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-left: 5px solid #EE9B00;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .nav-link {
+            transition: color 0.3s ease, border-bottom-color 0.3s ease;
+            border-bottom: 2px solid transparent;
+            padding-bottom: 4px;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #EE9B00;
+            border-bottom-color: #EE9B00;
+        }
+        .flow-box {
+            border: 2px solid #94D2BD;
+            background-color: #f0fdfa;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-weight: 600;
+            color: #005F73;
+        }
+        .flow-line {
+            position: absolute;
+            background-color: #94D2BD;
+            z-index: -1;
+        }
+        .flow-line-end::after {
+            content: '►';
+            position: absolute;
+            right: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94D2BD;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <header class="bg-white/80 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-200">
+        <nav class="container mx-auto px-6 py-3">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <h1 class="text-2xl font-bold text-gray-800">Digital Logic & Circuitry</h1>
+                <div class="flex flex-wrap justify-center space-x-4 md:space-x-6 mt-2 md:mt-0 text-sm font-medium">
+                    <a href="#foundation" class="nav-link text-gray-600">Foundation</a>
+                    <a href="#gates" class="nav-link text-gray-600">Gates</a>
+                    <a href="#circuits" class="nav-link text-gray-600">Circuits</a>
+                    <a href="#timing" class="nav-link text-gray-600">Timing</a>
+                    <a href="#hardware" class="nav-link text-gray-600">Hardware</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+
+        <div class="header-card text-white p-8 rounded-xl shadow-2xl mb-12 text-center">
+            <h2 class="text-4xl md:text-5xl font-black mb-2">The World is Built on Two Numbers</h2>
+            <p class="text-lg md:text-xl max-w-3xl mx-auto text-blue-100">Every calculation, every decision, and every pixel on this screen boils down to the fundamental principles of digital logic—a system built entirely on the states of 0 and 1.</p>
+        </div>
+
+        <section id="foundation" class="scroll-mt-24">
+            <div class="stat-card">
+                <h3 class="text-3xl font-bold text-gray-900 mb-4">The Binary Foundation</h3>
+                <p class="text-gray-600 mb-8 max-w-4xl">Digital logic operates on the binary system, where information is represented by one of two states: OFF (0) or ON (1). This corresponds directly to physical voltage levels in a circuit—low for 0, high for 1. This simple, robust system is the bedrock of all modern computing, from simple switches to complex microprocessors.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                    <div class="bg-gray-50 p-6 rounded-lg">
+                        <p class="text-7xl font-extrabold text-[#005F73]">0</p>
+                        <p class="font-semibold mt-2">LOGIC LOW</p>
+                        <p class="text-sm text-gray-500">(e.g., 0 Volts, Switch OFF)</p>
+                    </div>
+                    <div class="bg-gray-50 p-6 rounded-lg flex items-center justify-center">
+                         <p class="text-5xl font-extrabold text-[#CA6702]">+</p>
+                    </div>
+                    <div class="bg-gray-50 p-6 rounded-lg">
+                        <p class="text-7xl font-extrabold text-[#0A9396]">1</p>
+                        <p class="font-semibold mt-2">LOGIC HIGH</p>
+                        <p class="text-sm text-gray-500">(e.g., +5 Volts, Switch ON)</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="gates" class="scroll-mt-24">
+            <div class="stat-card">
+                <h3 class="text-3xl font-bold text-gray-900 mb-4">The Building Blocks: Logic Gates</h3>
+                <p class="text-gray-600 mb-8 max-w-4xl">Logic gates are elementary circuits that perform a single logical operation. While simple on their own, they are combined by the millions to create complex digital systems. They fall into several categories, with NAND and NOR gates being "Universal" because either one can be used to create any other logic function.</p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="text-xl font-semibold text-center mb-2">Logic Gate Categories</h4>
+                        <p class="text-center text-gray-500 text-sm mb-4">An overview of the primary types of logic gates studied.</p>
+                        <div class="chart-container max-w-sm h-72 md:h-80">
+                            <canvas id="gateTypesChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-semibold text-center mb-2">Complexity by Transistor Count</h4>
+                        <p class="text-center text-gray-500 text-sm mb-4">A simple measure of a gate's complexity is the number of transistors required to build it.</p>
+                        <div class="chart-container max-w-lg h-72 md:h-80">
+                            <canvas id="gateComplexityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="circuits" class="scroll-mt-24">
+            <div class="stat-card">
+                <h3 class="text-3xl font-bold text-gray-900 mb-4">Constructing Circuits: The Full Adder</h3>
+                <p class="text-gray-600 mb-8 max-w-4xl">Combinational circuits produce an output based solely on their current inputs. A prime example is the Full Adder, which adds three bits together. This circuit is fundamental to computer arithmetic and is built by combining simpler components—in this case, two Half Adders and an OR gate.</p>
+                <div class="w-full bg-gray-50 p-6 rounded-lg overflow-x-auto">
+                    <div class="relative min-w-[600px] h-64 mx-auto">
+                        <div class="absolute top-8 left-0 flex flex-col space-y-8">
+                            <div class="flow-box w-24">Input A</div>
+                            <div class="flow-box w-24">Input B</div>
+                        </div>
+                        <div class="absolute top-28 left-0 flow-box w-24">Cin</div>
+                        
+                        <div class="absolute top-16 left-48 flow-box w-32">Half Adder 1</div>
+                        <div class="absolute top-36 left-48 flow-box w-32">OR Gate</div>
+                        
+                        <div class="absolute top-8 left-96 flow-box w-32">Half Adder 2</div>
+                        
+                        <div class="absolute top-8 right-0 flow-box w-24">Sum</div>
+                        <div class="absolute top-36 right-0 flow-box w-24">Cout</div>
+
+                        <div class="flow-line" style="top: 2.7rem; left: 6rem; width: 6rem; height: 2px;"></div>
+                        <div class="flow-line" style="top: 5.7rem; left: 6rem; width: 6rem; height: 2px;"></div>
+                        <div class="flow-line" style="top: 8rem; left: 6rem; width: 14rem; height: 2px;"></div>
+                        <div class="flow-line" style="top: 4.7rem; left: 18rem; width: 6rem; height: 2px;" class="flow-line-end"></div>
+                        <div class="flow-line" style="top: 2.7rem; left: 12rem; width: 2px; height: 2rem;"></div>
+                        <div class="flow-line" style="top: 8.7rem; left: 12rem; width: 2px; height: 2.5rem;"></div>
+                        <div class="flow-line" style="top: 11rem; left: 12rem; width: 6rem; height: 2px;"></div>
+                        <div class="flow-line" style="top: 4.7rem; left: 12rem; width: 2px; height: 6.5rem;"></div>
+                        <div class="flow-line" style="top: 9.7rem; left: 18rem; width: 2px; height: -4.5rem;"></div>
+                        <div class="flow-line" style="top: 2.7rem; left: 24rem; width: 2px; height: 2rem;"></div>
+                        <div class="flow-line" style="top: 9.7rem; left: 24rem; width: 2px; height: -4rem;"></div>
+
+                        <div class="flow-line" style="top: 2.7rem; left: 32rem; width: 5.5rem; height: 2px;" class="flow-line-end"></div>
+                        <div class="flow-line" style="top: 9.7rem; left: 32rem; width: 5.5rem; height: 2px;" class="flow-line-end"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="timing" class="scroll-mt-24">
+            <div class="stat-card">
+                <h3 class="text-3xl font-bold text-gray-900 mb-4">Adding Memory & Time: Sequential Logic</h3>
+                <p class="text-gray-600 mb-8 max-w-4xl">Sequential circuits introduce memory. Their output depends on both current inputs and past states. Most modern systems are **synchronous**, using a clock to ensure state changes happen in an orderly fashion. **Asynchronous** circuits change state the moment an input changes, which can be faster but harder to design reliably.</p>
+                <div class="chart-container max-w-4xl h-80 md:h-96">
+                    <canvas id="timingChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="hardware" class="scroll-mt-24">
+             <div class="stat-card">
+                <h3 class="text-3xl font-bold text-gray-900 mb-4">From Logic to Silicon: CMOS Hardware</h3>
+                <p class="text-gray-600 mb-8 max-w-4xl">Logic gates are physically built from transistors. The dominant technology is CMOS, which uses complementary pairs of PMOS and NMOS transistors. PMOS transistors are used in the "pull-up network" to connect the output to HIGH (1), while NMOS transistors form the "pull-down network" to connect the output to LOW (0). This design is incredibly power-efficient.</p>
+                <div class="chart-container max-w-xl h-80 md:h-96">
+                    <canvas id="cmosChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center py-8">
+        <p class="text-gray-500">Infographic based on the "Digital Logic Gates and Circuits" report.</p>
+    </footer>
+
+    <script>
+        const brilliantBlues = {
+            blueDark: '#005F73',
+            blueMid: '#0A9396',
+            teal: '#94D2BD',
+            yellow: '#E9D8A6',
+            orange: '#EE9B00',
+            orangeDark: '#CA6702',
+            redDark: '#BB3E03'
+        };
+
+        const chartTooltipOptions = {
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: function(tooltipItems) {
+                            const item = tooltipItems[0];
+                            let label = item.chart.data.labels[item.dataIndex];
+                            if (Array.isArray(label)) {
+                              return label.join(' ');
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        };
+
+        function wrapLabel(label, maxLength = 16) {
+            if (label.length <= maxLength) {
+                return label;
+            }
+            const words = label.split(' ');
+            let lines = [];
+            let currentLine = '';
+            for (const word of words) {
+                if ((currentLine + ' ' + word).trim().length > maxLength) {
+                    lines.push(currentLine.trim());
+                    currentLine = word;
+                } else {
+                    currentLine = (currentLine + ' ' + word).trim();
+                }
+            }
+            if (currentLine) {
+                lines.push(currentLine.trim());
+            }
+            return lines;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            new Chart(document.getElementById('gateTypesChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Basic Gates (AND, OR, NOT)', 'Universal Gates (NAND, NOR)', 'Arithmetic/Equality Gates (XOR, XNOR)'],
+                    datasets: [{
+                        label: 'Gate Categories',
+                        data: [3, 2, 2],
+                        backgroundColor: [brilliantBlues.blueDark, brilliantBlues.orange, brilliantBlues.teal],
+                        borderColor: '#fff',
+                        borderWidth: 4,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 20 } },
+                        tooltip: chartTooltipOptions.plugins.tooltip
+                    }
+                }
+            });
+
+            new Chart(document.getElementById('gateComplexityChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['NOT', 'NAND', 'NOR', ['XOR', '(basic)'], ['XNOR', '(basic)']],
+                    datasets: [{
+                        label: 'Typical Transistor Count',
+                        data: [2, 4, 4, 8, 8],
+                        backgroundColor: brilliantBlues.blueMid,
+                        borderColor: brilliantBlues.blueDark,
+                        borderWidth: 2,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, title: { display: true, text: 'Number of Transistors' } } },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: chartTooltipOptions.plugins.tooltip
+                    }
+                }
+            });
+            
+            new Chart(document.getElementById('timingChart'), {
+                type: 'line',
+                data: {
+                    labels: ['T0', 'T1', 'T2', 'T3', 'T4', 'T5'],
+                    datasets: [{
+                        label: 'Synchronous State Change',
+                        data: [0, 0, 1, 1, 0, 0],
+                        borderColor: brilliantBlues.blueDark,
+                        backgroundColor: 'rgba(0, 95, 115, 0.1)',
+                        fill: false,
+                        stepped: true,
+                        borderWidth: 3
+                    }, {
+                        label: 'Asynchronous State Change',
+                        data: [0, 0.8, 0.8, 1.5, 2.9, 2.9],
+                        borderColor: brilliantBlues.orange,
+                        backgroundColor: 'rgba(238, 155, 0, 0.1)',
+                        fill: false,
+                        tension: 0.4,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { display: false, min: -0.5, max: 3.5 },
+                        x: { title: { display: true, text: 'Clock Ticks / Time' } }
+                    },
+                    plugins: {
+                        title: { display: true, text: 'State Changes Over Time', font: { size: 16 } },
+                        tooltip: chartTooltipOptions.plugins.tooltip
+                    }
+                }
+            });
+
+            new Chart(document.getElementById('cmosChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['CMOS Inverter (NOT)', 'CMOS NAND', 'CMOS NOR'],
+                    datasets: [
+                        {
+                            label: 'PMOS Transistors (Pull-Up)',
+                            data: [1, 2, 2],
+                            backgroundColor: brilliantBlues.teal,
+                        },
+                        {
+                            label: 'NMOS Transistors (Pull-Down)',
+                            data: [1, 2, 2],
+                            backgroundColor: brilliantBlues.blueDark,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } }
+                    },
+                    plugins: {
+                        title: { display: true, text: 'Transistor Composition of CMOS Gates', font: { size: 16 } },
+                         tooltip: chartTooltipOptions.plugins.tooltip
+                    }
+                }
+            });
+
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.toggle('active', link.getAttribute('href').substring(1) === entry.target.id);
+                        });
+                    }
+                });
+            }, { rootMargin: '-30% 0px -70% 0px' });
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        });
+    </script>
+
+</body>
+</html>

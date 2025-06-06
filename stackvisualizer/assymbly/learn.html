@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive x86 Assembly Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1b26;
+            color: #c0caf5;
+        }
+        .editor-container {
+            background-color: #24283b;
+            border-radius: 0.5rem;
+        }
+        .panel {
+            background-color: #24283b;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            height: 100%;
+        }
+        .register-grid, .flags-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.5rem;
+        }
+        .stack-view, .memory-view {
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid #414868;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            font-family: 'monospace';
+        }
+        .nav-button, .control-button {
+            background-color: #7aa2f7;
+            color: #1a1b26;
+            transition: background-color 0.3s;
+        }
+        .nav-button:hover, .control-button:hover {
+            background-color: #9ece6a;
+        }
+        .tab-button {
+            background-color: #414868;
+        }
+        .tab-button.active {
+            background-color: #7aa2f7;
+            color: #1a1b26;
+        }
+        #code-editor .current-line {
+            background-color: rgba(122, 162, 247, 0.3);
+        }
+        .instruction-explanation {
+            background-color: #1e2030;
+            border-top: 2px solid #7aa2f7;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-[#24283b] p-4 flex justify-between items-center shadow-md">
+        <h1 class="text-2xl font-bold text-white">x86 Assembly Explorer</h1>
+        <div>
+            <select id="lessons-dropdown" class="nav-button rounded-md px-4 py-2 mr-2">
+                <option value="intro">Introduction</option>
+                <option value="swap">Swap Two Values</option>
+                <option value="sum">Sum Array Elements</option>
+            </select>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow p-4 flex flex-col md:flex-row gap-4">
+
+        <!-- Left Pane: Code Editor and Controls -->
+        <div class="w-full md:w-1/2 flex flex-col gap-4">
+            <div class="editor-container flex-grow flex flex-col p-4 shadow-lg">
+                <h2 class="text-xl font-semibold mb-2 text-white">Code Editor</h2>
+                <textarea id="code-editor" class="w-full flex-grow bg-[#1e2030] text-white p-2 rounded-md font-mono focus:outline-none focus:ring-2 focus:ring-blue-500" spellcheck="false">
+section .data
+    array dd 10, 20, 30, 40, 50
+
+section .text
+    global _start
+
+_start:
+    mov eax, 0      ; Initialize sum
+    mov ecx, 5      ; Loop counter
+    mov esi, array  ; Pointer to array
+
+sum_loop:
+    add eax, [esi]  ; Add element to sum
+    add esi, 4      ; Move to next element
+    loop sum_loop   ; Decrement ecx and loop if not zero
+
+    ; Result is in EAX
+    hlt             ; Halt execution
+                </textarea>
+                <div class="flex items-center justify-between mt-4">
+                     <div class="flex space-x-2">
+                        <button id="run-btn" class="control-button font-bold py-2 px-4 rounded-md flex items-center"><i class="fas fa-play mr-2"></i>Run</button>
+                        <button id="step-btn" class="control-button font-bold py-2 px-4 rounded-md flex items-center"><i class="fas fa-step-forward mr-2"></i>Step</button>
+                        <button id="reset-btn" class="control-button font-bold py-2 px-4 rounded-md flex items-center"><i class="fas fa-redo mr-2"></i>Reset</button>
+                    </div>
+                </div>
+            </div>
+             <div id="instruction-explanation" class="instruction-explanation p-4 rounded-lg shadow-lg">
+                <h3 class="font-bold text-lg text-white">Instruction Explanation</h3>
+                <p id="explanation-text" class="mt-2 text-gray-300">Hover over an instruction to see its explanation.</p>
+            </div>
+        </div>
+
+        <!-- Right Pane: Registers, Flags, Stack, Memory -->
+        <div class="w-full md:w-1/2">
+            <div class="panel shadow-lg">
+                <div class="flex border-b border-gray-600 mb-4">
+                    <button class="tab-button flex-1 py-2 rounded-t-md" data-tab="registers">Registers</button>
+                    <button class="tab-button flex-1 py-2" data-tab="flags">Flags</button>
+                    <button class="tab-button flex-1 py-2" data-tab="stack">Stack</button>
+                    <button class="tab-button flex-1 py-2 rounded-t-md" data-tab="memory">Memory</button>
+                </div>
+
+                <!-- Registers Tab -->
+                <div id="registers-tab" class="tab-content">
+                    <div class="register-grid">
+                        <div>EAX: <span id="reg-eax">0x00000000</span></div>
+                        <div>EBX: <span id="reg-ebx">0x00000000</span></div>
+                        <div>ECX: <span id="reg-ecx">0x00000000</span></div>
+                        <div>EDX: <span id="reg-edx">0x00000000</span></div>
+                        <div>ESI: <span id="reg-esi">0x00000000</span></div>
+                        <div>EDI: <span id="reg-edi">0x00000000</span></div>
+                        <div>ESP: <span id="reg-esp">0x00100000</span></div>
+                        <div>EBP: <span id="reg-ebp">0x00100000</span></div>
+                        <div>EIP: <span id="reg-eip">0x00400000</span></div>
+                    </div>
+                </div>
+
+                <!-- Flags Tab -->
+                <div id="flags-tab" class="tab-content hidden">
+                    <div class="flags-grid">
+                         <div>ZF: <span id="flag-zf">0</span></div>
+                        <div>SF: <span id="flag-sf">0</span></div>
+                        <div>CF: <span id="flag-cf">0</span></div>
+                        <div>OF: <span id="flag-of">0</span></div>
+                    </div>
+                </div>
+
+                <!-- Stack Tab -->
+                <div id="stack-tab" class="tab-content hidden">
+                    <h3 class="font-bold mb-2">Stack</h3>
+                    <div id="stack-view" class="stack-view bg-[#1e2030]"></div>
+                </div>
+
+                <!-- Memory Tab -->
+                <div id="memory-tab" class="tab-content hidden">
+                     <h3 class="font-bold mb-2">Memory</h3>
+                    <div id="memory-view" class="memory-view bg-[#1e2030]"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const editor = document.getElementById('code-editor');
+            const runBtn = document.getElementById('run-btn');
+            const stepBtn = document.getElementById('step-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const lessonsDropdown = document.getElementById('lessons-dropdown');
+            const explanationText = document.getElementById('explanation-text');
+            
+            const MEMORY_SIZE = 1024 * 1024; // 1MB of memory
+
+            const registers = {
+                eax: 0, ebx: 0, ecx: 0, edx: 0,
+                esi: 0, edi: 0, esp: MEMORY_SIZE, ebp: MEMORY_SIZE,
+                eip: 0x00400000
+            };
+
+            const flags = { zf: 0, sf: 0, cf: 0, of: 0 };
+            let memory = new Uint8Array(MEMORY_SIZE);
+            let stack = new DataView(memory.buffer); // Create a view over the entire memory buffer
+            let codeLines = [];
+            let labels = {};
+            let data = {};
+            let currentLine = 0;
+
+            const lessons = {
+                intro: `section .text
+    global _start
+
+_start:
+    mov eax, 5      ; Move 5 into EAX
+    mov ebx, 10     ; Move 10 into EBX
+    add eax, ebx    ; Add EBX to EAX
+    hlt             ; Halt`,
+                swap: `section .text
+    global _start
+
+_start:
+    mov eax, 10     ; Value 1
+    mov ebx, 20     ; Value 2
+    
+    ; Swap using a third register
+    mov ecx, eax
+    mov eax, ebx
+    mov ebx, ecx
+    hlt`,
+                sum: `section .data
+    array dd 10, 20, 30, 40, 50
+
+section .text
+    global _start
+
+_start:
+    mov eax, 0      ; Initialize sum
+    mov ecx, 5      ; Loop counter
+    mov esi, array  ; Pointer to array
+
+sum_loop:
+    add eax, [esi]  ; Add element to sum
+    add esi, 4      ; Move to next element
+    loop sum_loop   ; Decrement ecx and loop
+    hlt`
+            };
+            
+            const instructionExplanations = {
+                'mov': 'Moves the second operand (source) to the first operand (destination).',
+                'add': 'Adds the source operand to the destination operand.',
+                'sub': 'Subtracts the source operand from the destination operand.',
+                'push': 'Pushes an operand onto the stack.',
+                'pop': 'Pops a value from the stack into an operand.',
+                'call': 'Pushes the return address onto the stack and jumps to a procedure.',
+                'ret': 'Pops the return address from the stack and returns.',
+                'cmp': 'Compares two operands and sets the flags.',
+                'jmp': 'Unconditionally jumps to a label.',
+                'je': 'Jumps to a label if the Zero Flag (ZF) is 1.',
+                'jne': 'Jumps to a label if the Zero Flag (ZF) is 0.',
+                'loop': 'Decrements ECX and jumps to a label if ECX is not 0.',
+                'hlt': 'Halts the processor.'
+            };
+
+            function updateUI() {
+                Object.keys(registers).forEach(reg => {
+                    document.getElementById(`reg-${reg}`).textContent = '0x' + registers[reg].toString(16).padStart(8, '0');
+                });
+                Object.keys(flags).forEach(flag => {
+                    document.getElementById(`flag-${flag}`).textContent = flags[flag];
+                });
+                updateStackView();
+                updateMemoryView();
+                highlightCurrentLine();
+            }
+
+            function updateStackView() {
+                const stackView = document.getElementById('stack-view');
+                stackView.innerHTML = '';
+                // Show memory from current stack pointer upwards
+                for (let i = 0; i < 20 && (registers.esp + i * 4) < MEMORY_SIZE; i++) {
+                    const addr = registers.esp + i * 4;
+                    // Ensure we don't read past the buffer
+                    if (addr < 0 || addr > MEMORY_SIZE - 4) continue;
+                    const value = stack.getUint32(addr, true);
+                     stackView.innerHTML += `<div>0x${addr.toString(16).padStart(8, '0')}: 0x${value.toString(16).padStart(8, '0')}</div>`;
+                }
+            }
+            
+             function updateMemoryView() {
+                const memoryView = document.getElementById('memory-view');
+                memoryView.innerHTML = '';
+                // Display memory around a sample data address if 'array' exists
+                const startAddr = data['array'] ? data['array'].address : 0;
+                for (let i = 0; i < 16; i++) {
+                    const addr = startAddr + i * 4;
+                    if (addr >= memory.length - 3) break;
+                    const value = new DataView(memory.buffer).getUint32(addr, true);
+                    memoryView.innerHTML += `<div>0x${addr.toString(16).padStart(8, '0')}: 0x${value.toString(16).padStart(8, '0')}</div>`;
+                }
+            }
+
+
+            function highlightCurrentLine() {
+                // This function is a stub. A proper implementation would require
+                // a more complex editor component instead of a plain textarea.
+                const lines = editor.value.split('\n');
+                let lineToHighlight = -1;
+                for(let i=0; i < codeLines.length; i++) {
+                    if (i === currentLine) {
+                        lineToHighlight = codeLines[i].originalLineNumber;
+                        break;
+                    }
+                }
+                // For now, we'll just log to console to show it's working
+                // console.log("Current execution line in editor:", lineToHighlight);
+            }
+
+            function parseCode() {
+                const rawLines = editor.value.split('\n');
+                codeLines = [];
+                labels = {};
+                data = {};
+                let currentSection = '.text';
+                let dataAddress = 0; // Simplified data addressing
+
+                rawLines.forEach((line, index) => {
+                    let sanitizedLine = line.split(';')[0].trim(); // Remove comments
+                    if (!sanitizedLine) return;
+                    
+                     if (sanitizedLine.startsWith('section')) {
+                        currentSection = sanitizedLine.split(' ')[1];
+                        return;
+                    }
+                    
+                    if (currentSection === '.data') {
+                        const parts = sanitizedLine.match(/(\w+)\s+(dd|\w+)\s+(.*)/);
+                        if (parts) {
+                            const name = parts[1];
+                            const values = parts[3].split(',').map(v => parseInt(v.trim()));
+                            data[name] = { address: dataAddress, values: values };
+                            values.forEach(val => {
+                                new DataView(memory.buffer).setUint32(dataAddress, val, true);
+                                dataAddress += 4;
+                            });
+                        }
+                    } else if (currentSection === '.text') {
+                       if (sanitizedLine.endsWith(':')) {
+                            const label = sanitizedLine.slice(0, -1);
+                            labels[label] = codeLines.length;
+                        } else {
+                            const parts = sanitizedLine.split(/\s+/);
+                            const instruction = {
+                                op: parts[0].toLowerCase(),
+                                args: parts.slice(1).join('').split(','),
+                                originalLineNumber: index
+                            };
+                            codeLines.push(instruction);
+                        }
+                    }
+                });
+                
+                const startLabel = labels['_start'];
+                currentLine = startLabel !== undefined ? startLabel : 0;
+            }
+
+            function getValue(operand) {
+                 operand = operand.trim();
+                if (registers.hasOwnProperty(operand)) {
+                    return registers[operand];
+                }
+                if (operand.startsWith('[') && operand.endsWith(']')) {
+                    const inner = operand.slice(1, -1);
+                    const addr = getValue(inner);
+                    return new DataView(memory.buffer).getUint32(addr, true);
+                }
+                 if(data[operand]){
+                    return data[operand].address;
+                }
+                return parseInt(operand);
+            }
+
+            function setValue(operand, value) {
+                operand = operand.trim();
+                if (registers.hasOwnProperty(operand)) {
+                    registers[operand] = value;
+                } else if (operand.startsWith('[') && operand.endsWith(']')) {
+                    const inner = operand.slice(1, -1);
+                    const addr = getValue(inner);
+                    new DataView(memory.buffer).setUint32(addr, value, true);
+                }
+            }
+
+
+            function step() {
+                if (currentLine >= codeLines.length) return false;
+                
+                const instr = codeLines[currentLine];
+                if (!instr || !instr.op) {
+                     currentLine++;
+                     return true; // Skip empty/invalid lines
+                }
+
+                let jumped = false;
+                
+                switch (instr.op) {
+                    case 'mov':
+                        setValue(instr.args[0], getValue(instr.args[1]));
+                        break;
+                    case 'add':
+                        setValue(instr.args[0], getValue(instr.args[0]) + getValue(instr.args[1]));
+                        break;
+                    case 'sub':
+                         setValue(instr.args[0], getValue(instr.args[0]) - getValue(instr.args[1]));
+                        break;
+                    case 'cmp':
+                        const val1 = getValue(instr.args[0]);
+                        const val2 = getValue(instr.args[1]);
+                        const result = val1 - val2;
+                        flags.zf = result === 0 ? 1 : 0;
+                        flags.sf = result < 0 ? 1 : 0;
+                        break;
+                    case 'jmp':
+                        currentLine = labels[instr.args[0]];
+                        jumped = true;
+                        break;
+                    case 'je':
+                        if(flags.zf === 1) {
+                             currentLine = labels[instr.args[0]];
+                             jumped = true;
+                        }
+                        break;
+                    case 'jne':
+                         if(flags.zf === 0) {
+                             currentLine = labels[instr.args[0]];
+                             jumped = true;
+                        }
+                        break;
+                    case 'push':
+                        registers.esp -= 4;
+                        stack.setUint32(registers.esp, getValue(instr.args[0]), true);
+                        break;
+                    case 'pop':
+                        setValue(instr.args[0], stack.getUint32(registers.esp, true));
+                        registers.esp += 4;
+                        break;
+                    case 'call':
+                         registers.esp -= 4;
+                         stack.setUint32(registers.esp, currentLine + 1, true);
+                         currentLine = labels[instr.args[0]];
+                         jumped = true;
+                         break;
+                    case 'ret':
+                         currentLine = stack.getUint32(registers.esp, true);
+                         registers.esp += 4;
+                         jumped = true;
+                         break;
+                    case 'loop':
+                        registers.ecx--;
+                        if (registers.ecx !== 0) {
+                            currentLine = labels[instr.args[0]];
+                            jumped = true;
+                        }
+                        break;
+                    case 'hlt':
+                        return false; // Halt execution
+                }
+
+                if (!jumped) {
+                    currentLine++;
+                }
+                registers.eip = 0x00400000 + currentLine * 4; // Approximate EIP
+                updateUI();
+                return true;
+            }
+
+            function run() {
+                runBtn.disabled = true;
+                stepBtn.disabled = true;
+                const interval = setInterval(() => {
+                    if (!step()) {
+                        clearInterval(interval);
+                        runBtn.disabled = false;
+                        stepBtn.disabled = false;
+                    }
+                }, 100);
+            }
+            
+            function reset() {
+                 Object.keys(registers).forEach(reg => registers[reg] = 0);
+                 registers.esp = MEMORY_SIZE;
+                 registers.ebp = MEMORY_SIZE;
+                 registers.eip = 0x00400000;
+                 Object.keys(flags).forEach(flag => flags[flag] = 0);
+                 memory = new Uint8Array(MEMORY_SIZE);
+                 stack = new DataView(memory.buffer);
+                 parseCode();
+                 updateUI();
+                 runBtn.disabled = false;
+                 stepBtn.disabled = false;
+            }
+
+            // Tabs
+            const tabs = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    tabContents.forEach(c => c.classList.add('hidden'));
+                    document.getElementById(`${tab.dataset.tab}-tab`).classList.remove('hidden');
+                });
+            });
+            document.querySelector('.tab-button[data-tab="registers"]').classList.add('active');
+
+
+            // Event Listeners
+            runBtn.addEventListener('click', () => { reset(); run(); });
+            stepBtn.addEventListener('click', step);
+            resetBtn.addEventListener('click', reset);
+            lessonsDropdown.addEventListener('change', (e) => {
+                editor.value = lessons[e.target.value];
+                reset();
+            });
+
+            editor.addEventListener('mousemove', (e) => {
+                 const text = editor.value;
+                 const lineNum = text.substr(0, editor.selectionStart).split("\n").length;
+                 const line = editor.value.split('\n')[lineNum - 1];
+                 if(line){
+                    const instruction = line.trim().split(' ')[0].toLowerCase();
+                    if(instructionExplanations[instruction]){
+                        explanationText.textContent = instructionExplanations[instruction];
+                    }
+                 }
+            });
+
+            // Initial setup
+            editor.value = lessons.intro;
+            reset();
+        });
+    </script>
+</body>
+</html>

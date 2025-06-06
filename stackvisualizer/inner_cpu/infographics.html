@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Inner Workings of a CPU: An Infographic</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: The infographic is structured as a top-to-bottom narrative scroll. It begins with a high-level hook, then introduces the core components in a "Meet the Players" section. The main feature is an interactive, animated visualization of the Fetch-Decode-Execute cycle, which allows users to step through the process. This is followed by supporting sections explaining the Clock Cycle's role and a comparative chart on CPU performance metrics. This linear, story-driven structure was chosen to guide the user from foundational concepts to complex processes in a logical, digestible manner, making the technical information from the report more accessible. -->
+    <!-- Visualization & Content Choices: 
+        - Component Overview: Goal=Inform. Method=HTML/CSS cards with Unicode icons (e.g., 🧠, ⚙️, ➕). Justification=Visually breaks down complex components into simple, thematic blocks without using restricted graphics.
+        - Fetch-Decode-Execute Cycle: Goal=Organize/Process. Method=A flowchart built with structured HTML/CSS (divs with borders) and animated with JavaScript. Justification=This is the most effective way to demonstrate a multi-step process. It makes the abstract data flow from the report's Table 2 tangible and easy to follow. NO SVG/Mermaid used.
+        - Clock Cycle: Goal=Inform. Method=A pulsing dot created with pure CSS animations. Justification=A simple and effective visual metaphor for a rhythmic pulse, requiring no images or libraries.
+        - Performance Factors (IPC vs Clock Speed): Goal=Compare. Method=A Chart.js Bar Chart rendering to Canvas. Justification=Clearly illustrates that CPU performance isn't just about clock speed, comparing two scenarios visually. This makes the abstract concept of IPC concrete. NO SVG used.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Roboto', sans-serif; background-color: #003f5c; color: #f0f8ff; }
+        .card { background-color: rgba(0, 50, 78, 0.6); backdrop-filter: blur(10px); border: 1px solid #374c80; }
+        .fde-step { transition: all 0.3s ease-in-out; }
+        .fde-step.active { background-color: #ffa600; color: #003f5c; border-color: #ff764a; transform: scale(1.05); }
+        .fde-path { position: absolute; background-color: #7a5195; transition: all 0.3s ease-in-out; }
+        .fde-path.active { background-color: #ffa600; }
+        .fde-arrow { border-color: #7a5195; transition: all 0.3s ease-in-out; }
+        .fde-arrow.active { border-color: #ffa600; }
+        .stat-number { color: #ffa600; }
+        .pulse-dot { animation: pulse 2s infinite; box-shadow: 0 0 0 0 rgba(255, 166, 0, 0.7); }
+        @keyframes pulse { to { box-shadow: 0 0 0 20px rgba(255, 166, 0, 0); } }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 400px; } }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Header Section -->
+    <header class="text-center py-16 md:py-24 px-4">
+        <h1 class="text-4xl md:text-6xl font-black text-white uppercase tracking-wider">The Symphony of a CPU</h1>
+        <p class="max-w-3xl mx-auto mt-4 text-lg md:text-xl text-blue-200">
+            Every click, every keystroke, every pixel on your screen is the result of a high-speed ballet inside your computer's brain. Let's pull back the curtain on how it works.
+        </p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 pb-16">
+
+        <!-- Section 1: The Core Components -->
+        <section id="components" class="mb-20">
+            <h2 class="text-3xl font-bold text-center mb-10">Meet the Key Players</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Control Unit -->
+                <div class="card rounded-xl p-6 text-center">
+                    <div class="text-5xl mb-4">⚙️</div>
+                    <h3 class="text-2xl font-bold text-white mb-2">Control Unit (CU)</h3>
+                    <p class="text-blue-200">The project manager. It fetches instructions from memory, decodes them, and directs the other components, telling everyone what to do and when.</p>
+                </div>
+                <!-- ALU -->
+                <div class="card rounded-xl p-6 text-center">
+                    <div class="text-5xl mb-4">➕➖✖️➗</div>
+                    <h3 class="text-2xl font-bold text-white mb-2">Arithmetic Logic Unit (ALU)</h3>
+                    <p class="text-blue-200">The master calculator. It handles all the math (addition, subtraction) and logic (AND, OR, NOT, comparisons) that a program requires.</p>
+                </div>
+                <!-- Registers -->
+                <div class="card rounded-xl p-6 text-center">
+                    <div class="text-5xl mb-4">⚡📝</div>
+                    <h3 class="text-2xl font-bold text-white mb-2">Registers</h3>
+                    <p class="text-blue-200">The CPU's ultra-fast scratchpad. These small storage spots hold the data and instructions the CPU is working with *right now*, for instant access.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: The Fetch-Decode-Execute Cycle -->
+        <section id="fde-cycle" class="mb-20">
+            <h2 class="text-3xl font-bold text-center mb-4">The Process in Action: A 3-Step Dance</h2>
+            <p class="text-center max-w-3xl mx-auto mb-10 text-blue-200">Every single instruction a computer processes goes through this fundamental cycle, millions of times per second. We'll trace one simple instruction: `ADD R1, R2` (Add the value in Register 2 to Register 1). Click the button to see it happen.</p>
+            
+            <div class="card rounded-xl p-6 md:p-8">
+                <!-- FDE Diagram -->
+                <div class="relative flex flex-col md:flex-row justify-around items-center h-[350px] md:h-[200px]">
+                    <!-- Fetch -->
+                    <div id="step-fetch" class="fde-step border-2 border-blue-400 rounded-lg p-4 w-48 text-center">
+                        <h4 class="font-bold text-lg">1. FETCH</h4>
+                        <p class="text-sm">Get the instruction from memory.</p>
+                    </div>
+                    <!-- Path 1 -->
+                    <div class="fde-path hidden md:block w-16 h-1 top-1/2 -mt-0.5 left-[calc(50%-8rem)]"></div>
+                    <div class="fde-arrow hidden md:block border-t-8 border-b-8 border-l-8 border-transparent border-l-blue-400 w-0 h-0 absolute top-1/2 -mt-2 left-[calc(50%-4rem)]"></div>
+                    <div class="fde-path block md:hidden w-1 h-12 left-1/2 -ml-0.5 top-28"></div>
+                    <div class="fde-arrow block md:hidden border-l-8 border-r-8 border-t-8 border-transparent border-t-blue-400 w-0 h-0 absolute left-1/2 -ml-2 top-40"></div>
+                    
+                    <!-- Decode -->
+                    <div id="step-decode" class="fde-step border-2 border-blue-400 rounded-lg p-4 w-48 text-center">
+                        <h4 class="font-bold text-lg">2. DECODE</h4>
+                        <p class="text-sm">Figure out what the instruction means.</p>
+                    </div>
+                    <!-- Path 2 -->
+                    <div class="fde-path hidden md:block w-16 h-1 top-1/2 -mt-0.5 right-[calc(50%-8rem)]"></div>
+                    <div class="fde-arrow hidden md:block border-t-8 border-b-8 border-l-8 border-transparent border-l-blue-400 w-0 h-0 absolute top-1/2 -mt-2 right-[calc(50%-4rem)]"></div>
+                    <div class="fde-path block md:hidden w-1 h-12 left-1/2 -ml-0.5 bottom-28"></div>
+                     <div class="fde-arrow block md:hidden border-l-8 border-r-8 border-t-8 border-transparent border-t-blue-400 w-0 h-0 absolute left-1/2 -ml-2 bottom-16"></div>
+
+                    <!-- Execute -->
+                    <div id="step-execute" class="fde-step border-2 border-blue-400 rounded-lg p-4 w-48 text-center">
+                        <h4 class="font-bold text-lg">3. EXECUTE</h4>
+                        <p class="text-sm">Carry out the action.</p>
+                    </div>
+                </div>
+
+                <!-- Explanation Box -->
+                <div class="mt-8 text-center bg-gray-900 bg-opacity-30 p-4 rounded-lg min-h-[100px]">
+                    <h3 id="fde-title" class="text-xl font-bold text-amber-400">Ready to Start</h3>
+                    <p id="fde-description" class="mt-2 text-blue-200">Click the button to begin the cycle.</p>
+                </div>
+
+                <!-- Controls -->
+                <div class="mt-6 flex justify-center gap-4">
+                    <button id="fde-reset" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition-colors">Reset</button>
+                    <button id="fde-next" class="bg-amber-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-amber-600 transition-colors">Start Cycle</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Synchronization & Performance -->
+        <section id="performance" class="mb-20">
+             <h2 class="text-3xl font-bold text-center mb-10">Keeping Time: Speed & Efficiency</h2>
+             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Clock Cycle -->
+                <div class="card rounded-xl p-6">
+                    <h3 class="text-2xl font-bold text-white mb-4">The Clock Cycle: The CPU's Heartbeat</h3>
+                    <div class="flex items-center gap-4">
+                        <div class="pulse-dot w-8 h-8 bg-amber-500 rounded-full flex-shrink-0"></div>
+                        <p class="text-blue-200">Everything is synchronized by a system clock that "ticks" billions of times per second (GHz). Each tick, or clock cycle, is an opportunity to perform one micro-operation. This relentless rhythm ensures every step happens in perfect order.</p>
+                    </div>
+                </div>
+                <!-- Performance -->
+                <div class="card rounded-xl p-6">
+                    <h3 class="text-2xl font-bold text-white mb-4">It's Not Just About Speed</h3>
+                    <p class="text-blue-200 mb-4">A higher clock speed (more GHz) is good, but efficiency—Instructions Per Cycle (IPC)—is crucial. A smarter CPU can do more work in a single clock cycle. Let's compare two CPUs:</p>
+                     <div class="chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+             </div>
+        </section>
+        
+    </main>
+
+    <footer class="text-center py-8 px-4 border-t border-blue-800">
+        <p class="text-blue-300">This infographic visualizes the fundamental operations of a CPU, turning complex engineering into a digestible narrative.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const fdeStepsData = [
+                { 
+                    id: 'fetch',
+                    title: 'Stage 1: FETCH', 
+                    description: 'The Control Unit gets the `ADD R1, R2` instruction from memory, using the Program Counter to find its address.' 
+                },
+                { 
+                    id: 'decode',
+                    title: 'Stage 2: DECODE', 
+                    description: 'The Control Unit analyzes the instruction. It understands it needs to perform an ADD operation on the data held in registers R1 and R2.' 
+                },
+                { 
+                    id: 'execute',
+                    title: 'Stage 3: EXECUTE', 
+                    description: 'The instruction is passed to the ALU. It takes the values from R1 and R2, adds them together, and stores the result back into R1.' 
+                },
+                { 
+                    id: 'complete',
+                    title: 'Cycle Complete!', 
+                    description: 'The instruction has been executed. The CPU is immediately ready to fetch the next instruction and begin the cycle all over again.' 
+                }
+            ];
+
+            const fdeNextBtn = document.getElementById('fde-next');
+            const fdeResetBtn = document.getElementById('fde-reset');
+            const fdeTitle = document.getElementById('fde-title');
+            const fdeDescription = document.getElementById('fde-description');
+            
+            const stepElements = {
+                fetch: document.getElementById('step-fetch'),
+                decode: document.getElementById('step-decode'),
+                execute: document.getElementById('step-execute'),
+            };
+            const pathElements = document.querySelectorAll('.fde-path, .fde-arrow');
+
+            let currentStep = -1;
+
+            function resetFDE() {
+                currentStep = -1;
+                fdeTitle.textContent = 'Ready to Start';
+                fdeDescription.textContent = 'Click the button to begin the cycle.';
+                fdeNextBtn.textContent = 'Start Cycle';
+                Object.values(stepElements).forEach(el => el.classList.remove('active'));
+                pathElements.forEach(el => el.classList.remove('active'));
+            }
+
+            fdeResetBtn.addEventListener('click', resetFDE);
+
+            fdeNextBtn.addEventListener('click', () => {
+                currentStep++;
+                fdeNextBtn.textContent = 'Next Step';
+                
+                if (currentStep >= fdeStepsData.length) {
+                    resetFDE();
+                    return;
+                }
+
+                const stepData = fdeStepsData[currentStep];
+                fdeTitle.textContent = stepData.title;
+                fdeDescription.textContent = stepData.description;
+
+                Object.values(stepElements).forEach(el => el.classList.remove('active'));
+                pathElements.forEach(el => el.classList.remove('active'));
+
+                if (stepData.id !== 'complete') {
+                    stepElements[stepData.id].classList.add('active');
+                    if (currentStep > 0) {
+                        // Highlight previous paths
+                        for(let i=0; i < currentStep; i++){
+                            pathElements[i*2].classList.add('active');
+                            pathElements[i*2 + 1].classList.add('active');
+                        }
+                    }
+                } else {
+                    Object.values(stepElements).forEach(el => el.classList.add('active'));
+                    pathElements.forEach(el => el.classList.add('active'));
+                    fdeNextBtn.textContent = 'Restart';
+                }
+            });
+            
+            resetFDE();
+
+            // Chart.js implementation
+            const ctx = document.getElementById('performanceChart');
+            
+            function wrapText(str) {
+                const words = str.split(' ');
+                const lines = [];
+                let currentLine = '';
+                for (let i = 0; i < words.length; i++) {
+                    const word = words[i];
+                    const width = currentLine.length + word.length;
+                    if (width < 16) {
+                        currentLine += (currentLine.length > 0 ? ' ' : '') + word;
+                    } else {
+                        lines.push(currentLine);
+                        currentLine = word;
+                    }
+                }
+                lines.push(currentLine);
+                return lines;
+            }
+
+            const performanceLabels = ['CPU A (Low Clock, High IPC)', 'CPU B (High Clock, Low IPC)'].map(wrapText);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: performanceLabels,
+                    datasets: [{
+                        label: 'Relative Performance',
+                        data: [90, 75],
+                        backgroundColor: ['#ef5675', '#7a5195'],
+                        borderColor: ['#bc5090', '#374c80'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(122, 81, 149, 0.2)' },
+                            ticks: { color: '#f0f8ff' }
+                        },
+                        y: {
+                            grid: { color: 'rgba(122, 81, 149, 0.2)' },
+                             ticks: { color: '#f0f8ff' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                             callbacks: {
+                                title: function(tooltipItems) {
+                                    const item = tooltipItems[0];
+                                    let label = item.chart.data.labels[item.dataIndex];
+                                    if (Array.isArray(label)) {
+                                      return label.join(' ');
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

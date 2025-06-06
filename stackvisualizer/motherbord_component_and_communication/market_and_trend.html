@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: Motherboard Market & Technology Trends</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: The infographic uses a linear, top-to-bottom narrative flow designed for easy scrolling and digestion. It begins with a high-level hook (Market Size), then delves into key technology trends (Chipset Evolution, Memory Transition), performance benchmarks (PCIe Growth), market segmentation (Form Factors), and concludes with a foundational concept (System Bus). This structure tells a coherent story, moving from broad market context to specific technological drivers, making the complex information from the report accessible to a wider audience. -->
+    <!-- Visualization & Content Choices: 
+        - Market Size (Goal: Inform): A 'Single Big Number' visualization to immediately convey the market's scale. Justification: High impact and easily understood. Method: Styled HTML/CSS.
+        - Chipset Evolution (Goal: Organize/Change): A simplified HTML/CSS flowchart. Justification: Visually explains the architectural shift from Northbridge/Southbridge to PCH, a key industry trend. Method: HTML/CSS with Tailwind.
+        - Memory Standard Adoption (Goal: Compare): A Donut Chart. Justification: Clearly shows the market share relationship between DDR4 and the emerging DDR5 standard. Library: Chart.js (Canvas).
+        - PCIe Bandwidth Growth (Goal: Change): A Line Chart. Justification: The best way to illustrate the exponential performance increase across technology generations, a critical market driver. Library: Chart.js (Canvas).
+        - Form Factor Market Share (Goal: Compare): An Ordered Bar Chart. Justification: Effectively compares the prevalence of different physical standards, illustrating market segmentation. Library: Chart.js (Canvas).
+        - System Communication Flow (Goal: Organize): A simplified HTML/CSS process diagram. Justification: Illustrates the fundamental relationship between the CPU, RAM, and the three core buses without technical overload. Method: HTML/CSS with Tailwind.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* A light, neutral blue-gray background */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 50vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .flow-arrow::after {
+            content: '→';
+            font-size: 2rem;
+            color: #3b82f6; /* blue-500 */
+            margin: 0 1rem;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-[#0a4d8c]">Motherboard Market & Technology Trends</h1>
+            <p class="mt-4 text-lg text-gray-600">An infographic deep-dive into the core of computing, visualizing the key trends, performance leaps, and market segments shaping the industry.</p>
+        </header>
+
+        <main class="space-y-12">
+            <section id="market-size" class="bg-white rounded-lg shadow-lg p-8 text-center">
+                <h2 class="text-xl font-bold text-gray-500 uppercase tracking-wider">Global Motherboard Market Size (Projected)</h2>
+                <p class="text-7xl md:text-8xl font-extrabold text-[#3b82f6] my-4">$15.7 Billion</p>
+                <p class="text-gray-600 max-w-2xl mx-auto">The global motherboard market continues to expand, driven by the demand for high-performance computing in gaming, data centers, and the ongoing cycle of PC upgrades.</p>
+            </section>
+            
+            <section id="chipset-evolution" class="bg-white rounded-lg shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-center mb-2 text-[#0a4d8c]">Industry Trend: Chipset Architecture Simplification</h2>
+                <p class="text-center text-gray-600 mb-8 max-w-3xl mx-auto">A fundamental shift in motherboard design has been the move from a two-chip system (Northbridge/Southbridge) to a single Platform Controller Hub (PCH). This integration reduces latency and complexity, placing key controllers like memory and primary PCIe directly on the CPU for faster performance.</p>
+                <div class="flex flex-col md:flex-row items-center justify-center text-center">
+                    <div class="flex flex-col items-center">
+                        <h3 class="font-semibold text-lg mb-2">Legacy Architecture</h3>
+                        <div class="flex items-center">
+                            <div class="p-4 bg-blue-100 border-2 border-blue-300 rounded-lg"><strong>CPU</strong></div>
+                            <div class="flow-arrow hidden md:block"></div>
+                            <div class="block md:hidden text-4xl text-blue-500 my-2">↓</div>
+                            <div class="flex flex-col gap-2">
+                               <div class="p-4 bg-red-100 border-2 border-red-300 rounded-lg"><strong>Northbridge</strong><br><span class="text-sm">(RAM, GPU)</span></div>
+                               <div class="p-4 bg-green-100 border-2 border-green-300 rounded-lg"><strong>Southbridge</strong><br><span class="text-sm">(USB, SATA)</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-6xl font-bold text-blue-500 mx-8 my-4 md:my-0">⇒</div>
+                    <div class="flex flex-col items-center">
+                        <h3 class="font-semibold text-lg mb-2">Modern Architecture</h3>
+                        <div class="flex items-center">
+                            <div class="p-4 bg-blue-100 border-2 border-blue-300 rounded-lg"><strong>CPU</strong><br><span class="text-sm">(RAM, GPU Ctrl)</span></div>
+                           <div class="flow-arrow hidden md:block"></div>
+                            <div class="block md:hidden text-4xl text-blue-500 my-2">↓</div>
+                           <div class="p-4 bg-purple-100 border-2 border-purple-300 rounded-lg"><strong>PCH</strong><br><span class="text-sm">(USB, SATA, etc.)</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <section id="memory-adoption" class="bg-white rounded-lg shadow-lg p-8">
+                    <h2 class="text-2xl font-bold text-center mb-2 text-[#0a4d8c]">Technology Adoption: DDR5 vs. DDR4</h2>
+                    <p class="text-center text-gray-600 mb-6">The transition to DDR5 RAM is a key market driver. While DDR4 remains prevalent, DDR5's higher speeds and efficiency are leading to rapid adoption in new high-end and mainstream systems, representing a significant upgrade cycle.</p>
+                    <div class="chart-container">
+                        <canvas id="memoryAdoptionChart"></canvas>
+                    </div>
+                </section>
+
+                <section id="pcie-growth" class="bg-white rounded-lg shadow-lg p-8">
+                    <h2 class="text-2xl font-bold text-center mb-2 text-[#0a4d8c]">Performance Trend: PCIe Bandwidth Growth</h2>
+                    <p class="text-center text-gray-600 mb-6">Each generation of the PCI Express standard has doubled the potential data throughput per lane. This exponential growth is critical for enabling next-generation graphics cards and ultra-fast NVMe storage, directly impacting system performance.</p>
+                    <div class="chart-container">
+                        <canvas id="pcieGrowthChart"></canvas>
+                    </div>
+                </section>
+            </div>
+
+            <section id="form-factors" class="bg-white rounded-lg shadow-lg p-8 md:col-span-2">
+                <h2 class="text-2xl font-bold text-center mb-2 text-[#0a4d8c]">Market Segmentation by Form Factor</h2>
+                <p class="text-center text-gray-600 mb-6 max-w-3xl mx-auto">The market is segmented by physical size, or form factor, which dictates expansion capability and case compatibility. ATX remains the standard for performance builds, while Micro-ATX and Mini-ITX cater to compact and budget-conscious segments.</p>
+                <div class="chart-container">
+                    <canvas id="formFactorChart"></canvas>
+                </div>
+            </section>
+
+            <section id="system-bus" class="bg-white rounded-lg shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-center mb-2 text-[#0a4d8c]">Process Flow: Core System Communication</h2>
+                <p class="text-center text-gray-600 mb-8 max-w-3xl mx-auto">At its heart, all communication relies on the system bus. The CPU uses the Address Bus to specify a location in RAM, the Control Bus to issue a 'Read' or 'Write' command, and the Data Bus to transfer the actual information.</p>
+                <div class="w-full bg-gray-50 p-6 rounded-lg border">
+                    <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 md:space-x-4">
+                        <div class="p-4 bg-blue-200 rounded-lg text-center shadow">
+                            <div class="text-2xl">🖥️</div>
+                            <div class="font-bold">CPU</div>
+                        </div>
+                        <div class="flex flex-col w-full md:w-auto items-center space-y-2">
+                            <div class="w-full p-2 text-center bg-[#60a5fa] text-white rounded-md shadow-sm">Address Bus → (Where to look?)</div>
+                            <div class="w-full p-2 text-center bg-[#34d399] text-white rounded-md shadow-sm">Data Bus ↔ (The information)</div>
+                            <div class="w-full p-2 text-center bg-[#fbbf24] text-white rounded-md shadow-sm">Control Bus → (What to do?)</div>
+                        </div>
+                         <div class="p-4 bg-blue-200 rounded-lg text-center shadow">
+                            <div class="text-2xl">💾</div>
+                            <div class="font-bold">RAM</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="text-center mt-12 pt-8 border-t border-gray-300">
+            <p class="text-gray-500">Infographic based on the "Motherboard: Core Architecture and System Integration" report.</p>
+        </footer>
+
+    </div>
+
+    <script>
+        const wrapLabel = (label, maxLength = 16) => {
+            if (label.length <= maxLength) {
+                return label;
+            }
+            const words = label.split(' ');
+            const lines = [];
+            let currentLine = '';
+            for (const word of words) {
+                if ((currentLine + word).length > maxLength) {
+                    lines.push(currentLine.trim());
+                    currentLine = '';
+                }
+                currentLine += word + ' ';
+            }
+            lines.push(currentLine.trim());
+            return lines;
+        };
+
+        const tooltipTitleCallback = (tooltipItems) => {
+            const item = tooltipItems[0];
+            let label = item.chart.data.labels[item.dataIndex];
+            return Array.isArray(label) ? label.join(' ') : label;
+        };
+        
+        const defaultChartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#4b5563',
+                        font: {
+                            size: 14
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: tooltipTitleCallback
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: { color: '#4b5563' },
+                    grid: { color: '#e5e7eb' }
+                },
+                x: {
+                    ticks: { color: '#4b5563' },
+                    grid: { display: false }
+                }
+            }
+        };
+
+        const blues = {
+            primary: '#3b82f6',
+            secondary: '#60a5fa',
+            accent: '#93c5fd',
+            dark: '#1e40af',
+            light: '#bfdbfe'
+        };
+
+        new Chart(document.getElementById('memoryAdoptionChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['DDR4 Systems', 'DDR5 Systems'],
+                datasets: [{
+                    label: 'Market Share',
+                    data: [65, 35],
+                    backgroundColor: [blues.secondary, blues.primary],
+                    borderColor: '#f0f4f8',
+                    borderWidth: 4,
+                }]
+            },
+            options: {
+                ...defaultChartOptions,
+                cutout: '60%',
+                plugins: {
+                    ...defaultChartOptions.plugins,
+                    title: {
+                        display: true,
+                        text: 'Estimated Market Share by RAM Type',
+                        color: '#1f2937',
+                        font: { size: 16, weight: 'bold' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('pcieGrowthChart'), {
+            type: 'line',
+            data: {
+                labels: ['PCIe 3.0', 'PCIe 4.0', 'PCIe 5.0', 'PCIe 6.0 (Proj.)'],
+                datasets: [{
+                    label: 'Bandwidth per Lane (GB/s)',
+                    data: [1, 2, 4, 8],
+                    fill: true,
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: blues.primary,
+                    tension: 0.1,
+                    pointBackgroundColor: blues.primary,
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                ...defaultChartOptions,
+                plugins: {
+                     ...defaultChartOptions.plugins,
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: 'Bandwidth Doubles Each Generation',
+                        color: '#1f2937',
+                        font: { size: 16, weight: 'bold' }
+                    }
+                },
+                scales: {
+                    y: { ...defaultChartOptions.scales.y, title: { display: true, text: 'GB/s per Lane' } },
+                    x: { ...defaultChartOptions.scales.x }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('formFactorChart'), {
+            type: 'bar',
+            data: {
+                labels: ['ATX', 'Micro-ATX', 'Mini-ITX'],
+                datasets: [{
+                    label: 'Market Share (%)',
+                    data: [55, 35, 10],
+                    backgroundColor: [blues.primary, blues.secondary, blues.accent],
+                    borderRadius: 4,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                ...defaultChartOptions,
+                indexAxis: 'y',
+                plugins: {
+                    ...defaultChartOptions.plugins,
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: 'Estimated Market Share by Form Factor',
+                        color: '#1f2937',
+                        font: { size: 16, weight: 'bold' }
+                    }
+                },
+                scales: {
+                    x: { ...defaultChartOptions.scales.x, title: { display: true, text: 'Share (%)' } },
+                    y: { ...defaultChartOptions.scales.y, grid: { display: false } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

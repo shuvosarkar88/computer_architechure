@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive CPU Operations Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals & Muted Tones -->
+    <!-- Application Structure Plan: The SPA is designed as a guided, interactive tour. The core is a large, clickable diagram of the CPU's architecture. Clicking a component reveals its detailed description in a dedicated panel, encouraging exploration. The primary learning tool is a step-by-step animator for the Fetch-Decode-Execute cycle. Users click 'Next Step' to visually trace an instruction's journey through the CPU components on the diagram, with accompanying text descriptions for each micro-operation. This transforms the abstract process from the source report's Table 2 into a concrete, observable animation. This structure was chosen over a linear document to foster active learning and make the complex data flows and component interactions intuitive and easy to grasp. -->
+    <!-- Visualization & Content Choices: 
+        - CPU Architecture Diagram: Goal=Organize/Inform. Method=Structured HTML/CSS with Tailwind, creating a clean, responsive block diagram. Interaction=Clicking a component div updates a separate details panel. Justification=Avoids static images/SVG, is fully responsive, and allows for dynamic highlighting during animations.
+        - Component Details: Goal=Inform. Method=JS updates the innerHTML of a dedicated text block. Interaction=Triggered by clicks on the diagram. Justification=Keeps the main view clean while providing deep-dive information on demand.
+        - Fetch-Decode-Execute Cycle: Goal=Change/Relationships. Method=A step-by-step animation powered by JS. It manipulates the CSS classes (borders, background colors) of the HTML diagram elements to show activity and data flow. A moving 'packet' div simulates data transfer. Interaction=User-controlled via 'Next Step' and 'Reset' buttons. Justification=This is the most effective way to teach a process. It makes the abstract sequence of micro-operations from the report tangible and easy to follow at the user's own pace.
+        - Clock Cycle Explanation: Goal=Inform. Method=A simple text section with a visual pulse animation (CSS). Justification=Provides context for synchronization without overcomplicating the main view. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #FDFBF6; }
+        .component { border: 2px solid #D1D5DB; transition: all 0.3s ease-in-out; }
+        .component.active { border-color: #F59E0B; background-color: #FEF3C7; transform: scale(1.03); box-shadow: 0 0 15px rgba(245, 158, 11, 0.5); }
+        .component-title { font-weight: 600; color: #4B5563; }
+        .path { position: absolute; background-color: #9CA3AF; z-index: 0; }
+        .path.active { background-color: #F59E0B; }
+        .data-packet { position: absolute; width: 20px; height: 20px; background-color: #F97316; border-radius: 50%; z-index: 10; transition: all 0.5s ease-in-out; opacity: 0; }
+        .data-packet.visible { opacity: 1; }
+        .btn { transition: all 0.2s ease; }
+        .pulse { animation: pulse-animation 1.5s infinite; }
+        @keyframes pulse-animation { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
+    </style>
+</head>
+<body class="text-gray-800">
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">The CPU: An Interactive Journey</h1>
+            <p class="mt-2 text-lg text-gray-600">Explore the inner workings of a CPU by interacting with its components and witnessing the fetch-decode-execute cycle in action.</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- CPU Diagram -->
+            <div class="lg:col-span-2 bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-200">
+                <h2 class="text-xl font-bold text-center mb-4">CPU Architecture</h2>
+                 <div id="diagram-container" class="relative w-full h-[550px] sm:h-[600px] md:h-[650px] mx-auto" style="max-width: 800px;">
+                    <!-- Main Memory -->
+                    <div id="memory" class="component absolute top-1/2 -translate-y-1/2 left-2 w-32 h-64 bg-gray-50 rounded-lg p-2 flex flex-col justify-center items-center cursor-pointer">
+                        <span class="component-title text-center">Main Memory (RAM)</span>
+                        <div class="text-xs text-gray-500 mt-2 text-center">Holds instructions & data</div>
+                    </div>
+                    
+                    <!-- CPU Boundary -->
+                    <div class="absolute top-0 right-0 w-[calc(100%-160px)] h-full border-4 border-dashed border-gray-300 rounded-2xl p-4">
+                        <h3 class="text-center font-bold text-gray-500">CPU</h3>
+                        <div id="data-packet" class="data-packet"></div>
+                        <!-- CU -->
+                        <div id="cu" class="component absolute top-4 left-1/2 -translate-x-1/2 w-48 h-24 bg-blue-50 rounded-lg p-2 text-center cursor-pointer flex justify-center items-center">
+                            <span class="component-title">Control Unit (CU)</span>
+                        </div>
+                        <!-- ALU -->
+                        <div id="alu" class="component absolute bottom-4 left-1/2 -translate-x-1/2 w-48 h-24 bg-green-50 rounded-lg p-2 text-center cursor-pointer flex justify-center items-center">
+                             <span class="component-title">Arithmetic Logic Unit (ALU)</span>
+                        </div>
+                        
+                        <!-- Registers -->
+                        <div class="absolute top-1/2 -translate-y-1/2 left-4 w-40">
+                             <div id="mar" class="component bg-purple-50 rounded-lg p-2 text-center mb-3 cursor-pointer"><span class="component-title">MAR</span><div id="mar-val" class="text-sm font-mono text-purple-700 h-5"></div></div>
+                             <div id="mdr" class="component bg-purple-50 rounded-lg p-2 text-center cursor-pointer"><span class="component-title">MDR</span><div id="mdr-val" class="text-sm font-mono text-purple-700 h-5 truncate"></div></div>
+                        </div>
+                        
+                        <div class="absolute top-1/2 -translate-y-1/2 right-4 w-40">
+                             <div id="pc" class="component bg-yellow-50 rounded-lg p-2 text-center mb-3 cursor-pointer"><span class="component-title">PC</span><div id="pc-val" class="text-sm font-mono text-yellow-700 h-5"></div></div>
+                             <div id="ir" class="component bg-yellow-50 rounded-lg p-2 text-center cursor-pointer"><span class="component-title">IR</span><div id="ir-val" class="text-sm font-mono text-yellow-700 h-5 truncate"></div></div>
+                        </div>
+
+                         <div class="absolute bottom-32 left-1/2 -translate-x-1/2 w-52">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div id="r1" class="component bg-red-50 rounded-lg p-2 text-center cursor-pointer"><span class="component-title">R1 (GPR)</span><div id="r1-val" class="text-sm font-mono text-red-700 h-5"></div></div>
+                                <div id="r2" class="component bg-red-50 rounded-lg p-2 text-center cursor-pointer"><span class="component-title">R2 (GPR)</span><div id="r2-val" class="text-sm font-mono text-red-700 h-5"></div></div>
+                            </div>
+                         </div>
+                    </div>
+
+                    <!-- Paths -->
+                    <div id="path-mem-mar" class="path top-[calc(50%-48px)] left-36 w-10 h-1"></div>
+                    <div id="path-mem-mdr" class="path top-[calc(50%+48px)] left-36 w-10 h-1"></div>
+                    <div id="path-mar-mem" class="path top-[calc(50%-48px)] left-36 w-10 h-1"></div>
+                    <div id="path-mdr-mem" class="path top-[calc(50%+48px)] left-36 w-10 h-1"></div>
+                    
+                    <div id="path-pc-mar" class="path top-[200px] right-[180px] w-24 h-1"></div>
+                    <div id="path-mdr-ir" class="path top-[350px] right-[180px] w-24 h-1"></div>
+                    
+                    <div id="path-cu-all" class="path top-[120px] left-[calc(50%+10px)] w-1 h-48"></div>
+                    <div id="path-alu-gpr" class="path bottom-[120px] left-[calc(50%+10px)] w-1 h-32"></div>
+                </div>
+            </div>
+
+            <!-- Details Panel -->
+            <div id="details-panel" class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg border border-gray-200 h-fit">
+                 <h2 id="details-title" class="text-xl font-bold mb-3">Component Details</h2>
+                 <div id="details-content" class="text-gray-700 space-y-3">
+                    <p>This interactive application demonstrates the inner workings of a CPU. The diagram on the left shows the primary components.</p>
+                    <p class="font-semibold">How to use this tool:</p>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li><strong>Click on any component</strong> in the diagram (like CU, ALU, PC) to learn about its specific function right here in this panel.</li>
+                        <li>Use the controls in the "Fetch-Decode-Execute Cycle" section below to <strong>run a step-by-step animation</strong> of an instruction being processed.</li>
+                    </ul>
+                 </div>
+            </div>
+        </main>
+        
+        <!-- FDE Cycle Animator -->
+        <section class="mt-8 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+            <h2 class="text-2xl font-bold text-center mb-4">Fetch-Decode-Execute Cycle Animator</h2>
+            <p class="text-center text-gray-600 max-w-3xl mx-auto mb-6">This section brings the CPU to life. We will walk through a single, hypothetical instruction: <strong>ADD R1, R2</strong>, which means "add the value in register R2 to register R1, and store the result back in R1." Click 'Next Step' to see how the CPU components coordinate to make this happen. Watch the diagram above for visual cues!</p>
+            
+            <div class="flex justify-center items-center gap-4 mb-4">
+                <button id="reset-btn" class="btn bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg shadow">Reset</button>
+                <button id="next-step-btn" class="btn bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-6 rounded-lg shadow">Next Step</button>
+            </div>
+
+            <div class="mt-4 bg-gray-50 p-4 rounded-lg border min-h-[100px]">
+                <h3 class="font-bold text-lg">Current Step: <span id="step-name" class="font-normal text-amber-700">Ready</span></h3>
+                <p id="step-description" class="text-gray-700 mt-1">Press 'Next Step' to begin the animation.</p>
+            </div>
+        </section>
+
+        <!-- Clock Section -->
+        <section class="mt-8 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+             <h2 class="text-2xl font-bold text-center mb-4">The CPU Clock & Synchronization</h2>
+             <div class="flex flex-col md:flex-row items-center gap-6">
+                <div class="flex-shrink-0">
+                    <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center">
+                        <div class="w-16 h-16 bg-amber-200 rounded-full flex items-center justify-center">
+                           <div id="clock-pulse" class="w-8 h-8 bg-amber-500 rounded-full pulse"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-gray-700 space-y-2">
+                    <p>The entire, intricate dance of operations inside the CPU is synchronized by a component you can't see on the diagram: the system clock. It generates a continuous, regular stream of electrical pulses, and each pulse is a 'clock cycle'.</p>
+                    <p>Think of it as the metronome for the CPU's orchestra. Every micro-operation in the Fetch-Decode-Execute cycle—like moving data from the PC to the MAR—is timed to start on a clock pulse. This ensures that one operation finishes before the next one begins, preventing chaos and data corruption. A CPU's 'speed' (e.g., 3.4 GHz) refers to billions of these clock cycles per second.</p>
+                </div>
+             </div>
+        </section>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const components = {
+                cu: {
+                    title: 'Control Unit (CU)',
+                    description: "The CU is the CPU's 'orchestra conductor'. It doesn't perform calculations itself, but it directs all the other components. It fetches instructions from memory, decodes them to understand what to do, and generates control signals that tell the ALU, registers, and memory how to act and when. It manages the entire Fetch-Decode-Execute cycle."
+                },
+                alu: {
+                    title: 'Arithmetic Logic Unit (ALU)',
+                    description: "The ALU is the mathematical brain of the CPU. It performs all arithmetic operations (like addition, subtraction) and all logical operations (like AND, OR, NOT, and comparisons). When the Control Unit decodes an instruction that involves a calculation, it tells the ALU to perform that specific calculation on data provided from the registers."
+                },
+                pc: {
+                    title: 'Program Counter (PC)',
+                    description: "The PC is a simple but vital register. Its only job is to hold the memory address of the *next* instruction to be fetched. After an instruction is fetched, the PC automatically increments to point to the next one in sequence. Special instructions like JUMP or BRANCH can change the PC's value directly, allowing the program to execute non-sequentially."
+                },
+                ir: {
+                    title: 'Instruction Register (IR)',
+                    description: "Once an instruction has been fetched from memory, it's stored in the IR. The IR holds this instruction steady so the Control Unit can decode it. Think of it as the CPU's 'currently-reading' slot. While the CU is busy decoding the instruction in the IR, the next instruction can already be on its way from memory."
+                },
+                mar: {
+                    title: 'Memory Address Register (MAR)',
+                    description: "The MAR is the CPU's 'address book' for memory. To read from or write to memory, the CPU first puts the specific memory address it wants to access into the MAR. The MAR is directly connected to the address bus, which carries this address to the main memory controller."
+                },
+                mdr: {
+                    title: 'Memory Data Register (MDR)',
+                    description: "The MDR is the 'loading dock' for memory. It's a two-way register that temporarily holds data being transferred between the CPU and main memory. When reading from memory, the data comes into the MDR. When writing to memory, the data is put in the MDR first before being sent out."
+                },
+                r1: {
+                    title: 'General-Purpose Register (R1)',
+                    description: "Modern CPUs have several General-Purpose Registers (GPRs). These are super-fast, temporary storage locations for data that the ALU is currently working with. Using GPRs is much faster than going to main memory. Instructions often specify which GPRs to use for operands and where to store the result. R1 is just one example."
+                },
+                r2: {
+                    title: 'General-Purpose Register (R2)',
+                    description: "Like R1, R2 is another General-Purpose Register. Having multiple GPRs allows the CPU to hold several pieces of data at once, making complex calculations much more efficient by reducing the need to access slower main memory."
+                },
+                memory: {
+                    title: 'Main Memory (RAM)',
+                    description: "While not technically part of the CPU, Main Memory (RAM) is where the program's instructions and the data it operates on are stored. The CPU constantly communicates with RAM, fetching instructions and reading/writing data as directed by the program."
+                }
+            };
+            
+            const fdeCycleSteps = [
+                {
+                    name: "Fetch 1: PC to MAR",
+                    description: "The CPU needs to fetch the next instruction. The address of this instruction, currently in the Program Counter (PC), is copied to the Memory Address Register (MAR).",
+                    active: ['pc', 'mar'],
+                    values: { pc: '0x100', mar: '0x100' },
+                    packet: { from: 'pc', to: 'mar' }
+                },
+                {
+                    name: "Fetch 2: Memory to MDR",
+                    description: "The CPU requests the content at the memory address in the MAR. The instruction is fetched from Main Memory and placed in the Memory Data Register (MDR). The PC is also incremented to point to the next instruction.",
+                    active: ['memory', 'mdr', 'pc'],
+                    values: { pc: '0x101', mdr: 'ADD R1,R2' },
+                    packet: { from: 'memory', to: 'mdr' }
+                },
+                {
+                    name: "Fetch 3: MDR to IR",
+                    description: "The instruction now in the MDR is copied to the Instruction Register (IR), where it will be held steady for decoding.",
+                    active: ['mdr', 'ir'],
+                    values: { ir: 'ADD R1,R2' },
+                    packet: { from: 'mdr', to: 'ir' }
+                },
+                {
+                    name: "Decode",
+                    description: "The Control Unit (CU) circuitry analyzes the instruction in the IR. It recognizes the 'ADD' opcode and identifies the operands as registers R1 and R2. It prepares to send control signals to the ALU and GPRs.",
+                    active: ['cu', 'ir'],
+                    values: {},
+                    packet: null
+                },
+                {
+                    name: "Execute 1: GPRs to ALU",
+                    description: "The CU instructs the General-Purpose Registers (R1, R2) to send their values to the Arithmetic Logic Unit (ALU) as inputs. It also tells the ALU to perform an addition operation.",
+                    active: ['cu', 'alu', 'r1', 'r2'],
+                    values: {},
+                    packet: { from: 'r1', to: 'alu' }
+                },
+                {
+                    name: "Execute 2: ALU computes",
+                    description: "The ALU performs the addition (5 + 10 = 15). The result is ready at the ALU's output. The ALU may also update status flags (e.g., Zero, Carry), though we don't show those here.",
+                    active: ['alu'],
+                    values: {},
+                    packet: null
+                },
+                {
+                    name: "Execute 3 (Write-back)",
+                    description: "The CU directs the result from the ALU's output to be written back into the destination register, R1. The old value of R1 is overwritten.",
+                    active: ['cu', 'alu', 'r1'],
+                    values: { r1: '15' },
+                    packet: { from: 'alu', to: 'r1' }
+                },
+                {
+                    name: "Cycle Complete",
+                    description: "The instruction is fully executed. The CPU is now ready to begin the next Fetch-Decode-Execute cycle, starting with the new address in the PC (0x101).",
+                    active: [],
+                    values: {},
+                    packet: null
+                }
+            ];
+
+            const detailsTitle = document.getElementById('details-title');
+            const detailsContent = document.getElementById('details-content');
+            const diagramContainer = document.getElementById('diagram-container');
+
+            diagramContainer.addEventListener('click', (e) => {
+                const componentEl = e.target.closest('.component');
+                if (componentEl && components[componentEl.id]) {
+                    const componentData = components[componentEl.id];
+                    detailsTitle.textContent = componentData.title;
+                    detailsContent.innerHTML = `<p>${componentData.description}</p>`;
+                }
+            });
+
+            let currentStep = -1;
+            const stepName = document.getElementById('step-name');
+            const stepDescription = document.getElementById('step-description');
+            const dataPacket = document.getElementById('data-packet');
+            
+            const initialValues = {
+                pc: '0x100', r1: '5', r2: '10', mar: '', mdr: '', ir: ''
+            };
+
+            function resetAnimation() {
+                currentStep = -1;
+                stepName.textContent = 'Ready';
+                stepDescription.textContent = "Press 'Next Step' to begin the animation.";
+                
+                document.querySelectorAll('.component.active').forEach(el => el.classList.remove('active'));
+                
+                for(const reg in initialValues) {
+                     const el = document.getElementById(`${reg}-val`);
+                     if(el) el.textContent = initialValues[reg];
+                }
+                dataPacket.classList.remove('visible');
+            }
+
+            document.getElementById('reset-btn').addEventListener('click', resetAnimation);
+            
+            document.getElementById('next-step-btn').addEventListener('click', () => {
+                currentStep++;
+                if (currentStep >= fdeCycleSteps.length) {
+                    currentStep = fdeCycleSteps.length - 1;
+                }
+
+                const step = fdeCycleSteps[currentStep];
+                
+                stepName.textContent = step.name;
+                stepDescription.textContent = step.description;
+
+                document.querySelectorAll('.component.active').forEach(el => el.classList.remove('active'));
+                step.active.forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.classList.add('active');
+                });
+                
+                for(const reg in step.values) {
+                     const el = document.getElementById(`${reg}-val`);
+                     if(el) el.textContent = step.values[reg];
+                }
+
+                if (step.packet) {
+                    const fromEl = document.getElementById(step.packet.from);
+                    const toEl = document.getElementById(step.packet.to);
+                    if (fromEl && toEl) {
+                        const fromRect = fromEl.getBoundingClientRect();
+                        const toRect = toEl.getBoundingClientRect();
+                        const containerRect = diagramContainer.getBoundingClientRect();
+
+                        const startX = fromRect.left - containerRect.left + fromRect.width / 2 - dataPacket.offsetWidth / 2;
+                        const startY = fromRect.top - containerRect.top + fromRect.height / 2 - dataPacket.offsetHeight / 2;
+                        
+                        const endX = toRect.left - containerRect.left + toRect.width / 2 - dataPacket.offsetWidth / 2;
+                        const endY = toRect.top - containerRect.top + toRect.height / 2 - dataPacket.offsetHeight / 2;
+
+                        dataPacket.style.transition = 'none';
+                        dataPacket.style.transform = `translate(${startX}px, ${startY}px)`;
+                        dataPacket.classList.add('visible');
+
+                        setTimeout(() => {
+                             dataPacket.style.transition = 'all 0.5s ease-in-out';
+                             dataPacket.style.transform = `translate(${endX}px, ${endY}px)`;
+                        }, 50);
+                         setTimeout(() => {
+                             dataPacket.classList.remove('visible');
+                        }, 550);
+                    }
+                } else {
+                    dataPacket.classList.remove('visible');
+                }
+            });
+
+            resetAnimation();
+        });
+    </script>
+</body>
+</html>

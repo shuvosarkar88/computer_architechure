@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive CPU Cycle Explainer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals & Subtle Accents -->
+    <!-- Application Structure Plan: A narrative, step-by-step learning path. It starts with a component overview, moves to a core interactive cycle simulator, explains the synchronizing clock cycle, and ends with a summary. This structure is designed for progressive learning, allowing users to first identify the parts and then see them in action, which is more intuitive for understanding a complex process than a chapter-based report structure. -->
+    <!-- Visualization & Content Choices: 1. Component Diagram (HTML/CSS/JS): Goal: Inform/Organize. Method: Interactive diagram using HTML/CSS. Justification: Encourages exploration and provides context before diving into the process. 2. Cycle Simulator (HTML/CSS/JS): Goal: Show Process/Change. Method: Custom JS-driven animation. Justification: The most effective way to teach a dynamic process by visualizing data flow step-by-step. 3. Clock Visual (CSS): Goal: Inform. Method: Simple CSS animation. Justification: Provides a tangible metaphor for the abstract concept of a clock signal. Library: None needed, pure DOM manipulation is sufficient and faster. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF8;
+            color: #383838;
+        }
+        .component-box {
+            border: 2px solid #D1D5DB;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .component-box:hover {
+            border-color: #A5B4FC;
+            background-color: #F0F2FF;
+        }
+        .register {
+            border: 1px solid #9CA3AF;
+            background-color: #F9FAFB;
+        }
+        .highlight-active {
+            border-color: #FB923C !important;
+            box-shadow: 0 0 15px rgba(251, 146, 60, 0.5);
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        .data-flow {
+            position: absolute;
+            background-color: #FBBF24;
+            color: #422006;
+            padding: 2px 6px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            opacity: 0;
+            transition: all 0.5s ease-in-out;
+            transform: translateY(20px);
+            z-index: 20;
+            white-space: nowrap;
+        }
+        .data-flow-active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .arrow {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+        .arrow-up { border-width: 0 5px 8.7px 5px; border-color: transparent transparent #6B7280 transparent; }
+        .arrow-down { border-width: 8.7px 5px 0 5px; border-color: #6B7280 transparent transparent transparent; }
+        .arrow-left { border-width: 5px 8.7px 5px 0; border-color: transparent #6B7280 transparent transparent; }
+        .arrow-right { border-width: 5px 0 5px 8.7px; border-color: transparent transparent transparent #6B7280; }
+
+        .bus-line { background-color: #9CA3AF; position: absolute; }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+        }
+        .clock-pulse {
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-2">The Heart of the Machine</h1>
+            <p class="text-lg text-gray-600 max-w-3xl mx-auto">An interactive guide to how a CPU processes instructions through the Fetch-Decode-Execute cycle.</p>
+        </header>
+
+        <main>
+            <!-- Section 1: Component Explorer -->
+            <section id="components" class="mb-16 bg-white p-8 rounded-2xl shadow-lg">
+                <h2 class="text-3xl font-bold text-center mb-2">Meet the Cast of Components</h2>
+                <p class="text-center text-gray-600 mb-8 max-w-2xl mx-auto">Hover over or tap on any component in the diagram below to learn its role. These are the key players in the instruction cycle.</p>
+                <div class="relative flex flex-col md:flex-row justify-between items-center space-y-8 md:space-y-0 md:space-x-8">
+                    <!-- CPU -->
+                    <div id="cpu-container" class="component-box p-4 rounded-xl w-full md:w-1/2 bg-gray-50">
+                         <h3 class="text-xl font-semibold text-center text-indigo-700">Central Processing Unit (CPU)</h3>
+                         <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Control Unit -->
+                            <div id="cu" class="component-box p-3 rounded-lg flex-1">
+                                <h4 class="font-semibold text-center">Control Unit (CU)</h4>
+                            </div>
+                            <!-- ALU -->
+                            <div id="alu" class="component-box p-3 rounded-lg flex-1">
+                                <h4 class="font-semibold text-center">Arithmetic Logic Unit (ALU)</h4>
+                            </div>
+                         </div>
+                         <div class="mt-4 p-3 rounded-lg border-2 border-dashed border-gray-300">
+                             <h4 class="font-semibold text-center mb-3">Registers</h4>
+                             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm text-center">
+                                <div id="pc" class="component-box register p-2 rounded-md"><strong>PC</strong><br>(Program Counter)</div>
+                                <div id="ir" class="component-box register p-2 rounded-md"><strong>IR</strong><br>(Instruction Register)</div>
+                                <div id="mar" class="component-box register p-2 rounded-md"><strong>MAR</strong><br>(Memory Addr. Reg)</div>
+                                <div id="mdr" class="component-box register p-2 rounded-md"><strong>MDR</strong><br>(Memory Data Reg)</div>
+                                <div id="acc" class="component-box register p-2 rounded-md"><strong>ACC</strong><br>(Accumulator)</div>
+                             </div>
+                         </div>
+                    </div>
+
+                    <!-- BUS -->
+                    <div class="relative w-full md:w-auto flex justify-center items-center h-24 md:h-auto">
+                        <div class="text-center">
+                            <h4 class="font-semibold mb-2">System Bus</h4>
+                            <div id="address-bus-arrow" class="arrow arrow-right" style="top: 30%; left: -20px;"></div>
+                            <div class="text-xs text-gray-500" style="position: absolute; top: 30%; left: -65px; transform: translateY(-50%);">Address</div>
+                            
+                            <div id="data-bus-arrow-to-cpu" class="arrow arrow-left" style="top: 50%; left: -20px;"></div>
+                            <div id="data-bus-arrow-to-ram" class="arrow arrow-right" style="top: 50%; right: -20px;"></div>
+                            <div class="text-xs text-gray-500" style="position: absolute; top: 50%; left: -50px; transform: translateY(-50%);">Data</div>
+                            
+                            <div id="control-bus-arrow" class="arrow arrow-right" style="top: 70%; left: -20px;"></div>
+                             <div class="text-xs text-gray-500" style="position: absolute; top: 70%; left: -65px; transform: translateY(-50%);">Control</div>
+                        </div>
+                    </div>
+
+                    <!-- RAM -->
+                    <div id="ram-container" class="component-box p-4 rounded-xl w-full md:w-1/3 bg-gray-50">
+                        <h3 class="text-xl font-semibold text-center text-teal-700">Main Memory (RAM)</h3>
+                        <p class="text-xs text-center text-gray-500 mt-2">Stores instructions and data for the currently running programs.</p>
+                    </div>
+                </div>
+                <div id="component-info" class="mt-8 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-center text-indigo-800 min-h-[60px] flex items-center justify-center transition-opacity duration-300 opacity-0">
+                    <p id="info-text">Hover over a component to see its description.</p>
+                </div>
+            </section>
+
+            <!-- Section 2: Interactive Simulator -->
+            <section id="simulator" class="mb-16">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold mb-2">The Fetch-Decode-Execute Cycle: In Action</h2>
+                    <p class="text-gray-600 max-w-3xl mx-auto">This is the fundamental operation cycle of a computer. We've loaded a simple program into RAM. Use the button below to walk through each step and see how the components work together.</p>
+                </div>
+
+                <div class="bg-white p-6 md:p-8 rounded-2xl shadow-lg">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- CPU State -->
+                        <div class="border p-4 rounded-lg bg-gray-50">
+                            <h3 class="font-bold text-lg mb-4 text-center">CPU State</h3>
+                            <div class="space-y-3 text-sm">
+                                <div id="sim-pc" class="register p-3 rounded-md flex justify-between items-center"><strong>Program Counter (PC)</strong> <span id="pc-value" class="font-mono bg-white px-2 py-1 rounded">0x00</span></div>
+                                <div id="sim-ir" class="register p-3 rounded-md flex justify-between items-center"><strong>Instruction Reg (IR)</strong> <span id="ir-value" class="font-mono bg-white px-2 py-1 rounded w-28 text-center">---</span></div>
+                                <div id="sim-mar" class="register p-3 rounded-md flex justify-between items-center"><strong>Mem. Address Reg (MAR)</strong> <span id="mar-value" class="font-mono bg-white px-2 py-1 rounded">---</span></div>
+                                <div id="sim-mdr" class="register p-3 rounded-md flex justify-between items-center"><strong>Mem. Data Reg (MDR)</strong> <span id="mdr-value" class="font-mono bg-white px-2 py-1 rounded w-28 text-center">---</span></div>
+                                <div id="sim-acc" class="register p-3 rounded-md flex justify-between items-center"><strong>Accumulator (ACC)</strong> <span id="acc-value" class="font-mono bg-white px-2 py-1 rounded">0</span></div>
+                                <div id="sim-cu" class="register p-3 rounded-md text-center"><strong>Control Unit (CU)</strong></div>
+                                <div id="sim-alu" class="register p-3 rounded-md text-center"><strong>ALU</strong></div>
+                            </div>
+                        </div>
+
+                        <!-- RAM State -->
+                        <div class="border p-4 rounded-lg bg-gray-50 lg:col-span-2">
+                            <h3 class="font-bold text-lg mb-4 text-center">RAM State</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                <div id="ram-0" class="register p-3 rounded-md"><strong>Addr 0x00:</strong> <span class="font-mono">LOAD #5</span></div>
+                                <div id="ram-1" class="register p-3 rounded-md"><strong>Addr 0x01:</strong> <span class="font-mono">ADD #10</span></div>
+                                <div id="ram-2" class="register p-3 rounded-md"><strong>Addr 0x02:</strong> <span class="font-mono">STORE 0x07</span></div>
+                                <div id="ram-3" class="register p-3 rounded-md"><strong>Addr 0x03:</strong> <span class="font-mono">HALT</span></div>
+                                <div id="ram-4" class="register p-3 rounded-md"><strong>Addr 0x04:</strong> <span class="font-mono">---</span></div>
+                                <div id="ram-5" class="register p-3 rounded-md"><strong>Addr 0x05:</strong> <span class="font-mono">---</span></div>
+                                <div id="ram-6" class="register p-3 rounded-md"><strong>Addr 0x06:</strong> <span class="font-mono">---</span></div>
+                                <div id="ram-7" class="register p-3 rounded-md"><strong>Addr 0x07:</strong> <span id="ram-value-7" class="font-mono">0</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 text-center">
+                        <div id="explanation-box" class="p-4 bg-blue-50 border border-blue-200 rounded-lg min-h-[80px] flex items-center justify-center mb-4">
+                            <p id="explanation-text" class="text-blue-800">Ready to start. Click the button to begin the first cycle.</p>
+                        </div>
+                        <button id="step-btn" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition-colors shadow-md">Start Cycle</button>
+                        <button id="reset-btn" class="bg-gray-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-600 transition-colors shadow-md ml-4">Reset</button>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Section 3: Clock Cycle -->
+            <section id="clock" class="mb-16">
+                 <div class="bg-white p-8 rounded-2xl shadow-lg flex flex-col md:flex-row items-center gap-8">
+                    <div class="w-24 h-24 bg-teal-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <div class="w-16 h-16 bg-teal-400 rounded-full clock-pulse"></div>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-bold mb-2">What is a Clock Cycle?</h2>
+                        <p class="text-gray-600">Think of the clock cycle as the computer's heartbeat. It's a continuous electrical signal that synchronizes all of the CPU's operations. On each "tick" (or cycle), the components perform one elementary step, like moving data from one register to another. The steps you walked through in the simulator are broken down into these discrete clock cycles. A CPU's speed (e.g., 4 GHz) measures how many billions of these cycles it can perform per second, dictating how quickly it can execute instructions.</p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const componentInfo = {
+                'cpu-container': '<strong>CPU (Central Processing Unit):</strong> The brain of the computer. It executes instructions from programs.',
+                'cu': '<strong>Control Unit (CU):</strong> Directs all of the processor\'s operations. It interprets instructions and generates control signals to other components.',
+                'alu': '<strong>Arithmetic Logic Unit (ALU):</strong> Performs all arithmetic calculations (addition, subtraction) and logical operations (AND, OR, NOT).',
+                'pc': '<strong>Program Counter (PC):</strong> A special register that holds the memory address of the next instruction to be executed.',
+                'ir': '<strong>Instruction Register (IR):</strong> A register that holds the instruction currently being decoded and executed.',
+                'mar': '<strong>Memory Address Register (MAR):</strong> Holds the address in memory that is to be accessed (read from or written to).',
+                'mdr': '<strong>Memory Data Register (MDR):</strong> A two-way register that holds data fetched from memory (and ready for the CPU to use) or data waiting to be stored in memory.',
+                'acc': '<strong>Accumulator (ACC):</strong> A register used to store intermediate arithmetic and logic results.',
+                'ram-container': '<strong>Main Memory (RAM):</strong> A large pool of storage where program instructions and data are held for quick access by the CPU.',
+            };
+
+            const infoBox = document.getElementById('component-info');
+            const infoText = document.getElementById('info-text');
+
+            Object.keys(componentInfo).forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('mouseenter', () => {
+                        infoBox.classList.remove('opacity-0');
+                        infoText.innerHTML = componentInfo[id];
+                    });
+                    element.addEventListener('mouseleave', () => {
+                        infoBox.classList.add('opacity-0');
+                    });
+                }
+            });
+
+            // Simulator Logic
+            const ram = {
+                '0x00': { instruction: 'LOAD #5', opcode: 'LOAD_VAL', value: 5 },
+                '0x01': { instruction: 'ADD #10', opcode: 'ADD_VAL', value: 10 },
+                '0x02': { instruction: 'STORE 0x07', opcode: 'STORE_MEM', address: '0x07' },
+                '0x03': { instruction: 'HALT', opcode: 'HALT' },
+            };
+            const memoryState = { '0x07': 0 };
+
+            let cpuState = { pc: 0, ir: '---', mar: '---', mdr: '---', acc: 0 };
+            let currentStep = 0;
+            let halted = false;
+
+            const stepBtn = document.getElementById('step-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const explanationText = document.getElementById('explanation-text');
+
+            const pcValueEl = document.getElementById('pc-value');
+            const irValueEl = document.getElementById('ir-value');
+            const marValueEl = document.getElementById('mar-value');
+            const mdrValueEl = document.getElementById('mdr-value');
+            const accValueEl = document.getElementById('acc-value');
+            const ramValue7El = document.getElementById('ram-value-7');
+
+            const elementsToHighlight = {
+                pc: document.getElementById('sim-pc'),
+                ir: document.getElementById('sim-ir'),
+                mar: document.getElementById('sim-mar'),
+                mdr: document.getElementById('sim-mdr'),
+                acc: document.getElementById('sim-acc'),
+                cu: document.getElementById('sim-cu'),
+                alu: document.getElementById('sim-alu'),
+            };
+
+            const resetHighlights = () => {
+                Object.values(elementsToHighlight).forEach(el => el.classList.remove('highlight-active'));
+                for (let i = 0; i < 8; i++) {
+                    document.getElementById(`ram-${i}`).classList.remove('highlight-active');
+                }
+            };
+            
+            const updateUI = () => {
+                pcValueEl.textContent = '0x0' + cpuState.pc;
+                irValueEl.textContent = cpuState.ir;
+                marValueEl.textContent = cpuState.mar;
+                mdrValueEl.textContent = cpuState.mdr;
+                accValueEl.textContent = cpuState.acc;
+                ramValue7El.textContent = memoryState['0x07'];
+            };
+            
+            const resetSimulation = () => {
+                cpuState = { pc: 0, ir: '---', mar: '---', mdr: '---', acc: 0 };
+                memoryState['0x07'] = 0;
+                currentStep = 0;
+                halted = false;
+                resetHighlights();
+                updateUI();
+                explanationText.textContent = "Ready to start. Click the button to begin the first cycle.";
+                stepBtn.disabled = false;
+                stepBtn.textContent = 'Start Cycle';
+            };
+
+            const steps = [
+                // Cycle 1: Fetch LOAD #5
+                { phase: 'FETCH', text: "<strong>FETCH:</strong> The Program Counter (PC) holds the address of the next instruction. Its value is copied to the Memory Address Register (MAR).", action: () => {
+                    resetHighlights();
+                    cpuState.mar = '0x0' + cpuState.pc;
+                    elementsToHighlight.pc.classList.add('highlight-active');
+                    elementsToHighlight.mar.classList.add('highlight-active');
+                }},
+                { phase: 'FETCH', text: "<strong>FETCH:</strong> The address is sent to RAM via the address bus. The instruction at that address is located and sent back to the CPU via the data bus, where it's stored in the Memory Data Register (MDR).", action: () => {
+                    resetHighlights();
+                    const address = '0x0' + cpuState.pc;
+                    cpuState.mdr = ram[address].instruction;
+                    document.getElementById(`ram-${cpuState.pc}`).classList.add('highlight-active');
+                    elementsToHighlight.mdr.classList.add('highlight-active');
+                }},
+                { phase: 'FETCH', text: "<strong>FETCH:</strong> The instruction is copied from the MDR to the Instruction Register (IR). The PC increments to point to the next instruction.", action: () => {
+                    resetHighlights();
+                    cpuState.ir = cpuState.mdr;
+                    cpuState.pc++;
+                    elementsToHighlight.mdr.classList.add('highlight-active');
+                    elementsToHighlight.ir.classList.add('highlight-active');
+                    elementsToHighlight.pc.classList.add('highlight-active');
+                }},
+                // Decode & Execute LOAD #5
+                { phase: 'DECODE', text: "<strong>DECODE:</strong> The Control Unit (CU) decodes the instruction in the IR ('LOAD #5'). It understands it needs to load a value into the Accumulator.", action: () => {
+                     resetHighlights();
+                     elementsToHighlight.ir.classList.add('highlight-active');
+                     elementsToHighlight.cu.classList.add('highlight-active');
+                }},
+                 { phase: 'EXECUTE', text: "<strong>EXECUTE:</strong> The value (5) is loaded directly into the Accumulator (ACC). The cycle is complete.", action: () => {
+                     resetHighlights();
+                     cpuState.acc = ram['0x00'].value;
+                     elementsToHighlight.acc.classList.add('highlight-active');
+                }},
+                
+                // Cycle 2: Fetch ADD #10
+                { phase: 'FETCH', text: "<strong>FETCH:</strong> The next cycle begins. PC value (0x01) is copied to the MAR.", action: () => {
+                    resetHighlights();
+                    cpuState.mar = '0x0' + cpuState.pc;
+                    elementsToHighlight.pc.classList.add('highlight-active');
+                    elementsToHighlight.mar.classList.add('highlight-active');
+                }},
+                { phase: 'FETCH', text: "<strong>FETCH:</strong> The instruction at address 0x01 ('ADD #10') is fetched from RAM and placed in the MDR.", action: () => {
+                    resetHighlights();
+                    const address = '0x0' + cpuState.pc;
+                    cpuState.mdr = ram[address].instruction;
+                    document.getElementById(`ram-${cpuState.pc}`).classList.add('highlight-active');
+                    elementsToHighlight.mdr.classList.add('highlight-active');
+                }},
+                { phase: 'FETCH', text: "<strong>FETCH:</strong> Instruction moves to IR. PC increments to 0x02.", action: () => {
+                    resetHighlights();
+                    cpuState.ir = cpuState.mdr;
+                    cpuState.pc++;
+                    elementsToHighlight.mdr.classList.add('highlight-active');
+                    elementsToHighlight.ir.classList.add('highlight-active');
+                    elementsToHighlight.pc.classList.add('highlight-active');
+                }},
+                // Decode & Execute ADD #10
+                { phase: 'DECODE', text: "<strong>DECODE:</strong> The CU decodes 'ADD #10'. It prepares the ALU for an addition operation.", action: () => {
+                     resetHighlights();
+                     elementsToHighlight.ir.classList.add('highlight-active');
+                     elementsToHighlight.cu.classList.add('highlight-active');
+                }},
+                 { phase: 'EXECUTE', text: "<strong>EXECUTE:</strong> The CU instructs the ALU. The ALU takes the value from the ACC (5) and the instruction's value (10), adds them, and stores the result (15) back in the ACC.", action: () => {
+                     resetHighlights();
+                     cpuState.acc += ram['0x01'].value;
+                     elementsToHighlight.alu.classList.add('highlight-active');
+                     elementsToHighlight.acc.classList.add('highlight-active');
+                }},
+
+                // Cycle 3: Fetch STORE 0x07
+                { phase: 'FETCH', text: "<strong>FETCH:</strong> Cycle 3 starts. PC value (0x02) is copied to MAR.", action: () => {
+                    resetHighlights();
+                    cpuState.mar = '0x0' + cpuState.pc;
+                    elementsToHighlight.pc.classList.add('highlight-active');
+                    elementsToHighlight.mar.classList.add('highlight-active');
+                }},
+                 { phase: 'FETCH', text: "<strong>FETCH:</strong> The instruction at address 0x02 ('STORE 0x07') is fetched from RAM to the MDR.", action: () => {
+                    resetHighlights();
+                    const address = '0x0' + cpuState.pc;
+                    cpuState.mdr = ram[address].instruction;
+                    document.getElementById(`ram-${cpuState.pc}`).classList.add('highlight-active');
+                    elementsToHighlight.mdr.classList.add('highlight-active');
+                }},
+                { phase: 'FETCH', text: "<strong>FETCH:</strong> Instruction moves to IR. PC increments to 0x03.", action: () => {
+                    resetHighlights();
+                    cpuState.ir = cpuState.mdr;
+                    cpuState.pc++;
+                    elementsToHighlight.mdr.classList.add('highlight-active');
+                    elementsToHighlight.ir.classList.add('highlight-active');
+                    elementsToHighlight.pc.classList.add('highlight-active');
+                }},
+                // Decode & Execute STORE 0x07
+                { phase: 'DECODE', text: "<strong>DECODE:</strong> The CU decodes 'STORE 0x07'. It recognizes this requires two steps: placing the address in MAR and the data in MDR.", action: () => {
+                     resetHighlights();
+                     elementsToHighlight.ir.classList.add('highlight-active');
+                     elementsToHighlight.cu.classList.add('highlight-active');
+                }},
+                 { phase: 'EXECUTE', text: "<strong>EXECUTE (Step 1):</strong> The target address (0x07) is put in the MAR. The data from the ACC (15) is put in the MDR, ready for transfer.", action: () => {
+                     resetHighlights();
+                     cpuState.mar = ram['0x02'].address;
+                     cpuState.mdr = cpuState.acc;
+                     elementsToHighlight.mar.classList.add('highlight-active');
+                     elementsToHighlight.mdr.classList.add('highlight-active');
+                     elementsToHighlight.acc.classList.add('highlight-active');
+                }},
+                { phase: 'EXECUTE', text: "<strong>EXECUTE (Step 2):</strong> The CU sends a 'write' signal. The address from MAR and data from MDR are sent to RAM. The value 15 is stored at address 0x07.", action: () => {
+                     resetHighlights();
+                     memoryState[cpuState.mar] = cpuState.mdr;
+                     elementsToHighlight.mdr.classList.add('highlight-active');
+                     document.getElementById('ram-7').classList.add('highlight-active');
+                }},
+
+                // Cycle 4: HALT
+                { phase: 'FETCH', text: "<strong>FETCH:</strong> Final cycle. PC value (0x03) to MAR.", action: () => {
+                    resetHighlights();
+                    cpuState.mar = '0x0' + cpuState.pc;
+                    elementsToHighlight.pc.classList.add('highlight-active');
+                    elementsToHighlight.mar.classList.add('highlight-active');
+                }},
+                { phase: 'FETCH', text: "<strong>FETCH:</strong> Instruction 'HALT' is fetched to MDR.", action: () => {
+                    resetHighlights();
+                    const address = '0x0' + cpuState.pc;
+                    cpuState.mdr = ram[address].instruction;
+                    document.getElementById(`ram-${cpuState.pc}`).classList.add('highlight-active');
+                    elementsToHighlight.mdr.classList.add('highlight-active');
+                }},
+                { phase: 'FETCH', text: "<strong>FETCH:</strong> Instruction 'HALT' moves to IR. PC increments.", action: () => {
+                    resetHighlights();
+                    cpuState.ir = cpuState.mdr;
+                    cpuState.pc++;
+                    elementsToHighlight.mdr.classList.add('highlight-active');
+                    elementsToHighlight.ir.classList.add('highlight-active');
+                }},
+                { phase: 'DECODE/EXECUTE', text: "<strong>EXECUTE:</strong> The CU decodes 'HALT'. It stops the cycle. The program is finished.", action: () => {
+                    resetHighlights();
+                    elementsToHighlight.cu.classList.add('highlight-active');
+                    halted = true;
+                }},
+            ];
+
+            stepBtn.addEventListener('click', () => {
+                if (halted) return;
+                
+                stepBtn.textContent = 'Next Step';
+                const step = steps[currentStep];
+                if (step) {
+                    explanationText.innerHTML = step.text;
+                    step.action();
+                    updateUI();
+                    currentStep++;
+                }
+
+                if (currentStep >= steps.length || halted) {
+                    stepBtn.disabled = true;
+                    stepBtn.textContent = 'Finished';
+                }
+            });
+            
+            resetBtn.addEventListener('click', resetSimulation);
+
+            resetSimulation();
+        });
+    </script>
+</body>
+</html>

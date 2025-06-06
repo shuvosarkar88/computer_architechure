@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Architecture of Computation: An Infographic</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Energetic & Playful -->
+    <!-- Application Structure Plan: The infographic follows a narrative structure, "Building a Computer's Brain," starting from fundamental concepts and progressively building up to a complete system. This bottom-up approach is more intuitive for an infographic than the report's formal structure. Sections include: 1) High-level CPU Blueprint, 2) The ALU as the 'Calculator,' 3) Registers as the 'Workbench,' 4) The Control Unit as the 'Conductor,' 5) A capstone 'Datapath in Action' section, and 6) a concluding look at 'Information Highways' (Buses). This narrative flow, combined with a single-page scrollable layout, makes complex computer architecture concepts accessible and engaging for a broader audience. -->
+    <!-- Visualization & Content Choices:
+        - Report Info: Core CPU Components. Goal: Organize. Viz: HTML/CSS Block Diagram. Justification: Provides a clear, high-level map of the CPU's structure at the start. Method: HTML/CSS with Tailwind. NO SVG.
+        - Report Info: ALU Construction. Goal: Explain Process. Viz: HTML/CSS Flowchart. Justification: Visually demonstrates the core principle of hierarchical abstraction in digital design, from gates to an N-bit adder. Method: HTML/CSS with Tailwind. NO SVG.
+        - Report Info: Fetch-Decode-Execute Cycle. Goal: Explain Process. Viz: HTML/CSS Circular Diagram. Justification: Emphasizes the cyclical, continuous nature of CPU operation. Method: HTML/CSS with Tailwind. NO SVG.
+        - Report Info: Single-Cycle CPU Performance. Goal: Compare. Viz: Bar Chart. Justification: Effectively compares the execution steps of different instruction types, visually demonstrating the primary inefficiency of a single-cycle design. Library: Chart.js (Canvas).
+        - Report Info: CPU Bus Organization Trade-offs. Goal: Compare/Inform. Viz: Donut Chart. Justification: Shows the proportional relationship between performance benefits and hardware complexity for different bus architectures. Library: Chart.js (Canvas).
+        - Report Info: Key Register Types. Goal: Inform. Viz: Styled HTML Cards with Unicode Icons. Justification: Cleanly segments and presents the function of each critical register. Method: HTML/CSS with Tailwind. NO SVG.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f7f4; /* A lighter shade derived from #E5DDC8 */
+        }
+        .infographic-card {
+            background-color: #ffffff;
+            border-left: 5px solid #01949A;
+        }
+        .flow-arrow::after {
+            content: '▼';
+            font-size: 1.5rem;
+            color: #DB1F48;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+                max-height: 400px;
+            }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-[#004369]">The Architecture of Computation</h1>
+            <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">An infographic journey into the heart of the Central Processing Unit, from a simple switch to a complete datapath.</p>
+        </header>
+
+        <!-- Main Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            <!-- Section 1: CPU Blueprint -->
+            <section class="lg:col-span-2 infographic-card rounded-xl shadow-lg p-6">
+                <h2 class="text-3xl font-bold text-[#DB1F48] mb-4">1. The Blueprint of a CPU</h2>
+                <p class="mb-6">The Central Processing Unit (CPU) is the engine of a computer, composed of several core functional units that work in perfect harmony. At the highest level, the Control Unit directs operations, Registers provide high-speed storage, and the ALU performs all calculations, all connected by data highways called buses.</p>
+                <div class="w-full bg-[#E5DDC8] rounded-lg p-6 flex flex-col md:flex-row items-center justify-around gap-6 text-center">
+                    <div class="font-bold text-xl p-4 bg-white rounded-lg shadow">Main Memory</div>
+                    <div class="font-bold text-gray-600 text-2xl hidden md:block">&#8644;</div>
+                    <div class="p-4 bg-white rounded-lg shadow-xl border-2 border-[#004369]">
+                        <h3 class="font-bold text-2xl text-[#004369]">CPU</h3>
+                        <div class="mt-4 grid grid-cols-2 gap-4">
+                            <div class="p-3 bg-blue-100 rounded">Control Unit</div>
+                            <div class="p-3 bg-red-100 rounded">ALU</div>
+                            <div class="col-span-2 p-3 bg-teal-100 rounded">Registers</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: The ALU -->
+            <section class="infographic-card rounded-xl shadow-lg p-6">
+                <h2 class="text-3xl font-bold text-[#DB1F48] mb-4">2. The Calculator: The ALU</h2>
+                <p class="mb-6">The Arithmetic Logic Unit (ALU) is the CPU's computational core. It's a combinational digital circuit built from basic logic gates to perform all math and logic operations, forming the foundation of data processing.</p>
+                <div class="bg-[#E5DDC8] rounded-lg p-6 text-center">
+                    <h3 class="text-xl font-bold text-[#004369] mb-4">From Gates to Adder</h3>
+                    <div class="flex flex-col items-center space-y-2">
+                        <div class="p-3 bg-white rounded-lg shadow w-48">AND/XOR Gates</div>
+                        <div class="flow-arrow"></div>
+                        <div class="p-3 bg-white rounded-lg shadow w-48">Half-Adder</div>
+                        <div class="flow-arrow"></div>
+                        <div class="p-3 bg-white rounded-lg shadow w-48">Full-Adder</div>
+                        <div class="flow-arrow"></div>
+                        <div class="p-3 bg-white rounded-lg shadow w-48 font-bold text-[#01949A]">N-Bit Adder</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Registers -->
+            <section class="infographic-card rounded-xl shadow-lg p-6">
+                <h2 class="text-3xl font-bold text-[#DB1F48] mb-4">3. The Workbench: Registers</h2>
+                <p class="mb-6">Registers are small, extremely fast memory locations inside the CPU. By holding data the CPU is actively using, they minimize slow trips to main memory (RAM), dramatically boosting performance.</p>
+                <div class="bg-[#E5DDC8] rounded-lg p-6 text-center">
+                    <h3 class="text-xl font-bold text-[#004369] mb-2">Key Register Types</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                        <div class="p-3 bg-white rounded-lg shadow text-left"><span class="font-bold">PC</span> (Program Counter):<br> Address of the next instruction.</div>
+                        <div class="p-3 bg-white rounded-lg shadow text-left"><span class="font-bold">IR</span> (Instruction Register):<br> Current instruction being executed.</div>
+                        <div class="p-3 bg-white rounded-lg shadow text-left"><span class="font-bold">GPRs</span> (General Purpose):<br> Holds data for ALU operations.</div>
+                        <div class="p-3 bg-white rounded-lg shadow text-left"><span class="font-bold">Flags</span> (Status Register):<br> Stores outcomes like Zero or Carry.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Control Unit -->
+            <section class="lg:col-span-2 infographic-card rounded-xl shadow-lg p-6">
+                <h2 class="text-3xl font-bold text-[#DB1F48] mb-4">4. The Conductor: The Control Unit</h2>
+                <p class="mb-6">The Control Unit (CU) orchestrates the entire CPU. It doesn't process data, but it generates timing and control signals to manage the other components. Its operation is defined by the repetitive Fetch-Decode-Execute cycle, the heartbeat of the CPU.</p>
+                <div class="w-full flex justify-center items-center">
+                     <div class="relative w-72 h-72">
+                        <div class="absolute top-0 left-1/2 -translate-x-1/2 p-4 bg-[#004369] text-white rounded-lg shadow-lg w-32 text-center">
+                            <span class="font-bold">1. Fetch</span>
+                            <p class="text-xs">Get Instruction</p>
+                        </div>
+                        <div class="absolute bottom-1/4 left-0 p-4 bg-[#004369] text-white rounded-lg shadow-lg w-32 text-center">
+                            <span class="font-bold">2. Decode</span>
+                            <p class="text-xs">Understand It</p>
+                        </div>
+                        <div class="absolute bottom-1/4 right-0 p-4 bg-[#004369] text-white rounded-lg shadow-lg w-32 text-center">
+                            <span class="font-bold">3. Execute</span>
+                            <p class="text-xs">Perform Action</p>
+                        </div>
+                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl font-extrabold text-[#DB1F48]">&#8635;</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Datapath in Action -->
+            <section class="infographic-card rounded-xl shadow-lg p-6">
+                <h2 class="text-3xl font-bold text-[#DB1F48] mb-4">5. The Datapath in Action</h2>
+                 <p class="mb-6">In a simple single-cycle CPU, every instruction takes one long clock cycle. The length of this cycle is dictated by the slowest instruction, which is often inefficient. This chart shows the relative number of sequential stages required for different instructions, highlighting this core trade-off.</p>
+                <div class="chart-container">
+                    <canvas id="instructionPerformanceChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Section 6: CPU Buses -->
+            <section class="infographic-card rounded-xl shadow-lg p-6">
+                 <h2 class="text-3xl font-bold text-[#DB1F48] mb-4">6. Information Highways: Buses</h2>
+                 <p class="mb-6">CPU performance is heavily influenced by its internal bus architecture. More buses allow for more parallel data transfers, increasing speed at the cost of greater hardware complexity. This illustrates the fundamental engineering trade-off between performance and cost.</p>
+                 <div class="chart-container">
+                    <canvas id="busTradeoffChart"></canvas>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script>
+        const wrapLabel = (label) => {
+            const limit = 16;
+            if (label.length <= limit) return label;
+            const words = label.split(' ');
+            const lines = [];
+            let currentLine = '';
+            words.forEach(word => {
+                if ((currentLine + ' ' + word).trim().length > limit) {
+                    lines.push(currentLine.trim());
+                    currentLine = word;
+                } else {
+                    currentLine = (currentLine + ' ' + word).trim();
+                }
+            });
+            if (currentLine) lines.push(currentLine);
+            return lines;
+        };
+
+        const tooltipTitleCallback = (tooltipItems) => {
+            const item = tooltipItems[0];
+            let label = item.chart.data.labels[item.dataIndex];
+            if (Array.isArray(label)) {
+                return label.join(' ');
+            } else {
+                return label;
+            }
+        };
+
+        const commonChartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#004369',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: tooltipTitleCallback
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: { color: '#004369' },
+                    grid: { color: '#e5e7eb' }
+                },
+                x: {
+                    ticks: { color: '#004369' },
+                    grid: { display: false }
+                }
+            }
+        };
+
+        // Chart 1: Instruction Performance
+        const instructionPerformanceCtx = document.getElementById('instructionPerformanceChart').getContext('2d');
+        const instructionPerformanceChart = new Chart(instructionPerformanceCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Arithmetic (ADD)', 'Memory Access (LOAD)', 'Control Flow (BRANCH)'],
+                datasets: [{
+                    label: 'Relative Stages in Single Cycle',
+                    data: [4, 5, 3],
+                    backgroundColor: ['#01949A', '#DB1F48', '#004369'],
+                    borderColor: ['#01949A', '#DB1F48', '#004369'],
+                    borderWidth: 1
+                }]
+            },
+            options: { ...commonChartOptions }
+        });
+
+        // Chart 2: Bus Tradeoff
+        const busTradeoffCtx = document.getElementById('busTradeoffChart').getContext('2d');
+        const busTradeoffChart = new Chart(busTradeoffCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['1-Bus Org: High Complexity Cost', '2-Bus Org: Balanced', '3-Bus Org: High Performance'],
+                datasets: [{
+                    label: 'Performance vs. Complexity',
+                    data: [30, 40, 60],
+                    backgroundColor: ['#DB1F48', '#01949A', '#004369'],
+                    borderColor: '#ffffff',
+                    borderWidth: 2,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                     legend: {
+                        position: 'top',
+                         labels: {
+                            color: '#004369',
+                            font: {
+                                weight: 'bold'
+                            },
+                            generateLabels: function(chart) {
+                                const data = chart.data;
+                                if (data.labels.length && data.datasets.length) {
+                                    return data.labels.map(function(label, i) {
+                                        const meta = chart.getDatasetMeta(0);
+                                        const style = meta.controller.getStyle(i);
+                                        return {
+                                            text: wrapLabel(label),
+                                            fillStyle: style.backgroundColor,
+                                            strokeStyle: style.borderColor,
+                                            lineWidth: style.borderWidth,
+                                            hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                                            index: i
+                                        };
+                                    });
+                                }
+                                return [];
+                            }
+                        }
+                     },
+                     tooltip: {
+                         callbacks: {
+                             title: tooltipTitleCallback
+                         }
+                     }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

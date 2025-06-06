@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: The Von Neumann Architecture</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: A top-down narrative infographic. It starts with the core principle (unified memory), presents an interactive diagram of the components, then visually simulates the Fetch-Decode-Execute cycle. This is followed by a comparative section (vs. Harvard), a visualization of the Von Neumann bottleneck, and a concluding overview of mitigation strategies. This linear, story-like flow is ideal for explaining a foundational concept progressively, ensuring understanding at each stage before moving to the next. -->
+    <!-- Visualization & Content Choices: 1. Core Concept (HTML/CSS): Goal: Inform. Method: Simple visual with styled divs. Justification: A strong visual hook. 2. Component Diagram (HTML/CSS/JS): Goal: Organize. Method: Interactive diagram using styled divs with JS hover effects. Justification: Allows user-led exploration of the core parts. 3. Fetch-Cycle Simulator (HTML/CSS/JS): Goal: Show Process. Method: Custom JS-driven animation on styled divs. Justification: A dynamic, step-by-step walkthrough is the clearest way to explain this complex cycle without video. 4. Von Neumann vs Harvard (HTML/CSS Table & Diagram): Goal: Compare. Method: Table for data, styled divs for architecture diagram. Justification: Direct comparison of features and visual representation of the key structural difference. 5. Bottleneck (HTML/CSS): Goal: Inform. Method: Visual metaphor with styled divs. Justification: Simplifies a complex performance issue. NO SVG/Mermaid used. Chart.js is included but not needed for this conceptual topic. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F0F8FF; /* Light Alice Blue */
+            color: #00296B; /* Dark Blue */
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+            border: 1px solid #E0EFFF;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+        .component {
+            border: 2px solid #00509D;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .component-label {
+            position: absolute;
+            top: -1.25rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #00509D;
+            color: white;
+            padding: 0.1rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .highlight-active {
+            border-color: #FDC500 !important;
+            background-color: #FFFBEB !important;
+            box-shadow: 0 0 15px rgba(253, 197, 0, 0.6);
+            transform: scale(1.03);
+            z-index: 10;
+        }
+        .bus-line {
+            position: absolute;
+            background-color: #003F88;
+            z-index: -1;
+        }
+        .explanation-box {
+            background-color: #E0EFFF;
+            border-left: 4px solid #00509D;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 py-12 md:py-20">
+
+        <header class="text-center mb-16 md:mb-24">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-[#00296B] leading-tight">
+                The Von Neumann Architecture
+            </h1>
+            <p class="mt-4 text-lg md:text-xl text-[#003F88] max-w-3xl mx-auto">A visual deep dive into the blueprint that defines nearly all modern computers.</p>
+        </header>
+
+        <!-- Core Concept -->
+        <section id="core-concept" class="mb-16 md:mb-24">
+            <div class="card p-8">
+                <h2 class="text-3xl font-bold text-center mb-6">The Revolutionary Idea: One Unified Memory</h2>
+                <p class="text-center text-gray-600 max-w-2xl mx-auto mb-8">The defining principle of the Von Neumann architecture is its use of a single, unified memory space to store both the program's instructions (the recipe) and the data those instructions work on (the ingredients). This simple but powerful concept paved the way for general-purpose computing.</p>
+                <div class="flex justify-center items-center p-6 bg-gray-50 rounded-lg">
+                    <div class="text-center mx-4">
+                        <div class="text-4xl">📜</div>
+                        <div class="font-bold mt-2">Instructions</div>
+                    </div>
+                    <div class="text-4xl font-bold text-[#FDC500] mx-4">+</div>
+                     <div class="text-center mx-4">
+                        <div class="text-4xl">🔢</div>
+                        <div class="font-bold mt-2">Data</div>
+                    </div>
+                    <div class="text-4xl font-bold text-[#FDC500] mx-4">=</div>
+                    <div class="text-center mx-4 p-4 border-4 border-dashed border-[#00509D] rounded-lg bg-white">
+                        <div class="text-4xl">🗃️</div>
+                        <div class="font-bold mt-2 text-[#00509D]">Shared Memory</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Components -->
+        <section id="components" class="mb-16 md:mb-24">
+            <h2 class="text-3xl font-bold text-center mb-12">The Blueprint: Core Components</h2>
+            <div class="card p-8 relative">
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
+                    <!-- CPU -->
+                    <div class="lg:col-span-2 component bg-blue-50 rounded-lg p-4">
+                        <div class="component-label">CPU</div>
+                        <div class="text-center font-bold text-lg mb-4 text-[#003F88]">Central Processing Unit</div>
+                        <div class="component bg-white rounded p-3 mb-3">
+                            <h4 class="font-semibold text-center">Control Unit (CU)</h4>
+                            <p class="text-xs text-center text-gray-500">Directs all operations</p>
+                        </div>
+                        <div class="component bg-white rounded p-3">
+                            <h4 class="font-semibold text-center">Arithmetic Logic Unit (ALU)</h4>
+                            <p class="text-xs text-center text-gray-500">Performs calculations</p>
+                        </div>
+                    </div>
+                    <!-- Buses -->
+                    <div class="flex flex-col items-center justify-center relative h-32 lg:h-auto">
+                         <div class="font-bold text-center">System Bus</div>
+                         <div class="text-xs text-gray-500">(Data Highway)</div>
+                         <div class="bus-line h-1 lg:h-full lg:w-1 w-full" style="top: 50%; left: 0; transform: translateY(-50%);"></div>
+                    </div>
+                    <!-- Memory -->
+                    <div class="lg:col-span-2 component bg-yellow-50 rounded-lg p-4">
+                         <div class="component-label">Memory</div>
+                         <div class="text-center font-bold text-lg mb-4 text-[#A16207]">Main Memory (RAM)</div>
+                         <p class="text-center text-sm text-gray-600">Stores both active program instructions and their data together in a unified address space.</p>
+                    </div>
+                </div>
+                <p class="text-center text-sm text-gray-500 mt-8">The CPU is the 'brain', executing instructions. The Memory Unit (RAM) is the workspace holding the current program and its data. The System Bus is the communication highway connecting them. This simple, elegant design forms the foundation of most modern computers.</p>
+            </div>
+        </section>
+        
+        <!-- Fetch-Decode-Execute -->
+        <section id="cycle" class="mb-16 md:mb-24">
+            <h2 class="text-3xl font-bold text-center mb-4">The Engine: Fetch-Decode-Execute Cycle</h2>
+            <p class="text-center text-gray-600 max-w-3xl mx-auto mb-12">This is the fundamental 3-step process the CPU repeats continuously to run programs. Use the buttons to walk through the cycle and see how data moves between components.</p>
+            <div class="card p-6 md:p-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- CPU Registers -->
+                    <div id="cpu-sim" class="component bg-blue-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-center mb-4">CPU Registers (High-Speed Scratchpad)</h3>
+                        <div class="space-y-2 text-sm">
+                            <div id="sim-pc" class="component flex justify-between items-center p-2 bg-white rounded"><strong>Program Counter (PC)</strong><span id="pc-val" class="font-mono bg-gray-200 px-2 rounded">00</span></div>
+                            <div id="sim-mar" class="component flex justify-between items-center p-2 bg-white rounded"><strong>Memory Addr Reg (MAR)</strong><span id="mar-val" class="font-mono bg-gray-200 px-2 rounded">--</span></div>
+                            <div id="sim-mdr" class="component flex justify-between items-center p-2 bg-white rounded"><strong>Memory Data Reg (MDR)</strong><span id="mdr-val" class="font-mono bg-gray-200 px-2 rounded w-28 text-center">--</span></div>
+                            <div id="sim-ir" class="component flex justify-between items-center p-2 bg-white rounded"><strong>Instruction Reg (IR)</strong><span id="ir-val" class="font-mono bg-gray-200 px-2 rounded w-28 text-center">--</span></div>
+                            <div id="sim-cu" class="component text-center p-2 bg-white rounded mt-4"><strong>Control Unit (CU)</strong></div>
+                        </div>
+                    </div>
+                    <!-- Memory Simulation -->
+                    <div id="mem-sim" class="component bg-yellow-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-center mb-4">Main Memory (RAM)</h3>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div id="mem-00" class="component flex justify-between items-center p-2 bg-white rounded"><strong>Addr 00:</strong><span class="font-mono">LOAD 03</span></div>
+                            <div id="mem-01" class="component flex justify-between items-center p-2 bg-white rounded"><strong>Addr 01:</strong><span class="font-mono">ADD 04</span></div>
+                            <div id="mem-02" class="component flex justify-between items-center p-2 bg-white rounded"><strong>Addr 02:</strong><span class="font-mono">HALT</span></div>
+                            <div id="mem-03" class="component flex justify-between items-center p-2 bg-white rounded"><strong>Addr 03:</strong><span class="font-mono">DATA 5</span></div>
+                            <div id="mem-04" class="component flex justify-between items-center p-2 bg-white rounded"><strong>Addr 04:</strong><span class="font-mono">DATA 10</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="cycle-explanation" class="explanation-box p-4 mt-6 rounded">
+                    <p class="font-semibold text-[#003F88]" id="explanation-text">Press 'Start Cycle' to begin.</p>
+                </div>
+                <div class="mt-6 flex justify-center space-x-4">
+                    <button id="step-btn" class="bg-[#00509D] text-white font-bold py-2 px-6 rounded-lg hover:bg-[#003F88] transition-colors shadow">Start Cycle</button>
+                    <button id="reset-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition-colors shadow">Reset</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Vs. Harvard -->
+        <section id="vs-harvard" class="mb-16 md:mb-24">
+            <h2 class="text-3xl font-bold text-center mb-12">Architectural Counterpoint: Von Neumann vs. Harvard</h2>
+             <div class="card p-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Von Neumann Diagram -->
+                    <div class="text-center border-2 border-[#00509D] p-4 rounded-lg bg-blue-50">
+                        <h3 class="font-bold text-lg text-[#003F88] mb-4">Von Neumann</h3>
+                        <div class="component bg-white rounded p-2 mb-2">CPU</div>
+                        <div class="h-8 w-1 bg-[#00509D] mx-auto"></div>
+                        <div class="text-sm font-semibold text-[#00509D] my-1">Shared Bus</div>
+                        <div class="h-8 w-1 bg-[#00509D] mx-auto"></div>
+                        <div class="component bg-white rounded p-2">Unified Memory (Code + Data)</div>
+                        <p class="text-xs text-gray-500 mt-4">Simpler and more flexible, but instructions and data access compete for the same pathway, creating a bottleneck.</p>
+                    </div>
+                    <!-- Harvard Diagram -->
+                    <div class="text-center border-2 border-yellow-500 p-4 rounded-lg bg-yellow-50">
+                        <h3 class="font-bold text-lg text-[#A16207] mb-4">Harvard</h3>
+                        <div class="component bg-white rounded p-2 mb-2">CPU</div>
+                        <div class="flex justify-around">
+                            <div>
+                                <div class="h-8 w-1 bg-yellow-500 mx-auto"></div>
+                                <div class="text-sm font-semibold text-yellow-600 my-1">Instruction Bus</div>
+                                <div class="h-8 w-1 bg-yellow-500 mx-auto"></div>
+                                <div class="component bg-white rounded p-2">Instruction Memory</div>
+                            </div>
+                            <div>
+                                <div class="h-8 w-1 bg-yellow-500 mx-auto"></div>
+                                <div class="text-sm font-semibold text-yellow-600 my-1">Data Bus</div>
+                                <div class="h-8 w-1 bg-yellow-500 mx-auto"></div>
+                                <div class="component bg-white rounded p-2">Data Memory</div>
+                            </div>
+                        </div>
+                         <p class="text-xs text-gray-500 mt-4">Faster due to parallel access, but more complex and costly. Common in specialized chips like DSPs.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bottleneck -->
+        <section id="bottleneck" class="mb-16 md:mb-24">
+            <h2 class="text-3xl font-bold text-center mb-12">The Achilles' Heel: The Von Neumann Bottleneck</h2>
+            <div class="card p-8">
+                 <p class="text-center text-gray-600 max-w-3xl mx-auto mb-8">The architecture's greatest weakness is that the fast CPU is often forced to wait for the slower memory, as both instructions and data must travel along the same, narrow bus.</p>
+                 <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-8">
+                    <div class="text-center">
+                        <div class="text-5xl">🧠</div>
+                        <div class="font-bold text-xl mt-2">Ultra-Fast CPU</div>
+                    </div>
+                    <div class="text-6xl text-[#FDC500] font-thin transform md:-rotate-90">»</div>
+                    <div class="p-4 bg-red-100 border-2 border-red-400 rounded-lg text-center">
+                        <div class="font-bold text-red-700">The Shared Bus</div>
+                        <div class="text-sm text-red-600">(One Lane Only)</div>
+                    </div>
+                     <div class="text-6xl text-[#FDC500] font-thin transform md:-rotate-90">»</div>
+                    <div class="text-center">
+                        <div class="text-5xl">🗃️</div>
+                        <div class="font-bold text-xl mt-2">Slower Memory</div>
+                    </div>
+                 </div>
+                 <p class="text-center text-sm text-gray-500 mt-8">Modern computers use many tricks to overcome this, like caches and pipelining, but the fundamental bottleneck remains a core challenge in computer design.</p>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const stepBtn = document.getElementById('step-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const explanationText = document.getElementById('explanation-text');
+        
+        const elements = {
+            pc: document.getElementById('sim-pc'),
+            mar: document.getElementById('sim-mar'),
+            mdr: document.getElementById('sim-mdr'),
+            ir: document.getElementById('sim-ir'),
+            cu: document.getElementById('sim-cu'),
+            mem: [
+                document.getElementById('mem-00'),
+                document.getElementById('mem-01'),
+                document.getElementById('mem-02'),
+                document.getElementById('mem-03'),
+                document.getElementById('mem-04'),
+            ]
+        };
+        
+        const values = {
+            pc: document.getElementById('pc-val'),
+            mar: document.getElementById('mar-val'),
+            mdr: document.getElementById('mdr-val'),
+            ir: document.getElementById('ir-val'),
+        };
+
+        let currentStep = 0;
+        let programHalted = false;
+
+        const cycleSteps = [
+            // Step 0: Initial State
+            { text: "The cycle begins. The Program Counter (PC) points to the first instruction at address 00.", action: () => {
+                highlight(elements.pc);
+            }},
+            // FETCH Phase for LOAD 03
+            { text: "<strong>FETCH 1/3:</strong> The address from the PC (00) is copied to the Memory Address Register (MAR).", action: () => {
+                values.mar.textContent = values.pc.textContent;
+                highlight(elements.pc, elements.mar);
+            }},
+            { text: "<strong>FETCH 2/3:</strong> The instruction at address 00 ('LOAD 03') is fetched from Memory to the Memory Data Register (MDR).", action: () => {
+                values.mdr.textContent = 'LOAD 03';
+                highlight(elements.mem[0], elements.mdr);
+            }},
+            { text: "<strong>FETCH 3/3:</strong> The instruction moves from MDR to the Instruction Register (IR). The PC increments to point to the next instruction (01).", action: () => {
+                values.ir.textContent = values.mdr.textContent;
+                values.pc.textContent = '01';
+                highlight(elements.mdr, elements.ir, elements.pc);
+            }},
+            // DECODE/EXECUTE for LOAD 03
+            { text: "<strong>DECODE:</strong> The Control Unit (CU) interprets 'LOAD 03'. It understands it needs to fetch data from memory address 03.", action: () => {
+                highlight(elements.ir, elements.cu);
+            }},
+            { text: "<strong>EXECUTE 1/2:</strong> The address part of the instruction (03) is placed in the MAR.", action: () => {
+                values.mar.textContent = '03';
+                highlight(elements.ir, elements.mar);
+            }},
+            { text: "<strong>EXECUTE 2/2:</strong> The data at address 03 (DATA 5) is fetched to the MDR. (In a real CPU, it would go to the Accumulator next).", action: () => {
+                values.mdr.textContent = 'DATA 5';
+                highlight(elements.mem[3], elements.mdr);
+                stepBtn.textContent = 'Next Cycle';
+            }},
+             // --- Cycle 2 ---
+            { text: "Next cycle begins. The PC (01) points to the 'ADD 04' instruction.", action: () => {
+                highlight(elements.pc);
+            }},
+            { text: "<strong>FETCH 1/3:</strong> PC value (01) is copied to MAR.", action: () => {
+                values.mar.textContent = values.pc.textContent;
+                highlight(elements.pc, elements.mar);
+            }},
+            { text: "<strong>FETCH 2/3:</strong> Instruction at address 01 ('ADD 04') is fetched to MDR.", action: () => {
+                values.mdr.textContent = 'ADD 04';
+                highlight(elements.mem[1], elements.mdr);
+            }},
+            { text: "<strong>FETCH 3/3:</strong> Instruction moves to IR. PC increments to 02.", action: () => {
+                values.ir.textContent = 'ADD 04';
+                values.pc.textContent = '02';
+                highlight(elements.mdr, elements.ir, elements.pc);
+            }},
+            { text: "<strong>DECODE/EXECUTE:</strong> The CU decodes 'ADD 04'. The ALU would then add the value from address 04 to the previously loaded value. This step is simplified here.", action: () => {
+                highlight(elements.ir, elements.cu);
+                 stepBtn.textContent = 'Next Cycle';
+            }},
+            // --- Cycle 3 ---
+            { text: "Final cycle. PC (02) points to 'HALT'.", action: () => {
+                highlight(elements.pc);
+            }},
+             { text: "<strong>FETCH:</strong> The 'HALT' instruction is fetched and copied to the IR.", action: () => {
+                values.mar.textContent = '02';
+                values.mdr.textContent = 'HALT';
+                values.ir.textContent = 'HALT';
+                values.pc.textContent = '03';
+                highlight(elements.mem[2], elements.ir, elements.pc);
+            }},
+            { text: "<strong>EXECUTE:</strong> The CU decodes 'HALT' and stops the program. The cycle is complete.", action: () => {
+                highlight(elements.cu);
+                programHalted = true;
+            }},
+        ];
+
+        function highlight(...els) {
+            // Clear all previous highlights
+            Object.values(elements).flat().forEach(el => el.classList.remove('highlight-active'));
+            // Apply new highlights
+            els.forEach(el => el.classList.add('highlight-active'));
+        }
+
+        function resetSimulation() {
+            currentStep = 0;
+            programHalted = false;
+            values.pc.textContent = '00';
+            values.mar.textContent = '--';
+            values.mdr.textContent = '--';
+            values.ir.textContent = '--';
+            explanationText.innerHTML = "Press 'Start Cycle' to begin.";
+            stepBtn.disabled = false;
+            stepBtn.textContent = 'Start Cycle';
+            highlight();
+        }
+
+        stepBtn.addEventListener('click', () => {
+            if (programHalted) return;
+            
+            const step = cycleSteps[currentStep];
+            if (step) {
+                explanationText.innerHTML = step.text;
+                step.action();
+                currentStep++;
+            }
+            
+            if (currentStep >= cycleSteps.length || programHalted) {
+                stepBtn.disabled = true;
+                stepBtn.textContent = 'Finished';
+            } else {
+                 stepBtn.textContent = 'Next Step';
+            }
+        });
+
+        resetBtn.addEventListener('click', resetSimulation);
+        
+        resetSimulation(); // Initialize on load
+    });
+    </script>
+</body>
+</html>

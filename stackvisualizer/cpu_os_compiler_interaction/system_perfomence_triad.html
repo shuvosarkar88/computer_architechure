@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: The System Performance Triad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: The infographic tells a story, "From Code to Execution," structured in four key sections: 1. The Foundation (big stats on modes/calls), 2. The Engine Room (visualizing processes like context switching & compilation), 3. Comparative Analysis (breaking down calling conventions), and 4. The Optimization Edge (highlighting compiler optimizations). This narrative structure was chosen to guide a user from high-level concepts to detailed mechanics, making a dense technical topic digestible, much like a market report moves from market size to competitive analysis. -->
+    <!-- Visualization & Content Choices: 
+        - Privilege Modes: Goal: Inform. Viz: Donut chart showing conceptual time split. Justification: Simple, high-impact visual for a core concept. Library: Chart.js.
+        - System Call Categories: Goal: Compare. Viz: Bar chart. Justification: Clearly compares the "market share" of different types of OS services. Library: Chart.js.
+        - Compiler Pipeline: Goal: Organize. Viz: HTML/CSS flowchart. Justification: Visually represents a process flow without SVG/Mermaid, as required. Method: HTML/CSS.
+        - Context Switch Overhead: Goal: Show Relationship. Viz: Dynamic donut chart with slider. Justification: Interactively demonstrates the trade-off between responsiveness and overhead. Library: Chart.js.
+        - Calling Conventions: Goal: Compare. Viz: HTML/CSS table. Justification: Best for direct, feature-by-feature comparison of abstract rules. Method: HTML/CSS.
+        - Optimization Impact: Goal: Compare. Viz: Radar chart. Justification: Visually compares the multi-faceted impact of different optimization techniques. Library: Chart.js.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #F0F4F8; /* Light Blue-Gray */
+        }
+        .section-card {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background-color: #1a237e; /* Indigo 900 */
+            color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            text-align: center;
+        }
+        .chart-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 500px; 
+            margin-left: auto; 
+            margin-right: auto; 
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) { 
+            .chart-container { height: 350px; } 
+        }
+        .flowchart-item {
+            background-color: #E3F2FD; /* Blue 50 */
+            border: 2px solid #2196F3; /* Blue 500 */
+            color: #1E88E5; /* Blue 600 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-weight: bold;
+            flex-grow: 1;
+        }
+        .flowchart-arrow {
+            font-size: 2.5rem;
+            color: #90A4AE; /* Blue Gray 400 */
+            align-self: center;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-6xl">
+
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-6xl font-black" style="color: #0D47A1;">THE SYSTEM PERFORMANCE TRIAD</h1>
+            <p class="text-xl md:text-2xl mt-4 text-gray-600">An Industry Analysis of the OS, Compiler & CPU Interplay</p>
+        </header>
+
+        <!-- Section 1: The Foundation -->
+        <section class="section-card">
+            <h2 class="text-3xl font-bold text-center mb-2" style="color: #1565C0;">The Foundation: Privileged Control</h2>
+            <p class="text-center text-gray-600 mb-8 max-w-3xl mx-auto">Modern computing architecture is built on a fundamental division of privilege: a secure Kernel Mode for the OS and a restricted User Mode for applications. This separation, enforced by the CPU, is the bedrock of system stability and security. All requests for hardware resources must cross this boundary via system calls.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h3 class="text-xl font-bold text-center mb-4">CPU Time Allocation (Conceptual)</h3>
+                    <div class="chart-container h-64 md:h-auto">
+                        <canvas id="modeChart"></canvas>
+                    </div>
+                     <p class="text-sm text-gray-600 mt-4 text-center">The donut chart illustrates the conceptual separation of duties. While applications run in User Mode, any operation touching hardware (files, network) requires a costly transition into Kernel Mode, where the OS performs the work. This is a critical security feature.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-center mb-4">System Call Market Share by Category</h3>
+                     <div class="chart-container h-80 md:h-auto">
+                        <canvas id="syscallChart"></canvas>
+                    </div>
+                     <p class="text-sm text-gray-600 mt-4 text-center">System calls are the products offered by the OS. As this chart shows, File and Process Management are dominant market segments, representing the most frequent requests made by applications to the kernel, highlighting their importance in modern software.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: The Engine Room -->
+        <section class="section-card">
+            <h2 class="text-3xl font-bold text-center mb-8" style="color: #1565C0;">The Engine Room: Core Processes</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <!-- Compiler Pipeline -->
+                <div>
+                    <h3 class="text-2xl font-bold text-center mb-6">The Compiler Production Line</h3>
+                    <p class="text-gray-600 mb-6 text-center">The compiler acts as a sophisticated factory, transforming high-level source code into low-level machine instructions through a multi-stage pipeline. Each stage adds value, refining the raw material into a product optimized for a specific CPU architecture.</p>
+                    <div class="flex flex-col gap-4">
+                        <div class="flowchart-item">Source Code</div>
+                        <div class="flowchart-arrow self-center">&#129047;</div>
+                        <div class="flowchart-item">Front End (Parsing & Semantic Analysis)</div>
+                        <div class="flowchart-arrow self-center">&#129047;</div>
+                        <div class="flowchart-item">Middle End (Machine-Independent Optimization)</div>
+                         <div class="flowchart-arrow self-center">&#129047;</div>
+                        <div class="flowchart-item">Back End (Target-Specific Code Generation)</div>
+                         <div class="flowchart-arrow self-center">&#129047;</div>
+                        <div class="flowchart-item" style="background-color: #BBDEFB; border-color: #1976D2;">Machine Code (Executable)</div>
+                    </div>
+                </div>
+                <!-- Context Switch -->
+                <div>
+                    <h3 class="text-2xl font-bold text-center mb-6">The Cost of Concurrency: Context Switching</h3>
+                    <p class="text-gray-600 mb-6 text-center">To create the illusion of multitasking, the OS rapidly switches the CPU's attention between processes. This "context switch" is essential but represents pure operational overhead. Shorter time slices improve responsiveness but increase this overhead, a key trade-off in system performance tuning.</p>
+                    <div class="chart-container">
+                        <canvas id="contextSwitchChart"></canvas>
+                    </div>
+                    <div class="mt-4 px-4">
+                        <label for="timesliceSlider" class="block font-bold text-center text-sm mb-2">Responsiveness vs. Efficiency</label>
+                        <input id="timesliceSlider" type="range" min="5" max="50" value="20" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>High Responsiveness</span>
+                            <span>High Efficiency</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Comparative Analysis -->
+        <section class="section-card">
+            <h2 class="text-3xl font-bold text-center mb-2" style="color: #1565C0;">Competitive Landscape: Calling Conventions</h2>
+            <p class="text-center text-gray-600 mb-8 max-w-3xl mx-auto">Calling conventions are the standardized protocols that competing compilers and modules agree upon to ensure interoperability. The evolution from stack-based to register-based conventions in 64-bit systems reflects a market shift toward higher performance.</p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-indigo-800 text-white">
+                            <th class="p-3 font-bold uppercase">Convention</th>
+                            <th class="p-3 font-bold uppercase">Argument Passing</th>
+                            <th class="p-3 font-bold uppercase">Stack Cleanup</th>
+                            <th class="p-3 font-bold uppercase">Key Advantage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="bg-white hover:bg-gray-100 border-b">
+                            <td class="p-3 font-bold">cdecl</td>
+                            <td class="p-3">Stack (Right-to-Left)</td>
+                            <td class="p-3 text-red-600 font-semibold">Caller</td>
+                            <td class="p-3">Supports variable arguments (e.g., printf)</td>
+                        </tr>
+                        <tr class="bg-white hover:bg-gray-100 border-b">
+                            <td class="p-3 font-bold">stdcall</td>
+                            <td class="p-3">Stack (Right-to-Left)</td>
+                            <td class="p-3 text-green-600 font-semibold">Callee</td>
+                            <td class="p-3">Slightly smaller code size; used by Win32 API</td>
+                        </tr>
+                         <tr class="bg-white hover:bg-gray-100">
+                            <td class="p-3 font-bold">x64 Fastcall</td>
+                            <td class="p-3">Registers first, then Stack</td>
+                            <td class="p-3 text-red-600 font-semibold">Caller</td>
+                            <td class="p-3">Significantly faster due to reduced memory access</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 4: Optimization -->
+        <section class="section-card">
+            <h2 class="text-3xl font-bold text-center mb-2" style="color: #1565C0;">The Optimization Edge</h2>
+            <p class="text-center text-gray-600 mb-8 max-w-3xl mx-auto">Modern compilers are a key competitive advantage, employing sophisticated strategies to boost performance. They analyze code to reduce redundant work, restructure loops for better cache performance, and utilize special CPU instructions (SIMD) for parallel data processing.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                     <h3 class="text-xl font-bold text-center mb-4">Compiler Optimization Impact Analysis</h3>
+                    <div class="chart-container">
+                        <canvas id="optimizationChart"></canvas>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg mb-2">Key Strategies & Market Impact:</h3>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700">
+                        <li><strong>Function Inlining:</strong> Reduces call overhead, boosting speed for small, frequent functions. High impact on performance-critical code.</li>
+                        <li><strong>Loop Unrolling:</strong> Decreases loop control overhead, improving throughput for data processing tasks. Key for scientific computing.</li>
+                        <li><strong>Dead Code Elimination:</strong> Reduces final code size, leading to better instruction cache performance and smaller binaries.</li>
+                        <li><strong>Auto-Vectorization (SIMD):</strong> Leverages specialized CPU hardware for massive data-parallel speedups. A game-changer for multimedia and AI workloads.</li>
+                         <li><strong>Instruction Scheduling:</strong> Reorders instructions to match the CPU's pipeline, minimizing stalls and maximizing hardware utilization.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        const brilliantBlues = {
+            primary: '#2196F3', // Blue 500
+            secondary: '#1976D2', // Blue 700
+            accent: '#0D47A1', // Blue 900
+            neutral: '#90A4AE', // Blue Gray 400
+            success: '#4CAF50', // Green 500
+            danger: '#F44336' // Red 500
+        };
+
+        const wrapLabel = (label, maxWidth) => {
+            if (label.length <= maxWidth) {
+                return label;
+            }
+            const words = label.split(' ');
+            let lines = [];
+            let currentLine = '';
+            words.forEach(word => {
+                if ((currentLine + ' ' + word).trim().length > maxWidth) {
+                    lines.push(currentLine.trim());
+                    currentLine = word;
+                } else {
+                    currentLine = (currentLine + ' ' + word).trim();
+                }
+            });
+            if (currentLine) {
+                lines.push(currentLine.trim());
+            }
+            return lines;
+        };
+        
+        const tooltipTitleCallback = (tooltipItems) => {
+            const item = tooltipItems[0];
+            let label = item.chart.data.labels[item.dataIndex];
+            if (Array.isArray(label)) {
+              return label.join(' ');
+            }
+            return label;
+        };
+
+        // Chart 1: Mode Chart
+        const modeCtx = document.getElementById('modeChart').getContext('2d');
+        const modeChart = new Chart(modeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Application Code (User Mode)', 'OS Services (Kernel Mode)'],
+                datasets: [{
+                    label: 'CPU Time',
+                    data: [75, 25],
+                    backgroundColor: [brilliantBlues.primary, brilliantBlues.accent],
+                    borderColor: 'white',
+                    borderWidth: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { callbacks: { title: tooltipTitleCallback } }
+                }
+            }
+        });
+
+        // Chart 2: Syscall Chart
+        const syscallCtx = document.getElementById('syscallChart').getContext('2d');
+        const syscallLabels = ['Process Control', 'File Management', 'Communication', 'Info Maintenance', 'Device Management'].map(l => wrapLabel(l, 16));
+        const syscallChart = new Chart(syscallCtx, {
+            type: 'bar',
+            data: {
+                labels: syscallLabels,
+                datasets: [{
+                    label: 'Frequency of Use (Conceptual)',
+                    data: [85, 95, 60, 50, 40],
+                    backgroundColor: brilliantBlues.secondary,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { title: tooltipTitleCallback } }
+                },
+                scales: {
+                    x: { beginAtZero: true }
+                }
+            }
+        });
+        
+        // Chart 3: Context Switch Chart
+        const contextSwitchCtx = document.getElementById('contextSwitchChart').getContext('2d');
+        const contextSwitchChart = new Chart(contextSwitchCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Useful Work', 'Context Switch Overhead'],
+                datasets: [{
+                    data: [90, 10],
+                    backgroundColor: [brilliantBlues.success, brilliantBlues.danger],
+                    borderColor: 'white',
+                    borderWidth: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { callbacks: { title: tooltipTitleCallback } }
+                }
+            }
+        });
+        
+        const slider = document.getElementById('timesliceSlider');
+        slider.addEventListener('input', (e) => {
+            const overhead = 60 - e.target.value; // Inverse relationship
+            const usefulWork = 100 - overhead;
+            contextSwitchChart.data.datasets[0].data = [usefulWork, overhead];
+            contextSwitchChart.update();
+        });
+
+        // Chart 4: Optimization Chart
+        const optimizationCtx = document.getElementById('optimizationChart').getContext('2d');
+        const optimizationLabels = ['Speed', 'Code Size', 'Parallelism', 'Memory Use', 'Compile Time'].map(l => wrapLabel(l, 16));
+        const optimizationChart = new Chart(optimizationCtx, {
+            type: 'radar',
+            data: {
+                labels: optimizationLabels,
+                datasets: [
+                    {
+                        label: 'Inlining',
+                        data: [9, 3, 7, 8, 5],
+                        fill: true,
+                        backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                        borderColor: '#2196F3',
+                        pointBackgroundColor: '#2196F3',
+                    },
+                    {
+                        label: 'Loop Unrolling',
+                        data: [8, 2, 9, 7, 4],
+                        fill: true,
+                        backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                        borderColor: '#1976D2',
+                        pointBackgroundColor: '#1976D2',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: { callbacks: { title: tooltipTitleCallback } },
+                    legend: { position: 'bottom'}
+                },
+                scales: {
+                    r: {
+                        angleLines: { color: '#CFD8DC' },
+                        grid: { color: '#ECEFF1' },
+                        pointLabels: { font: { size: 12 } },
+                        suggestedMin: 0,
+                        suggestedMax: 10
+                    }
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>

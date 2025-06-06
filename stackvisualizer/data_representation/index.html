@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Data Representation Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        
+        /* Custom styles for a cleaner look */
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+        }
+        .nav-link.active {
+            background-color: #6B7A8F;
+            color: #F8F7F4;
+            transform: translateX(4px);
+        }
+        .bit-display {
+            display: inline-block;
+            text-align: center;
+            margin: 1px;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            min-width: 30px;
+            font-family: monospace;
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+        .chart-container {
+            position: relative;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+            width: 100%;
+            max-width: 600px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+    <!-- Chosen Palette: Calm Neutrals -->
+    <!-- Application Structure Plan: A single-page application with a fixed sidebar for navigation and a main content area. The application is divided into five interactive 'lab' sections: 1. Number System Converter, 2. Integer Explorer, 3. IEEE 754 Decomposer, 4. Character Encoder, and 5. Error Detection Simulator. This structure was chosen to transform the dense, linear report into an engaging, non-linear, and hands-on learning experience. It allows users to jump to specific topics and learn by doing, which is more effective for technical concepts than passive reading. -->
+    <!-- Visualization & Content Choices: 
+        - Number Systems: Goal: Teach conversion. Method: Interactive input fields. Interaction: Real-time, bidirectional conversion on input. Justification: Direct manipulation reinforces learning. Library: Vanilla JS.
+        - Integer Representation: Goal: Compare signed integer schemes. Method: Input field and dropdown, with results displayed in a grid and a Chart.js bar chart for range comparison. Interaction: User inputs a number and selects bit-width to see visual representations. Justification: Side-by-side comparison of bit patterns and a visual chart clarifies the differences in range and encoding, especially for negative values. Library: Chart.js.
+        - IEEE 754: Goal: Demystify floating-point format. Method: A visual decomposer using styled HTML divs. Interaction: User inputs a number to see its sign, exponent, and fraction bits. Justification: Makes the abstract standard tangible by breaking it down into its core components. Library: Vanilla JS.
+        - Character Encoding: Goal: Show text-to-byte conversion. Method: Interactive text input. Interaction: User types a character and sees its Unicode code point and UTF-8/UTF-16 binary representation. Justification: Clearly demonstrates variable-length encoding for different characters. Library: Vanilla JS.
+        - Error Detection: Goal: Illustrate parity checks. Method: A simple bit-flipping simulator. Interaction: User enters data, then clicks bits to introduce errors and see the check fail. Justification: A simple, visual simulation makes the concept of error detection intuitive. Library: Vanilla JS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-[#F8F7F4] text-[#333333]">
+    <div class="flex min-h-screen">
+        <aside class="w-64 bg-[#EAE7E1] p-6 hidden md:block sticky top-0 h-screen">
+            <h1 class="text-2xl font-bold text-[#6B7A8F] mb-8">Data Explorer</h1>
+            <nav id="desktop-nav" class="space-y-2">
+                <a href="#intro" class="nav-link block p-3 rounded-lg font-medium">Introduction</a>
+                <a href="#number-systems" class="nav-link block p-3 rounded-lg font-medium">Number Systems</a>
+                <a href="#integers" class="nav-link block p-3 rounded-lg font-medium">Integer Representation</a>
+                <a href="#floating-point" class="nav-link block p-3 rounded-lg font-medium">Floating-Point (IEEE 754)</a>
+                <a href="#characters" class="nav-link block p-3 rounded-lg font-medium">Character Encoding</a>
+                <a href="#error-detection" class="nav-link block p-3 rounded-lg font-medium">Error Detection</a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 p-4 md:p-10">
+            <div class="md:hidden mb-4">
+                 <select id="mobile-nav" class="w-full p-3 rounded-lg border bg-white border-gray-300">
+                    <option value="intro">Introduction</option>
+                    <option value="number-systems">Number Systems</option>
+                    <option value="integers">Integer Representation</option>
+                    <option value="floating-point">Floating-Point (IEEE 754)</option>
+                    <option value="characters">Character Encoding</option>
+                    <option value="error-detection">Error Detection</option>
+                </select>
+            </div>
+
+            <section id="intro" class="content-section active">
+                <h2 class="text-4xl font-bold text-[#6B7A8F] mb-4">A Deep Dive into Data Representation</h2>
+                <p class="text-lg mb-6 max-w-3xl">
+                    Welcome to the Interactive Data Representation Explorer. This tool is designed to bring the fundamental concepts of computer science to life. All data in a computer—from numbers and text to images and instructions—is stored as sequences of binary digits (bits). Understanding how this translation from abstract information to binary occurs is crucial for anyone in the tech field. This application moves beyond static text, allowing you to interactively explore number systems, integer and floating-point representations, character encodings, and error detection schemes. Use the tools in each section to experiment with different inputs and see how computers work at their most fundamental level.
+                </p>
+            </section>
+
+            <section id="number-systems" class="content-section">
+                <h2 class="text-3xl font-bold text-[#6B7A8F] mb-4">Number System Converter</h2>
+                <p class="text-base mb-6 max-w-3xl">
+                    This section provides a hands-on tool for converting numbers between the three most common number systems in computing. Binary (base-2) is the native language of hardware. Decimal (base-10) is what humans use daily. Hexadecimal (base-16) serves as a compact, human-readable shorthand for long binary numbers. Type a valid number in any field to see it instantly converted to the other systems.
+                </p>
+                <div class="grid md:grid-cols-3 gap-6 max-w-4xl p-6 bg-white rounded-xl shadow-md">
+                    <div>
+                        <label for="decimalInput" class="block text-sm font-medium text-gray-700 mb-1">Decimal (Base-10)</label>
+                        <input type="text" id="decimalInput" class="w-full p-2 border border-gray-300 rounded-md" value="26">
+                    </div>
+                    <div>
+                        <label for="binaryInput" class="block text-sm font-medium text-gray-700 mb-1">Binary (Base-2)</label>
+                        <input type="text" id="binaryInput" class="w-full p-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label for="hexInput" class="block text-sm font-medium text-gray-700 mb-1">Hexadecimal (Base-16)</label>
+                        <input type="text" id="hexInput" class="w-full p-2 border border-gray-300 rounded-md">
+                    </div>
+                </div>
+            </section>
+
+            <section id="integers" class="content-section">
+                <h2 class="text-3xl font-bold text-[#6B7A8F] mb-4">Integer Representation Explorer</h2>
+                 <p class="text-base mb-6 max-w-3xl">
+                    Computers represent whole numbers (integers) in various ways, especially when dealing with positive and negative values. This explorer shows how a single decimal number is represented in binary using different schemes. Notice the unique properties of Two's Complement, which is the standard in modern computing because it has a single representation for zero and simplifies arithmetic logic in the CPU.
+                </p>
+                <div class="p-6 bg-white rounded-xl shadow-md max-w-4xl mb-6">
+                    <div class="flex items-center space-x-4 mb-4">
+                        <div>
+                            <label for="integerInput" class="block text-sm font-medium text-gray-700">Decimal Value:</label>
+                            <input type="number" id="integerInput" class="p-2 border border-gray-300 rounded-md w-32" value="25">
+                        </div>
+                        <div>
+                            <label for="bitWidthSelect" class="block text-sm font-medium text-gray-700">Bit Width:</label>
+                            <select id="bitWidthSelect" class="p-2 border border-gray-300 rounded-md">
+                                <option value="4">4-bit</option>
+                                <option value="8" selected>8-bit</option>
+                                <option value="16">16-bit</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="integerResults" class="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-lg"></div>
+                </div>
+                <div class="p-6 bg-white rounded-xl shadow-md max-w-4xl">
+                    <h3 class="text-2xl font-bold text-[#6B7A8F] mb-4">Representable Range Comparison</h3>
+                    <div class="chart-container">
+                        <canvas id="integerRangeChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section id="floating-point" class="content-section">
+                <h2 class="text-3xl font-bold text-[#6B7A8F] mb-4">IEEE 754 Floating-Point Decomposer</h2>
+                 <p class="text-base mb-6 max-w-3xl">
+                    Real numbers (with fractions) are represented using a format similar to scientific notation, standardized as IEEE 754. This allows computers to handle a vast range of values, from the very small to the very large. Enter a decimal number to see how it is deconstructed into its three core components—Sign, Exponent, and Fraction—for both 32-bit (float) and 64-bit (double) precision.
+                </p>
+                <div class="p-6 bg-white rounded-xl shadow-md max-w-4xl">
+                     <div>
+                        <label for="floatInput" class="block text-sm font-medium text-gray-700">Decimal Value:</label>
+                        <input type="number" step="any" id="floatInput" class="p-2 border border-gray-300 rounded-md w-48 mb-4" value="-12.375">
+                    </div>
+                    <div id="floatResults"></div>
+                </div>
+            </section>
+            
+            <section id="characters" class="content-section">
+                <h2 class="text-3xl font-bold text-[#6B7A8F] mb-4">Character Encoder</h2>
+                <p class="text-base mb-6 max-w-3xl">
+                    Text is stored by mapping each character to a unique number (a code point) via an encoding standard. While ASCII was an early standard, it was too limited for global languages. Unicode, typically implemented with UTF-8 or UTF-16, provides a universal solution. Type any character (including letters, symbols, or emojis) to see its Unicode code point and its binary representation in the most common encodings.
+                </p>
+                <div class="p-6 bg-white rounded-xl shadow-md max-w-4xl">
+                     <div>
+                        <label for="charInput" class="block text-sm font-medium text-gray-700">Enter a single character:</label>
+                        <input type="text" id="charInput" maxlength="2" class="p-2 border border-gray-300 rounded-md w-48 mb-4" value="A">
+                    </div>
+                    <div id="charResults" class="space-y-4"></div>
+                </div>
+            </section>
+            
+            <section id="error-detection" class="content-section">
+                 <h2 class="text-3xl font-bold text-[#6B7A8F] mb-4">Error Detection Simulator</h2>
+                 <p class="text-base mb-6 max-w-3xl">
+                    Data can get corrupted during transmission or storage. Error detection schemes add redundant information to data to check its integrity. The simplest method is a parity bit. This simulator demonstrates how an even parity bit is calculated. Enter a 7-bit binary number, then click on any bit to "flip" it and introduce an error. Observe how the parity check status changes, signaling that the data has been corrupted.
+                </p>
+                <div class="p-6 bg-white rounded-xl shadow-md max-w-4xl">
+                     <div>
+                        <label for="parityInput" class="block text-sm font-medium text-gray-700">Enter 7 bits of data (e.g., 1011001):</label>
+                        <input type="text" id="parityInput" maxlength="7" class="p-2 border border-gray-300 rounded-md w-48 mb-4 font-mono" value="1011001">
+                    </div>
+                    <div class="mb-4">
+                        <h3 class="text-lg font-medium">Transmitted Data (with Parity Bit):</h3>
+                        <div id="parityDisplay" class="flex items-center space-x-2"></div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium">Status Check at Receiver:</h3>
+                        <div id="parityStatus" class="p-3 rounded-md text-lg font-bold"></div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const sections = document.querySelectorAll('.content-section');
+    const desktopNavLinks = document.querySelectorAll('#desktop-nav .nav-link');
+    const mobileNav = document.getElementById('mobile-nav');
+
+    function navigateTo(hash) {
+        sections.forEach(section => {
+            if ('#' + section.id === hash) {
+                section.classList.add('active');
+            } else {
+                section.classList.remove('active');
+            }
+        });
+
+        desktopNavLinks.forEach(link => {
+            if (link.getAttribute('href') === hash) {
+                link.classList.add('active');
+            } else {
+                link.classList.remove('active');
+            }
+        });
+        
+        if (mobileNav.value !== hash.substring(1)) {
+            mobileNav.value = hash.substring(1);
+        }
+    }
+
+    desktopNavLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const hash = e.target.getAttribute('href');
+            history.pushState(null, null, hash);
+            navigateTo(hash);
+        });
+    });
+
+    mobileNav.addEventListener('change', (e) => {
+        const hash = '#' + e.target.value;
+        history.pushState(null, null, hash);
+        navigateTo(hash);
+        // Scroll to section on mobile
+        document.querySelector(hash).scrollIntoView({ behavior: 'smooth' });
+    });
+
+    window.addEventListener('popstate', () => {
+        navigateTo(location.hash || '#intro');
+    });
+
+    navigateTo(location.hash || '#intro');
+
+    // Number System Converter
+    const decimalInput = document.getElementById('decimalInput');
+    const binaryInput = document.getElementById('binaryInput');
+    const hexInput = document.getElementById('hexInput');
+
+    function updateConverters(source) {
+        let decValue;
+        if (source === 'decimal') {
+            decValue = parseInt(decimalInput.value, 10);
+            if (isNaN(decValue)) { binaryInput.value = ''; hexInput.value = ''; return; }
+            binaryInput.value = decValue.toString(2);
+            hexInput.value = decValue.toString(16).toUpperCase();
+        } else if (source === 'binary') {
+            decValue = parseInt(binaryInput.value, 2);
+            if (isNaN(decValue)) { decimalInput.value = ''; hexInput.value = ''; return; }
+            decimalInput.value = decValue;
+            hexInput.value = decValue.toString(16).toUpperCase();
+        } else if (source === 'hex') {
+            decValue = parseInt(hexInput.value, 16);
+            if (isNaN(decValue)) { decimalInput.value = ''; binaryInput.value = ''; return; }
+            decimalInput.value = decValue;
+            binaryInput.value = decValue.toString(2);
+        }
+    }
+
+    decimalInput.addEventListener('input', () => updateConverters('decimal'));
+    binaryInput.addEventListener('input', () => updateConverters('binary'));
+    hexInput.addEventListener('input', () => updateConverters('hex'));
+    updateConverters('decimal');
+
+    // Integer Explorer
+    const integerInput = document.getElementById('integerInput');
+    const bitWidthSelect = document.getElementById('bitWidthSelect');
+    const integerResults = document.getElementById('integerResults');
+    const integerRangeCtx = document.getElementById('integerRangeChart').getContext('2d');
+    let integerRangeChart;
+
+    function updateIntegerExplorer() {
+        const val = parseInt(integerInput.value);
+        const bits = parseInt(bitWidthSelect.value);
+
+        if (isNaN(val)) {
+            integerResults.innerHTML = '<p class="text-red-500">Please enter a valid number.</p>';
+            return;
+        }
+
+        const maxUnsigned = Math.pow(2, bits) - 1;
+        const minSigned = -Math.pow(2, bits - 1);
+        const maxSigned = Math.pow(2, bits - 1) - 1;
+
+        let resultsHTML = '';
+
+        // Unsigned
+        if (val >= 0 && val <= maxUnsigned) {
+            resultsHTML += `<div><strong>Unsigned:</strong> ${val.toString(2).padStart(bits, '0')}</div>`;
+        } else {
+            resultsHTML += `<div><strong>Unsigned:</strong> <span class="text-gray-500">Out of Range</span></div>`;
+        }
+        
+        // Two's Complement
+        if (val >= minSigned && val <= maxSigned) {
+            let twosComp = val >= 0 ? val.toString(2).padStart(bits, '0') : (Math.pow(2, bits) + val).toString(2);
+            resultsHTML += `<div><strong>Two's Complement:</strong> ${twosComp}</div>`;
+        } else {
+            resultsHTML += `<div><strong>Two's Complement:</strong> <span class="text-gray-500">Out of Range</span></div>`;
+        }
+        
+        // Sign-Magnitude
+        if (val >= -(maxSigned) && val <= maxSigned) {
+            const mag = Math.abs(val).toString(2).padStart(bits - 1, '0');
+            const sign = val < 0 ? '1' : '0';
+            resultsHTML += `<div><strong>Sign-Magnitude:</strong> ${sign}${mag}</div>`;
+        } else {
+            resultsHTML += `<div><strong>Sign-Magnitude:</strong> <span class="text-gray-500">Out of Range</span></div>`;
+        }
+        
+        // One's Complement
+         if (val >= -(maxSigned) && val <= maxSigned) {
+            let onesComp;
+            if (val >= 0) {
+                onesComp = val.toString(2).padStart(bits, '0');
+            } else {
+                const pos = Math.abs(val).toString(2).padStart(bits, '0');
+                onesComp = pos.split('').map(b => b === '0' ? '1' : '0').join('');
+            }
+            resultsHTML += `<div><strong>One's Complement:</strong> ${onesComp}</div>`;
+        } else {
+            resultsHTML += `<div><strong>One's Complement:</strong> <span class="text-gray-500">Out of Range</span></div>`;
+        }
+
+        integerResults.innerHTML = resultsHTML;
+        updateIntegerRangeChart(bits);
+    }
+    
+    function updateIntegerRangeChart(bits) {
+        const maxUnsigned = Math.pow(2, bits) - 1;
+        const minSigned = -Math.pow(2, bits - 1);
+        const maxSigned = Math.pow(2, bits - 1) - 1;
+        
+        const labels = ['Unsigned', 'Two\'s Complement', 'Sign-Mag & One\'s Comp.'];
+        const minData = [0, minSigned, -(maxSigned)];
+        const maxData = [maxUnsigned, maxSigned, maxSigned];
+
+        if (integerRangeChart) {
+            integerRangeChart.destroy();
+        }
+        
+        integerRangeChart = new Chart(integerRangeCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Minimum Value',
+                        data: minData,
+                        backgroundColor: '#F7C59F',
+                        borderColor: '#F7C59F',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Maximum Value',
+                        data: maxData,
+                        backgroundColor: '#6B7A8F',
+                        borderColor: '#6B7A8F',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        ticks: {
+                           callback: function(value, index, values) {
+                                return value.toLocaleString();
+                           }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.x !== null) {
+                                    label += context.parsed.x.toLocaleString();
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    integerInput.addEventListener('input', updateIntegerExplorer);
+    bitWidthSelect.addEventListener('change', updateIntegerExplorer);
+    updateIntegerExplorer();
+
+    // Floating-Point Decomposer
+    const floatInput = document.getElementById('floatInput');
+    const floatResults = document.getElementById('floatResults');
+    
+    function updateFloatDecomposer() {
+        const val = parseFloat(floatInput.value);
+        if (isNaN(val)) {
+            floatResults.innerHTML = '<p class="text-red-500">Please enter a valid number.</p>';
+            return;
+        }
+
+        const getFloat32 = (num) => {
+            const buffer = new ArrayBuffer(4);
+            const view = new DataView(buffer);
+            view.setFloat32(0, num, false);
+            let bin = '';
+            for (let i = 0; i < 4; i++) {
+                bin += view.getUint8(i).toString(2).padStart(8, '0');
+            }
+            return {
+                sign: bin[0],
+                exponent: bin.substring(1, 9),
+                fraction: bin.substring(9)
+            };
+        };
+        
+        const getFloat64 = (num) => {
+             const buffer = new ArrayBuffer(8);
+            const view = new DataView(buffer);
+            view.setFloat64(0, num, false);
+            let bin = '';
+            for (let i = 0; i < 8; i++) {
+                bin += view.getUint8(i).toString(2).padStart(8, '0');
+            }
+            return {
+                sign: bin[0],
+                exponent: bin.substring(1, 12),
+                fraction: bin.substring(12)
+            };
+        };
+
+        const f32 = getFloat32(val);
+        const f64 = getFloat64(val);
+        
+        floatResults.innerHTML = `
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-2">Single Precision (32-bit)</h3>
+                <div class="flex flex-wrap">
+                    <div class="bit-display bg-blue-200" title="Sign">${f32.sign}</div>
+                    <div class="bit-display bg-green-200" title="Exponent">${f32.exponent}</div>
+                    <div class="bit-display bg-yellow-200" title="Fraction">${f32.fraction}</div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold mb-2">Double Precision (64-bit)</h3>
+                <div class="flex flex-wrap">
+                    <div class="bit-display bg-blue-200" title="Sign">${f64.sign}</div>
+                    <div class="bit-display bg-green-200" title="Exponent">${f64.exponent}</div>
+                    <div class="bit-display bg-yellow-200" title="Fraction">${f64.fraction}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    floatInput.addEventListener('input', updateFloatDecomposer);
+    updateFloatDecomposer();
+
+    // Character Encoder
+    const charInput = document.getElementById('charInput');
+    const charResults = document.getElementById('charResults');
+
+    function updateCharEncoder() {
+        const char = charInput.value.slice(0, 1); // Only first char for non-emojis
+        const fullChar = charInput.value; // For potential emojis
+
+        if (!fullChar) {
+            charResults.innerHTML = '<p class="text-gray-500">Enter a character to see details.</p>';
+            return;
+        }
+        
+        const codePoint = fullChar.codePointAt(0);
+
+        // UTF-8
+        let utf8Bytes = [];
+        if (codePoint <= 0x7f) {
+            utf8Bytes.push(codePoint);
+        } else if (codePoint <= 0x7ff) {
+            utf8Bytes.push(0xc0 | (codePoint >> 6));
+            utf8Bytes.push(0x80 | (codePoint & 0x3f));
+        } else if (codePoint <= 0xffff) {
+            utf8Bytes.push(0xe0 | (codePoint >> 12));
+            utf8Bytes.push(0x80 | ((codePoint >> 6) & 0x3f));
+            utf8Bytes.push(0x80 | (codePoint & 0x3f));
+        } else if (codePoint <= 0x10ffff) {
+            utf8Bytes.push(0xf0 | (codePoint >> 18));
+            utf8Bytes.push(0x80 | ((codePoint >> 12) & 0x3f));
+            utf8Bytes.push(0x80 | ((codePoint >> 6) & 0x3f));
+            utf8Bytes.push(0x80 | (codePoint & 0x3f));
+        }
+        const utf8Binary = utf8Bytes.map(b => b.toString(2).padStart(8, '0')).join(' ');
+
+        // UTF-16
+        let utf16Binary;
+        if (codePoint <= 0xffff) {
+            utf16Binary = codePoint.toString(2).padStart(16, '0');
+        } else {
+            const highSurrogate = Math.floor((codePoint - 0x10000) / 0x400) + 0xD800;
+            const lowSurrogate = ((codePoint - 0x10000) % 0x400) + 0xDC00;
+            utf16Binary = highSurrogate.toString(2).padStart(16, '0') + ' ' + lowSurrogate.toString(2).padStart(16, '0');
+        }
+
+        charResults.innerHTML = `
+            <div><strong>Unicode Code Point:</strong> U+${codePoint.toString(16).toUpperCase().padStart(4, '0')}</div>
+            <div class="font-mono"><strong>UTF-8 Binary:</strong> ${utf8Binary}</div>
+            <div class="font-mono"><strong>UTF-16 Binary (BE):</strong> ${utf16Binary}</div>
+        `;
+    }
+
+    charInput.addEventListener('input', updateCharEncoder);
+    updateCharEncoder();
+    
+    // Parity Bit Simulator
+    const parityInput = document.getElementById('parityInput');
+    const parityDisplay = document.getElementById('parityDisplay');
+    const parityStatus = document.getElementById('parityStatus');
+    
+    function updateParitySimulator() {
+        let data = parityInput.value.replace(/[^01]/g, '').padEnd(7, '0').substring(0, 7);
+        if(parityInput.value !== data) {
+            parityInput.value = data;
+        }
+
+        const oneCount = (data.match(/1/g) || []).length;
+        const parityBit = oneCount % 2 === 0 ? '0' : '1';
+        
+        displayParity(data, parityBit);
+        checkParity(data, parityBit);
+    }
+
+    function displayParity(data, parityBit) {
+        parityDisplay.innerHTML = '';
+        const fullData = data + parityBit;
+        fullData.split('').forEach((bit, index) => {
+            const bitDiv = document.createElement('div');
+            bitDiv.textContent = bit;
+            bitDiv.classList.add('bit-display', 'cursor-pointer');
+            if (index < 7) {
+                bitDiv.classList.add('bg-gray-200');
+                bitDiv.addEventListener('click', () => {
+                    const newData = data.split('');
+                    newData[index] = newData[index] === '0' ? '1' : '0';
+                    parityInput.value = newData.join('');
+                    updateParitySimulator();
+                });
+            } else {
+                bitDiv.classList.add('bg-[#F7C59F]', 'font-bold');
+                bitDiv.title = "Parity Bit";
+            }
+            parityDisplay.appendChild(bitDiv);
+        });
+    }
+
+    function checkParity(receivedData, receivedParity) {
+        const oneCount = (receivedData.match(/1/g) || []).length;
+        const calculatedParity = oneCount % 2 === 0 ? '0' : '1';
+        if (calculatedParity === receivedParity) {
+            parityStatus.textContent = '✅ OK: No error detected.';
+            parityStatus.className = 'p-3 rounded-md text-lg font-bold bg-green-100 text-green-800';
+        } else {
+            parityStatus.textContent = '❌ ERROR: Parity check failed!';
+            parityStatus.className = 'p-3 rounded-md text-lg font-bold bg-red-100 text-red-800';
+        }
+    }
+
+    parityInput.addEventListener('input', updateParitySimulator);
+    updateParitySimulator();
+});
+</script>
+</body>
+</html>

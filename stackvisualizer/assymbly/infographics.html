@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: The infographic follows a top-down narrative, guiding the user from foundational concepts to more complex comparisons and practical applications. The structure is: 1) Hero section with a hook stat. 2) Core Components (Instructions, Registers, Memory) to build a foundation. 3) High-Level vs. Low-Level to contextualize Assembly's role. 4) Architecture Showdown (x86 vs. ARM) to compare dominant players. 5) The Developer's Toolkit to show the practical workflow. This linear story is ideal for an infographic format, making a complex topic digestible in a single, scrollable page. -->
+    <!-- Visualization & Content Choices:
+        - Data Point: Relationship to machine code -> Goal: Inform -> Viz/Method: Single Big Number (HTML/Tailwind). Justification: High-impact, memorable hook. Confirms NO SVG.
+        - Data Point: Instruction categories -> Goal: Organize -> Viz/Method: Styled HTML cards with Unicode icons. Justification: Scannable, clear grouping without chart overhead. Confirms NO SVG.
+        - Data Point: Register types -> Goal: Compare composition -> Viz/Method: Donut Chart (Chart.js/Canvas). Justification: Effectively shows the simple proportion of GPRs vs. Special Purpose registers. Confirms NO SVG.
+        - Data Point: Compilation Process -> Goal: Show process -> Viz/Method: HTML/CSS flow diagram. Justification: Clearly illustrates a linear sequence using simple, styled divs. Confirms NO SVG, NO Mermaid JS.
+        - Data Point: CISC vs RISC characteristics -> Goal: Compare -> Viz/Method: Radar Chart (Chart.js/Canvas). Justification: Perfect for multi-faceted comparison of two entities, showing their strengths and weaknesses in one visual. Confirms NO SVG.
+        - Data Point: Architecture use cases -> Goal: Compare composition -> Viz/Method: Horizontal Bar Chart (Chart.js/Canvas). Justification: Clearly compares the market dominance of x86 and ARM in their respective strongholds. Confirms NO SVG.
+        - Data Point: Assembly workflow -> Goal: Show process -> Viz/Method: HTML/CSS flow diagram. Justification: Simple and effective for showing the developer workflow. Confirms NO SVG, NO Mermaid JS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <title>Infographic: The World of Assembly Language</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0B2447;
+            color: #A5D7E8;
+        }
+        .card {
+            background-color: #19376D;
+            border: 1px solid #576CBC;
+        }
+        .text-accent {
+            color: #A5D7E8;
+        }
+        .text-main-header {
+            color: #ffffff;
+            font-weight: 900;
+        }
+        .text-subtle {
+            color: #a5d7e8b3;
+        }
+        .flow-arrow {
+            color: #576CBC;
+            font-size: 2rem;
+            line-height: 1;
+        }
+        .chart-container {
+            position: relative; 
+            width: 100%; 
+            max-width: 500px; 
+            margin-left: auto; 
+            margin-right: auto; 
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container mx-auto px-4 py-12 md:px-8">
+
+        <!-- HERO SECTION -->
+        <section class="text-center my-16">
+            <h1 class="text-4xl md:text-6xl text-main-header tracking-tight">THE BEDROCK OF COMPUTATION</h1>
+            <p class="mt-4 text-lg md:text-xl text-accent max-w-3xl mx-auto">An infographic journey into Assembly Language, the vital link between human-readable code and the processor's native tongue.</p>
+            <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="card rounded-xl p-6 flex flex-col justify-center items-center">
+                    <span class="text-6xl font-black text-white">1:1</span>
+                    <h3 class="mt-2 text-xl font-bold text-accent">Instruction Mapping</h3>
+                    <p class="text-subtle mt-1">Each Assembly instruction typically corresponds directly to a single machine code operation, offering unparalleled hardware control.</p>
+                </div>
+                 <div class="card rounded-xl p-6 flex flex-col justify-center items-center">
+                    <span class="text-6xl font-black text-white">CISC</span>
+                    <h3 class="mt-2 text-xl font-bold text-accent">x86 Philosophy</h3>
+                    <p class="text-subtle mt-1">Complex instructions that can perform multi-step operations, dominating desktops and servers.</p>
+                </div>
+                 <div class="card rounded-xl p-6 flex flex-col justify-center items-center">
+                    <span class="text-6xl font-black text-white">RISC</span>
+                    <h3 class="mt-2 text-xl font-bold text-accent">ARM Philosophy</h3>
+                    <p class="text-subtle mt-1">Reduced (simpler) instructions built for speed and power efficiency, dominating mobile and embedded systems.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CORE COMPONENTS -->
+        <section class="my-24">
+            <h2 class="text-3xl md:text-4xl text-main-header text-center mb-12">The Core Components</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="card rounded-xl p-8">
+                    <h3 class="text-2xl font-bold text-white mb-4">Anatomy of an Instruction</h3>
+                    <p class="text-subtle mb-6">Assembly commands are structured simply. They consist of a label for location, a mnemonic for the operation, operands for the data, and a comment for clarity.</p>
+                    <div class="bg-gray-900/50 font-mono text-sm rounded-lg p-4 text-white">
+                        <div><span class="text-purple-400">start_loop:</span><span class="text-sky-400 ml-4">MOV</span> <span class="text-green-400">EAX</span>, <span class="text-orange-400">[my_var]</span> <span class="text-gray-500 ml-4">; Copy value from my_var to EAX</span></div>
+                        <div class="flex mt-2 space-x-6 text-xs">
+                            <span><span class="text-purple-400 font-bold">LABEL</span></span>
+                            <span><span class="text-sky-400 font-bold">MNEMONIC</span></span>
+                            <span><span class="text-green-400 font-bold">DEST</span>, <span class="text-orange-400 font-bold">SOURCE</span></span>
+                            <span class="text-gray-500 font-bold">COMMENT</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card rounded-xl p-8">
+                    <h3 class="text-2xl font-bold text-white mb-4">Processor Registers</h3>
+                     <p class="text-subtle mb-6">Registers are the CPU's high-speed local memory. They are broadly categorized as General-Purpose for data tasks and Special-Purpose for controlling program flow.</p>
+                    <div class="chart-container h-64 md:h-auto">
+                        <canvas id="registerTypesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- TRANSLATION PROCESS -->
+        <section class="my-24">
+            <h2 class="text-3xl md:text-4xl text-main-header text-center mb-12">From High-Level to the Metal</h2>
+            <p class="text-center text-accent max-w-3xl mx-auto mb-10">High-level languages like C are compiled into Assembly as an intermediate step. This process translates abstract concepts into concrete hardware instructions.</p>
+            <div class="card rounded-xl p-8">
+                 <div class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 text-center">
+                    <div class="p-4 rounded-lg">
+                        <div class="text-4xl">📝</div>
+                        <h4 class="text-lg font-bold text-white mt-2">C Code</h4>
+                        <p class="text-subtle text-sm">Human-readable, abstract</p>
+                    </div>
+                    <div class="flow-arrow font-black">→</div>
+                     <div class="p-4 rounded-lg">
+                        <div class="text-4xl">⚙️</div>
+                        <h4 class="text-lg font-bold text-white mt-2">Assembly Code</h4>
+                        <p class="text-subtle text-sm">Low-level, specific</p>
+                    </div>
+                    <div class="flow-arrow font-black">→</div>
+                     <div class="p-4 rounded-lg">
+                        <div class="text-4xl">🤖</div>
+                        <h4 class="text-lg font-bold text-white mt-2">Machine Code</h4>
+                        <p class="text-subtle text-sm">Binary, executable</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ARCHITECTURE SHOWDOWN -->
+        <section class="my-24">
+            <h2 class="text-3xl md:text-4xl text-main-header text-center mb-12">Architecture Showdown: x86 vs. ARM</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <div class="card rounded-xl p-8">
+                    <h3 class="text-2xl font-bold text-white mb-4">Design Philosophy Comparison</h3>
+                    <p class="text-subtle mb-6">x86 (CISC) and ARM (RISC) are designed with different trade-offs. This radar chart visualizes their contrasting approaches to complexity, power, and performance.</p>
+                    <div class="chart-container">
+                        <canvas id="architectureRadarChart"></canvas>
+                    </div>
+                </div>
+                <div class="card rounded-xl p-8">
+                    <h3 class="text-2xl font-bold text-white mb-4">Market Dominance by Use Case</h3>
+                    <p class="text-subtle mb-6">These design differences lead to specialization. x86's raw power has made it the king of desktops and servers, while ARM's efficiency is perfect for mobile and embedded devices.</p>
+                    <div class="chart-container h-80 md:h-auto">
+                        <canvas id="marketShareChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- THE TOOLCHAIN -->
+        <section class="my-24">
+             <h2 class="text-3xl md:text-4xl text-main-header text-center mb-12">The Developer's Toolkit</h2>
+             <p class="text-center text-accent max-w-3xl mx-auto mb-10">Creating an executable from Assembly source code involves a standard, multi-step process known as the toolchain.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+                <div class="flex items-center sm:flex-col">
+                    <div class="card rounded-xl p-6 w-full">
+                        <div class="text-4xl">⌨️</div>
+                        <h3 class="text-xl font-bold text-white mt-2">1. Write Code</h3>
+                        <p class="text-subtle mt-1">Create source file (`.asm`) in a text editor.</p>
+                    </div>
+                    <div class="flow-arrow mx-4 sm:mx-0 sm:my-4 sm:transform sm:rotate-90">→</div>
+                </div>
+                 <div class="flex items-center sm:flex-col">
+                    <div class="card rounded-xl p-6 w-full">
+                        <div class="text-4xl">🧩</div>
+                        <h3 class="text-xl font-bold text-white mt-2">2. Assemble</h3>
+                        <p class="text-subtle mt-1">Use an assembler (e.g., NASM) to create an object file (`.o`).</p>
+                    </div>
+                    <div class="flow-arrow mx-4 sm:mx-0 sm:my-4 sm:transform sm:rotate-90">→</div>
+                </div>
+                 <div class="flex items-center sm:flex-col">
+                    <div class="card rounded-xl p-6 w-full">
+                        <div class="text-4xl">🔗</div>
+                        <h3 class="text-xl font-bold text-white mt-2">3. Link</h3>
+                        <p class="text-subtle mt-1">Use a linker (e.g., ld) to produce an executable file.</p>
+                    </div>
+                    <div class="flow-arrow mx-4 sm:mx-0 sm:my-4 sm:transform sm:rotate-90">→</div>
+                </div>
+                 <div class="flex items-center sm:flex-col">
+                    <div class="card rounded-xl p-6 w-full">
+                        <div class="text-4xl">🐞</div>
+                        <h3 class="text-xl font-bold text-white mt-2">4. Debug</h3>
+                        <p class="text-subtle mt-1">Use a debugger (e.g., GDB) to inspect and fix the code.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center mt-16 py-8 border-t border-blue-900/50">
+            <p class="text-subtle">Understanding Assembly is understanding how software truly works.</p>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            const brilliantBlues = {
+                dark: '#0B2447',
+                midDark: '#19376D',
+                midLight: '#576CBC',
+                light: '#A5D7E8',
+                white: '#FFFFFF'
+            };
+
+            const defaultChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: brilliantBlues.light,
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                const item = tooltipItems[0];
+                                let label = item.chart.data.labels[item.dataIndex];
+                                if (Array.isArray(label)) {
+                                  return label.join(' ');
+                                } else {
+                                  return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            
+            function wrapLabel(label) {
+                const maxLength = 16;
+                if (label.length <= maxLength) return label;
+                
+                const words = label.split(' ');
+                let lines = [];
+                let currentLine = '';
+
+                words.forEach(word => {
+                    if ((currentLine + ' ' + word).trim().length > maxLength) {
+                        lines.push(currentLine.trim());
+                        currentLine = word;
+                    } else {
+                        currentLine = (currentLine + ' ' + word).trim();
+                    }
+                });
+                lines.push(currentLine);
+                return lines;
+            }
+
+            // Chart 1: Register Types (Donut)
+            const registerTypesCtx = document.getElementById('registerTypesChart').getContext('2d');
+            new Chart(registerTypesCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['General-Purpose (GPRs)', 'Special-Purpose (IP, SP, Flags)'],
+                    datasets: [{
+                        label: 'Register Types',
+                        data: [16, 4], // Example numbers for x86-64
+                        backgroundColor: [brilliantBlues.light, brilliantBlues.midLight],
+                        borderColor: brilliantBlues.midDark,
+                        borderWidth: 2,
+                        hoverOffset: 4
+                    }]
+                },
+                options: defaultChartOptions
+            });
+
+            // Chart 2: Architecture Comparison (Radar)
+            const radarCtx = document.getElementById('architectureRadarChart').getContext('2d');
+            new Chart(radarCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Instruction Complexity', 'Power Efficiency', 'Register Count', 'Direct Memory Ops', 'Code Density'],
+                    datasets: [{
+                        label: 'x86 (CISC)',
+                        data: [9, 3, 5, 9, 8],
+                        backgroundColor: 'rgba(91, 192, 190, 0.2)',
+                        borderColor: 'rgba(91, 192, 190, 1)',
+                        pointBackgroundColor: 'rgba(91, 192, 190, 1)',
+                    }, {
+                        label: 'ARM (RISC)',
+                        data: [3, 9, 8, 2, 6],
+                        backgroundColor: 'rgba(233, 175, 78, 0.2)',
+                        borderColor: 'rgba(233, 175, 78, 1)',
+                        pointBackgroundColor: 'rgba(233, 175, 78, 1)',
+                    }]
+                },
+                options: { ...defaultChartOptions,
+                    scales: {
+                        r: {
+                            angleLines: { color: brilliantBlues.midLight + '80' },
+                            grid: { color: brilliantBlues.midLight + '80' },
+                            pointLabels: { color: brilliantBlues.light, font: {size: 12} },
+                            ticks: {
+                                color: brilliantBlues.light,
+                                backdropColor: 'rgba(0,0,0,0)',
+                                stepSize: 2
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Chart 3: Market Share (Horizontal Bar)
+            const marketCtx = document.getElementById('marketShareChart').getContext('2d');
+            new Chart(marketCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Desktops & Servers', ['Mobile &', 'Embedded Systems']],
+                    datasets: [
+                        {
+                            label: 'x86 Market Share',
+                            data: [90, 5],
+                            backgroundColor: 'rgba(91, 192, 190, 0.7)',
+                            borderColor: 'rgba(91, 192, 190, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'ARM Market Share',
+                            data: [10, 95],
+                            backgroundColor: 'rgba(233, 175, 78, 0.7)',
+                            borderColor: 'rgba(233, 175, 78, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: { ...defaultChartOptions,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            stacked: true,
+                            grid: { color: brilliantBlues.midLight + '80' },
+                            ticks: { color: brilliantBlues.light, callback: (value) => value + '%' }
+                        },
+                        y: {
+                            stacked: true,
+                            grid: { display: false },
+                            ticks: { color: brilliantBlues.light, font: {size: 14} }
+                        }
+                    },
+                    plugins: {
+                        ...defaultChartOptions.plugins,
+                        tooltip: {
+                            callbacks: {
+                                ...defaultChartOptions.plugins.tooltip.callbacks,
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.x !== null) {
+                                        label += context.parsed.x + '%';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>

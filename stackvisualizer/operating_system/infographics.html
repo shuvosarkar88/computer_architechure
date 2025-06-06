@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The World of Operating Systems: An Infographic</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues & Vibrant Accents -->
+    <!-- Application Structure Plan: A linear, narrative-driven single-page scrollable infographic. The structure guides the user from high-level concepts (What is an OS?) down to more specific implementation details (Hardware Interaction). Each logical section (Execution, Memory, Files, etc.) is visually distinct with clear headings, using a mix of large text stats, comparison diagrams (HTML/CSS), and data charts (Chart.js) to tell a cohesive story. This narrative flow was chosen to make the dense, academic source material accessible and engaging for a broader audience. -->
+    <!-- Visualization & Content Choices: 
+        - OS Responsibilities -> Goal: Inform -> Pictograph/Icon Chart -> Justification: Quick, visual summary of core functions. -> Method: HTML/CSS with Unicode.
+        - Process vs. Thread -> Goal: Compare -> Side-by-Side Cards -> Justification: Clear, direct comparison of attributes. -> Method: HTML/CSS (Grid).
+        - Process States -> Goal: Organize -> HTML/CSS Flowchart -> Justification: Visually maps the lifecycle without complex graphics. -> Method: HTML/CSS with borders for arrows. CONFIRMING NO SVG/Mermaid.
+        - CPU Scheduling -> Goal: Compare -> Bar Chart (Gantt-like) -> Justification: Effectively shows how different algorithms impact wait times for the same jobs. -> Library: Chart.js (Canvas).
+        - Paging vs. Segmentation -> Goal: Compare -> Donut Charts & Bar Chart -> Justification: Donut charts show the concept of fixed vs. variable units, while the bar chart compares fragmentation issues. -> Library: Chart.js (Canvas).
+        - File Allocation Methods -> Goal: Organize -> HTML/CSS Diagram -> Justification: Simple visual representation of block allocation on a "disk". -> Method: HTML/CSS.
+        - User/Kernel Space -> Goal: Organize -> HTML/CSS Diagram -> Justification: Clearly illustrates the protective boundary and the role of system calls. -> Method: HTML/CSS. CONFIRMING NO SVG/Mermaid.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; }
+        .gradient-text { background: linear-gradient(to right, #665191, #f95d6a, #ff7c43); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .stat-card { background-color: white; border-radius: 1rem; padding: 2rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05); }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 50vh; }
+        @media (min-width: 768px) { .chart-container { height: 400px; } }
+        .flow-arrow { position: relative; }
+        .flow-arrow::after { content: '→'; font-size: 2rem; color: #d1d5db; position: absolute; right: -1.75rem; top: 50%; transform: translateY(-50%); }
+        .flow-arrow-down::after { content: '↓'; font-size: 2rem; color: #d1d5db; position: absolute; bottom: -2rem; left: 50%; transform: translateX(-50%); }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+
+        <!-- Header -->
+        <header class="text-center my-12 md:my-20">
+            <h1 class="text-4xl md:text-6xl font-extrabold leading-tight">
+                <span class="block">The Unseen Engine:</span>
+                <span class="gradient-text block mt-2">An Operating System Deep Dive</span>
+            </h1>
+            <p class="mt-6 text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">An infographic journey into the core of what makes our computers work, from managing tasks and memory to organizing data and talking to hardware.</p>
+        </header>
+
+        <!-- Section 1: What is an OS? -->
+        <section class="my-16">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-[#003f5c]">The Conductor of the Computer</h2>
+                <p class="mt-4 text-gray-600 max-w-2xl mx-auto">The Operating System (OS) is the master software that manages all hardware and software, acting as the critical intermediary between you and the machine.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="stat-card text-center">
+                    <div class="text-5xl mb-4">🏃‍♂️</div>
+                    <h3 class="text-xl font-bold text-[#2f4b7c]">Process Management</h3>
+                    <p class="mt-2 text-gray-500">Creates, schedules, and terminates application processes, ensuring fair access to the CPU.</p>
+                </div>
+                <div class="stat-card text-center">
+                    <div class="text-5xl mb-4">🧠</div>
+                    <h3 class="text-xl font-bold text-[#2f4b7c]">Memory Management</h3>
+                    <p class="mt-2 text-gray-500">Allocates and protects RAM, using virtual memory to run programs larger than physical memory.</p>
+                </div>
+                <div class="stat-card text-center">
+                    <div class="text-5xl mb-4">🗄️</div>
+                    <h3 class="text-xl font-bold text-[#2f4b7c]">File System Management</h3>
+                    <p class="mt-2 text-gray-500">Organizes data into files and directories on storage drives like SSDs and HDDs.</p>
+                </div>
+                <div class="stat-card text-center">
+                    <div class="text-5xl mb-4">🔌</div>
+                    <h3 class="text-xl font-bold text-[#2f4b7c]">Device Management</h3>
+                    <p class="mt-2 text-gray-500">Communicates with hardware like keyboards and printers through specialized drivers.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Execution -->
+        <section class="my-24">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-[#665191]">Managing Execution</h2>
+                <p class="mt-4 text-gray-600 max-w-2xl mx-auto">An OS juggles countless tasks. This is achieved through processes and threads, the fundamental units of work.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                <div class="stat-card">
+                    <h3 class="text-2xl font-bold mb-4 text-center">Process vs. Thread</h3>
+                    <p class="text-sm text-gray-500 text-center mb-6">A process is an isolated program (like a browser), while threads are concurrent tasks within it (like tabs and spell-check).</p>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-blue-50 rounded-lg">
+                            <h4 class="font-bold text-[#003f5c]">Process (Heavyweight)</h4>
+                            <p class="text-sm">Has its own private memory. A crash is isolated. Slower to create and switch.</p>
+                        </div>
+                        <div class="p-4 bg-purple-50 rounded-lg">
+                            <h4 class="font-bold text-[#665191]">Thread (Lightweight)</h4>
+                            <p class="text-sm">Shares memory with other threads in the same process. Faster to create and switch.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <h3 class="text-2xl font-bold mb-6 text-center">Process State Lifecycle</h3>
+                    <p class="text-sm text-gray-500 text-center mb-6">A process moves through distinct states from creation to termination.</p>
+                    <div class="flex flex-wrap items-center justify-center gap-x-12 gap-y-8 text-center">
+                        <div class="flow-arrow"><span class="bg-gray-200 px-3 py-1 rounded-full font-medium">New</span></div>
+                        <div class="flow-arrow"><span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">Ready</span></div>
+                        <div class="flow-arrow"><span class="bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Running</span></div>
+                        <div class="flow-arrow-down"><span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-medium">Waiting</span></div>
+                        <div><span class="bg-red-100 text-red-800 px-3 py-1 rounded-full font-medium">Terminated</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card mt-8 md:col-span-2">
+                <h3 class="text-2xl font-bold mb-4 text-center">CPU Scheduling Algorithms</h3>
+                <p class="text-center text-gray-600 mb-6">The OS scheduler decides which process runs next. Different algorithms have different trade-offs in fairness and efficiency.</p>
+                 <div class="chart-container">
+                    <canvas id="schedulingChart"></canvas>
+                </div>
+                <p class="text-center mt-4 text-sm text-gray-500">The chart above visualizes how different scheduling algorithms would execute the same set of jobs. Notice how Shortest Job First (SJF) minimizes overall wait time but risks starving longer jobs, while Round Robin (RR) provides more fairness by giving each job a turn.</p>
+            </div>
+        </section>
+
+        <!-- Section 3: Memory Management -->
+        <section class="my-24">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-[#a05195]">Memory Management</h2>
+                <p class="mt-4 text-gray-600 max-w-2xl mx-auto">The OS acts as a real estate agent for RAM, allocating space to programs while creating the illusion of infinite memory.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+                <div class="stat-card flex flex-col justify-center items-center">
+                    <h3 class="text-2xl font-bold text-center mb-4">Paging: The Great Equalizer</h3>
+                    <p class="text-center text-gray-600 mb-6">Memory is divided into fixed-size "frames," and programs into same-sized "pages." This eliminates unusable gaps (external fragmentation).</p>
+                    <div class="w-full max-w-xs chart-container" style="height: 200px;">
+                        <canvas id="pagingDonut"></canvas>
+                    </div>
+                </div>
+                 <div class="stat-card flex flex-col justify-center items-center">
+                    <h3 class="text-2xl font-bold text-center mb-4">Segmentation: The Logical View</h3>
+                    <p class="text-center text-gray-600 mb-6">Memory is divided into logical, variable-sized "segments" (like code, data, stack), but this can lead to fragmentation.</p>
+                    <div class="w-full max-w-xs chart-container" style="height: 200px;">
+                        <canvas id="segmentationDonut"></canvas>
+                    </div>
+                </div>
+
+                <div class="stat-card md:col-span-2">
+                    <h3 class="text-2xl font-bold mb-4 text-center">Virtual Memory: The Ultimate Illusion</h3>
+                    <p class="text-center text-gray-600 mb-6">By using disk space as an extension of RAM, the OS lets you run programs far larger than your physical memory. Only the active parts of a program are kept in RAM.</p>
+                     <div class="flex items-center justify-center gap-4 text-center">
+                        <div class="p-4">
+                            <span class="text-6xl">🧠</span>
+                            <h4 class="font-bold mt-2">Physical RAM</h4>
+                            <p class="text-sm">(Fast, Expensive, Limited)</p>
+                        </div>
+                        <div class="text-4xl font-light text-gray-400">↔️</div>
+                        <div class="p-4">
+                            <span class="text-6xl">💾</span>
+                            <h4 class="font-bold mt-2">Disk (Swap Space)</h4>
+                            <p class="text-sm">(Slow, Cheap, Plentiful)</p>
+                        </div>
+                     </div>
+                     <p class="text-center mt-6 text-gray-600">When a needed "page" isn't in RAM, a <span class="font-bold text-[#d45087]">page fault</span> occurs, and the OS fetches it from the disk.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: File Systems -->
+        <section class="my-24">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-[#f95d6a]">File System Management</h2>
+                <p class="mt-4 text-gray-600 max-w-2xl mx-auto">The OS organizes data on disks, providing the familiar structure of files and folders.</p>
+            </div>
+             <div class="stat-card">
+                 <h3 class="text-2xl font-bold mb-6 text-center">File Allocation Methods</h3>
+                 <p class="text-center text-gray-600 mb-8">How does the OS store file blocks on a disk? Each method has pros and cons.</p>
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                     <div class="text-center">
+                         <h4 class="font-bold text-[#f95d6a]">Contiguous</h4>
+                         <div class="flex gap-1 mt-2 p-2 bg-gray-100 rounded">
+                             <div class="w-1/4 h-8 bg-[#ff7c43] rounded-sm"></div><div class="w-1/4 h-8 bg-[#ff7c43] rounded-sm"></div><div class="w-1/4 h-8 bg-[#ff7c43] rounded-sm"></div>
+                         </div>
+                         <p class="text-xs mt-2 text-gray-500">Fast access, but suffers from fragmentation.</p>
+                     </div>
+                     <div class="text-center">
+                         <h4 class="font-bold text-[#f95d6a]">Linked</h4>
+                         <div class="flex justify-around mt-2 p-2 bg-gray-100 rounded">
+                             <div class="w-1/6 h-8 bg-[#ff7c43] rounded-sm"></div><div class="w-1/6 h-8 bg-[#ff7c43] rounded-sm"></div><div class="w-1/6 h-8 bg-[#ff7c43] rounded-sm"></div>
+                         </div>
+                         <p class="text-xs mt-2 text-gray-500">Flexible, but slow for random access.</p>
+                     </div>
+                     <div class="text-center">
+                         <h4 class="font-bold text-[#f95d6a]">Indexed</h4>
+                         <div class="flex justify-between items-center mt-2 p-2 bg-gray-100 rounded">
+                             <div class="w-1/5 h-8 bg-[#d45087] rounded-sm"></div>
+                             <div class="w-1/5 h-8 bg-[#ff7c43] rounded-sm"></div><div class="w-1/5 h-8 bg-[#ff7c43] rounded-sm"></div><div class="w-1/5 h-8 bg-[#ff7c43] rounded-sm"></div>
+                         </div>
+                         <p class="text-xs mt-2 text-gray-500">Good balance, but has overhead for the index block.</p>
+                     </div>
+                 </div>
+             </div>
+             <div class="stat-card mt-8">
+                <h3 class="text-2xl font-bold mb-4 text-center">Modern File Systems</h3>
+                <p class="text-center text-gray-600 mb-6">Different OSes use different file systems, each optimized for specific goals like reliability, performance, or compatibility.</p>
+                 <div class="chart-container">
+                    <canvas id="fileSystemChart"></canvas>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Section 5: The Interface -->
+        <section class="my-24">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-[#ff7c43]">The Protected Core</h2>
+                <p class="mt-4 text-gray-600 max-w-2xl mx-auto">A strict boundary exists between applications and the OS kernel to ensure security and stability.</p>
+            </div>
+            <div class="stat-card p-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center items-center">
+                    <div class="p-6 bg-blue-100 rounded-xl">
+                        <h3 class="text-xl font-bold text-blue-800">User Space</h3>
+                        <p class="mt-2 text-blue-700">Where your applications run with restricted privileges.</p>
+                        <div class="text-4xl mt-4">💻</div>
+                    </div>
+
+                    <div class="flex flex-col items-center">
+                        <div class="font-bold text-gray-600">System Call</div>
+                        <div class="text-4xl my-2 text-[#ff7c43]">⇩</div>
+                        <div class="font-mono text-xs p-2 bg-gray-800 text-white rounded">read(file, buffer)</div>
+                        <div class="text-4xl my-2 text-gray-400">⇧</div>
+                        <div class="font-bold text-gray-600">Return Value</div>
+                    </div>
+                    
+                    <div class="p-6 bg-red-100 rounded-xl">
+                        <h3 class="text-xl font-bold text-red-800">Kernel Space</h3>
+                        <p class="mt-2 text-red-700">The protected domain where the OS core runs with full hardware access.</p>
+                        <div class="text-4xl mt-4">🛡️</div>
+                    </div>
+                </div>
+                <p class="text-center mt-8 text-gray-600">Applications cannot access hardware directly. They must make a <span class="font-bold">System Call</span>, which is a controlled request for the OS to perform a privileged action on their behalf. This is the only way to cross the boundary into kernel space.</p>
+            </div>
+        </section>
+
+        <footer class="text-center mt-20 py-8 border-t border-gray-200">
+            <p class="text-gray-500">Infographic created based on the "Operating System Core Concepts" report.</p>
+        </footer>
+    </div>
+
+<script>
+    function wrapLabel(label) {
+        const maxLen = 16;
+        if (label.length <= maxLen) return label;
+        const words = label.split(' ');
+        const lines = [];
+        let currentLine = '';
+        for (const word of words) {
+            if ((currentLine + ' ' + word).trim().length > maxLen) {
+                lines.push(currentLine.trim());
+                currentLine = word;
+            } else {
+                currentLine = (currentLine + ' ' + word).trim();
+            }
+        }
+        if (currentLine) lines.push(currentLine);
+        return lines;
+    }
+    
+    const commonTooltipCallback = {
+        title: function(tooltipItems) {
+            const item = tooltipItems[0];
+            let label = item.chart.data.labels[item.dataIndex];
+            return Array.isArray(label) ? label.join(' ') : label;
+        }
+    };
+
+    // Scheduling Chart
+    const ctxScheduling = document.getElementById('schedulingChart').getContext('2d');
+    new Chart(ctxScheduling, {
+        type: 'bar',
+        data: {
+            labels: ['First-Come, First-Served', 'Shortest Job First', 'Round Robin'],
+            datasets: [
+                {
+                    label: 'Average Wait Time (ms)',
+                    data: [17, 6.5, 9.5],
+                    backgroundColor: ['#665191', '#a05195', '#d45087'],
+                    borderColor: 'white',
+                    borderWidth: 2
+                },
+                {
+                    label: 'Fairness (Subjective)',
+                    data: [5, 2, 9],
+                    backgroundColor: ['rgba(102, 81, 145, 0.5)', 'rgba(160, 81, 149, 0.5)', 'rgba(212, 80, 135, 0.5)'],
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { tooltip: { callbacks: commonTooltipCallback } },
+            scales: { y: { beginAtZero: true, title: { display: true, text: 'Metric Value' } } }
+        }
+    });
+
+    // Paging Donut Chart
+    const ctxPaging = document.getElementById('pagingDonut').getContext('2d');
+    new Chart(ctxPaging, {
+        type: 'doughnut',
+        data: {
+            labels: ['Page 1', 'Page 2', 'Page 3', 'Internal Fragmentation'],
+            datasets: [{
+                data: [4, 4, 4, 1.5],
+                backgroundColor: ['#2f4b7c', '#2f4b7c', '#2f4b7c', '#d1d5db'],
+                borderColor: 'white',
+                borderWidth: 4,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12 } },
+                title: { display: true, text: 'Program in Pages (4KB)' },
+                tooltip: { callbacks: commonTooltipCallback }
+            }
+        }
+    });
+
+    // Segmentation Donut Chart
+    const ctxSegmentation = document.getElementById('segmentationDonut').getContext('2d');
+    new Chart(ctxSegmentation, {
+        type: 'doughnut',
+        data: {
+            labels: ['Code Segment', 'Data Segment', 'Stack Segment'],
+            datasets: [{
+                data: [8, 3, 2],
+                backgroundColor: ['#a05195', '#d45087', '#f95d6a'],
+                borderColor: 'white',
+                borderWidth: 4,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12 } },
+                title: { display: true, text: 'Program in Segments' },
+                tooltip: { callbacks: commonTooltipCallback }
+            }
+        }
+    });
+
+    // File System Chart
+    const ctxFileSystem = document.getElementById('fileSystemChart').getContext('2d');
+    new Chart(ctxFileSystem, {
+        type: 'bar',
+        data: {
+            labels: ['NTFS (Windows)', 'ext4 (Linux)', 'APFS (Apple)', 'exFAT (Universal)'],
+            datasets: [{
+                label: 'Journaling Support',
+                data: [1, 1, 1, 0], // 1 for Yes, 0 for No
+                backgroundColor: '#f95d6a',
+            }, {
+                label: 'Optimized for SSDs',
+                data: [0, 0, 1, 0],
+                backgroundColor: '#ff7c43',
+            },{
+                label: 'Max Compatibility',
+                data: [0, 0, 0, 1],
+                backgroundColor: '#ffa600',
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'Feature Comparison' },
+                tooltip: { callbacks: commonTooltipCallback }
+            },
+            scales: {
+                x: { stacked: true, ticks: { display: false } },
+                y: { stacked: true }
+            }
+        }
+    });
+
+</script>
+</body>
+</html>

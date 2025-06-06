@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: The CPU Memory Hierarchy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: The infographic follows a logical top-down narrative. It starts with a high-impact hook (the "Memory Wall") to establish the core problem. It then presents the solution visually with a Pyramid diagram. The fundamental 'Why' is explained through the principle of locality. The 'How' is detailed in a step-by-step flowchart of a memory request. This is followed by a quantitative deep-dive comparing latencies and real-world CPU cache specs. Finally, it touches on the underlying technology of virtual memory. This structure was chosen to guide a user from a high-level problem to the layered solution and its technical underpinnings in a digestible, story-like format. -->
+    <!-- Visualization & Content Choices: 1. Memory Wall: Big Number (HTML/CSS) for high impact (Goal: Inform). 2. Hierarchy: Pyramid Diagram (HTML/CSS) as the central organizing visual (Goal: Organize). 3. Locality: Simple icons (Unicode) and text for clarity (Goal: Inform). 4. Memory Request: Flowchart (HTML/CSS) to visualize a process (Goal: Organize). 5. Latency Comparison: Logarithmic Bar Chart (Chart.js) to show extreme differences (Goal: Compare). 6. CPU Cache Specs: Grouped Bar Chart (Chart.js) for direct competitor comparison (Goal: Compare). 7. Virtual Memory: Donut Chart (Chart.js) to show composition (Goal: Inform). All visualizations use Canvas or HTML/CSS, strictly adhering to the no-SVG/Mermaid constraint. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #0B2447;
+            color: #A5D7E8;
+        }
+        .card {
+            background-color: #19376D;
+            border: 1px solid #576CBC;
+        }
+        .text-accent { color: #A5D7E8; }
+        .text-highlight { color: #ffffff; }
+        .bg-accent { background-color: #576CBC; }
+        .border-accent { border-color: #576CBC; }
+        h1, h2, h3 { font-weight: 900; color: #ffffff; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px;
+            max-height: 500px;
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 350px;
+                max-height: 400px;
+            }
+        }
+        .flow-line::after {
+            content: '▼';
+            position: absolute;
+            left: 50%;
+            bottom: -20px;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: #576CBC;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="max-w-6xl mx-auto p-4 md:p-8 space-y-16">
+
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl md:text-6xl tracking-tight">The Memory Wall</h1>
+            <p class="text-xl md:text-2xl text-accent max-w-4xl mx-auto">CPUs are incredibly fast, but they're useless if they're waiting for data. This is the story of the sophisticated system built to solve that problem: The Memory Hierarchy.</p>
+        </header>
+
+        <section id="pyramid" class="space-y-8">
+            <div class="text-center">
+                <h2 class="text-3xl md:text-4xl">A Pyramid of Power & Compromise</h2>
+                <p class="mt-2 text-lg max-w-3xl mx-auto">The hierarchy balances speed, size, and cost. Each level is smaller, faster, and more expensive per byte than the level below it.</p>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <div class="flex flex-col items-center space-y-1">
+                    <div class="w-1/4 p-3 bg-cyan-400 text-blue-900 font-bold text-center rounded-t-lg">Registers</div>
+                    <div class="w-2/5 p-3 bg-cyan-500 text-blue-900 font-bold text-center">L1 Cache</div>
+                    <div class="w-3/5 p-3 bg-blue-400 text-white font-bold text-center">L2 Cache</div>
+                    <div class="w-4/5 p-3 bg-blue-500 text-white font-bold text-center">L3 Cache</div>
+                    <div class="w-full p-3 bg-indigo-500 text-white font-bold text-center">Main Memory (RAM)</div>
+                    <div class="w-full p-3 bg-indigo-600 text-white font-bold text-center rounded-b-lg">Virtual Memory</div>
+                </div>
+                <div class="card p-6 rounded-lg shadow-lg">
+                    <h3 class="text-2xl mb-4">The Golden Rule: Locality</h3>
+                    <p class="mb-4">The entire system works because of a predictable pattern in how programs run, known as the Principle of Locality.</p>
+                    <div class="space-y-4">
+                        <div class="flex items-start space-x-4">
+                            <span class="text-3xl">⏱️</span>
+                            <div>
+                                <h4 class="font-bold text-highlight">Temporal Locality</h4>
+                                <p>If a piece of data is used, it's likely to be used again soon. (e.g., a loop counter). Caches keep this data close.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-4">
+                            <span class="text-3xl">⛓️</span>
+                            <div>
+                                <h4 class="font-bold text-highlight">Spatial Locality</h4>
+                                <p>If a piece of data is used, data physically near it in memory will likely be used soon. (e.g., array elements). Caches fetch data in blocks (lines) to exploit this.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="journey" class="space-y-8">
+            <div class="text-center">
+                <h2 class="text-3xl md:text-4xl">Journey of a Memory Request</h2>
+                <p class="mt-2 text-lg max-w-3xl mx-auto">When the CPU needs data, it doesn't just go to RAM. It follows a strict, sequential path, checking the fastest levels first.</p>
+            </div>
+            <div class="relative flex flex-col items-center space-y-12">
+                <div class="card p-4 rounded-full shadow-lg text-center w-48 relative flow-line">
+                    <h4 class="font-bold">1. CPU Core</h4>
+                    <p class="text-xs">Needs data</p>
+                </div>
+                <div class="card p-4 rounded-lg shadow-lg text-center w-64 relative flow-line">
+                    <h4 class="font-bold">2. Check Registers & L1 Cache</h4>
+                    <p class="text-xs">~1-5 Cycles. HIT? Done! MISS? Continue...</p>
+                </div>
+                <div class="card p-4 rounded-lg shadow-lg text-center w-64 relative flow-line">
+                    <h4 class="font-bold">3. Check L2 Cache</h4>
+                    <p class="text-xs">~10-20 Cycles. HIT? Send to L1. MISS? Continue...</p>
+                </div>
+                <div class="card p-4 rounded-lg shadow-lg text-center w-64 relative flow-line">
+                    <h4 class="font-bold">4. Check L3 Cache (LLC)</h4>
+                    <p class="text-xs">~30-70 Cycles. HIT? Send up. MISS? Uh oh...</p>
+                </div>
+                <div class="card p-4 rounded-lg shadow-lg text-center w-64 relative flow-line bg-red-800/50 border-red-500">
+                    <h4 class="font-bold text-red-200">5. Access Main Memory (RAM)</h4>
+                    <p class="text-xs text-red-300">~100s of Cycles. SLOW. Is page in RAM? YES? Done. NO? Page Fault!</p>
+                </div>
+                <div class="card p-4 rounded-lg shadow-lg text-center w-64 bg-red-900/50 border-red-600">
+                    <h4 class="font-bold text-red-200">6. PAGE FAULT</h4>
+                    <p class="text-xs text-red-300">Millions of Cycles. OS loads page from disk. EXTREMELY SLOW.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="deep-dive" class="space-y-16">
+             <div class="text-center">
+                <h2 class="text-3xl md:text-4xl">A Game of Nanoseconds: Latency Matters</h2>
+                <p class="mt-2 text-lg max-w-3xl mx-auto">The time penalty for a cache miss is enormous. This chart uses a logarithmic scale to visualize just how much slower each successive level is.</p>
+            </div>
+            <div class="card p-4 md:p-6 rounded-lg shadow-lg">
+                <div class="chart-container">
+                    <canvas id="latencyChart"></canvas>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <h2 class="text-3xl md:text-4xl">Market Snapshot: Modern CPU Cache Wars</h2>
+                <p class="mt-2 text-lg max-w-3xl mx-auto">Cache size is a key battleground for performance. Here's how flagship CPUs from AMD and Intel stack up in the 2024-2025 era.</p>
+            </div>
+             <div class="card p-4 md:p-6 rounded-lg shadow-lg">
+                <div class="chart-container">
+                    <canvas id="cpuCompareChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="vmem" class="space-y-8">
+            <div class="text-center">
+                <h2 class="text-3xl md:text-4xl">The Grand Illusion: Virtual Memory</h2>
+                <p class="mt-2 text-lg max-w-3xl mx-auto">To run massive applications and multitask, the OS and hardware create an illusion of near-infinite memory using the disk.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 <div class="card p-6 rounded-lg shadow-lg flex flex-col justify-center">
+                     <h3 class="text-2xl mb-4">How it works: Paging</h3>
+                     <p class="mb-2">Your program's memory (virtual address space) is broken into small, fixed-size 'pages'. Physical RAM is broken into 'frames'.</p>
+                     <p>A special hardware unit (MMU) translates your program's virtual pages to physical frames in RAM. If a page isn't in RAM, it's a 'page fault', and the OS loads it from the disk (e.g., SSD).</p>
+                 </div>
+                 <div class="card p-4 md:p-6 rounded-lg shadow-lg">
+                    <div class="chart-container" style="height: 300px; max-height: 350px;">
+                        <canvas id="vmemChart"></canvas>
+                    </div>
+                     <p class="text-center mt-4 font-semibold">A Process's Virtual Address Space</p>
+                 </div>
+            </div>
+        </section>
+
+        <footer class="text-center py-8 border-t border-accent">
+            <p>Infographic based on the "Memory Hierarchy and CPU Interaction" report.</p>
+        </footer>
+
+    </div>
+
+<script>
+    const palette = {
+        darkBlue: '#0B2447',
+        mediumBlue: '#19376D',
+        lightBlue: '#576CBC',
+        paleBlue: '#A5D7E8',
+        white: '#FFFFFF'
+    };
+
+    function wrapLabel(str, maxWidth) {
+        if (str.length <= maxWidth) {
+            return str;
+        }
+        const words = str.split(' ');
+        let lines = [];
+        let currentLine = words[0];
+        for (let i = 1; i < words.length; i++) {
+            if (currentLine.length + words[i].length + 1 < maxWidth) {
+                currentLine += ' ' + words[i];
+            } else {
+                lines.push(currentLine);
+                currentLine = words[i];
+            }
+        }
+        lines.push(currentLine);
+        return lines;
+    }
+    
+    const requiredTooltipConfig = {
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    title: function(tooltipItems) {
+                        const item = tooltipItems[0];
+                        let label = item.chart.data.labels[item.dataIndex];
+                        if (Array.isArray(label)) {
+                          return label.join(' ');
+                        }
+                        return label;
+                    }
+                }
+            }
+        }
+    };
+
+    const latencyData = {
+        labels: ['CPU Register', 'L1 Cache', 'L2 Cache', 'L3 Cache', 'Main Memory (RAM)', ['Page Fault to', 'NVMe SSD']],
+        datasets: [{
+            label: 'Access Latency (ns)',
+            data: [0.2, 1, 3.5, 15, 65, 20000],
+            backgroundColor: [
+                '#A5D7E8', '#89CFF0', '#576CBC', '#405D97', '#19376D', '#E63946'
+            ]
+        }]
+    };
+    
+    const latencyCtx = document.getElementById('latencyChart').getContext('2d');
+    new Chart(latencyCtx, {
+        type: 'bar',
+        data: latencyData,
+        options: {
+            ...requiredTooltipConfig,
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    type: 'logarithmic',
+                    title: { display: true, text: 'Latency in Nanoseconds (Logarithmic Scale)', color: palette.paleBlue },
+                    ticks: { color: palette.paleBlue },
+                    grid: { color: 'rgba(165, 215, 232, 0.2)' }
+                },
+                y: {
+                    ticks: { color: palette.paleBlue, font: {size: 14} },
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                ...requiredTooltipConfig.plugins,
+                legend: { display: false },
+                title: { display: true, text: 'Access Time: From Nanoseconds to Milliseconds', color: palette.white, font: {size: 18} }
+            }
+        }
+    });
+
+    const cpuData = {
+        labels: ['L1 Data Cache (KB/core)', 'L2 Cache (MB/core)', 'L3 Cache (Total MB)'],
+        datasets: [
+            {
+                label: 'AMD Ryzen 9 9950X',
+                data: [48, 1, 64],
+                backgroundColor: '#576CBC',
+                borderColor: '#A5D7E8',
+                borderWidth: 1
+            },
+            {
+                label: 'Intel Core i9-14900K (P-Core)',
+                data: [48, 2, 36],
+                backgroundColor: '#19376D',
+                borderColor: '#A5D7E8',
+                borderWidth: 1
+            }
+        ]
+    };
+
+    const cpuCompareCtx = document.getElementById('cpuCompareChart').getContext('2d');
+    new Chart(cpuCompareCtx, {
+        type: 'bar',
+        data: cpuData,
+        options: {
+            ...requiredTooltipConfig,
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    ticks: { color: palette.paleBlue, font: {size: 14}, callback: function(value, index, values) {
+                            const label = this.getLabelForValue(value);
+                            return wrapLabel(label, 16);
+                        } 
+                    },
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Cache Size', color: palette.paleBlue },
+                    ticks: { color: palette.paleBlue },
+                    grid: { color: 'rgba(165, 215, 232, 0.2)' }
+                }
+            },
+            plugins: {
+                ...requiredTooltipConfig.plugins,
+                legend: { labels: { color: palette.white, font: {size: 14} } },
+                title: { display: true, text: 'Cache Capacity: AMD (Zen 5) vs Intel (Raptor Lake Refresh)', color: palette.white, font: {size: 18} }
+            }
+        }
+    });
+    
+    const vmemData = {
+        labels: ['Active in RAM', 'Paged to Disk (Swap)', 'Unused'],
+        datasets: [{
+            data: [25, 35, 40],
+            backgroundColor: ['#576CBC', '#19376D', 'rgba(11, 36, 71, 0.5)'],
+            borderColor: '#0B2447',
+            hoverOffset: 4
+        }]
+    };
+
+    const vmemCtx = document.getElementById('vmemChart').getContext('2d');
+    new Chart(vmemCtx, {
+        type: 'doughnut',
+        data: vmemData,
+        options: {
+            ...requiredTooltipConfig,
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                ...requiredTooltipConfig.plugins,
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: palette.white,
+                        font: { size: 14 },
+                        padding: 20
+                    }
+                }
+            }
+        }
+    });
+
+</script>
+
+</body>
+</html>

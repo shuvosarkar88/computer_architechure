@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>An Infographic Guide to Virtual Memory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: The infographic is structured as a narrative journey, starting with the high-level "why" of virtual memory and progressively delving into the "how." It's a single, scrollable page broken into thematic cards. This structure is chosen over a complex dashboard because the source material presents a linear, educational path. The narrative flow is: 1) Big Idea, 2) Core Components, 3) The Translation Process, 4) Handling Faults, 5) Alternative Models, 6) Real-World Examples. This logical progression allows a user to build knowledge incrementally, which is ideal for a complex technical topic. There are no interactive elements, as the goal is a static, easily digestible infographic presentation. -->
+    <!-- Visualization & Content Choices: Since the source report contains conceptual information and processes rather than quantitative data, traditional charts (Bar, Line, Pie) are not suitable. All visualizations are custom-designed using HTML and Tailwind CSS to represent the report's core ideas.
+    - Virtual Page to Physical Frame Mapping: Goal: Compare/Organize. Method: Styled HTML divs with connecting lines simulated by borders. Justification: Clearly shows the non-contiguous mapping principle without the need for a complex chart library.
+    - Address Translation Pipeline & Page Fault Flow: Goal: Organize (Process Flow). Method: HTML/CSS flowchart using flexbox and styled divs with unicode arrows. Justification: This is the most effective way to represent a sequence of steps as described in the report, adhering to the NO SVG/Mermaid constraint.
+    - Paging vs. Segmentation Table: Goal: Compare. Method: Styled HTML table. Justification: The guide explicitly recommends tables for detailed, multi-variable comparisons, which is a perfect fit for this section.
+    - OS Implementations (Linux/Windows Lists): Goal: Compare/Organize. Method: Styled HTML divs representing the conceptual lists (Active/Inactive, Standby/Modified). Justification: This visually represents the state transitions of pages in each OS's replacement strategy.
+    CONFIRMATION: NO Chart.js/Plotly.js used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f9ff; /* sky-50 */
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            border: 1px solid #e0f2fe; /* sky-100 */
+        }
+        .flow-arrow {
+            color: #38bdf8; /* sky-400 */
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 mb-2">The Architecture of Virtual Memory</h1>
+            <p class="text-lg text-slate-600">A visual guide to the foundational technology that powers modern computing.</p>
+        </header>
+
+        <main class="space-y-12">
+
+            <section id="introduction" class="card p-6 md:p-8 text-center">
+                <h2 class="text-2xl font-bold text-sky-600 mb-4">The Illusion of Infinite Memory</h2>
+                <p class="text-slate-600 max-w-3xl mx-auto mb-6">
+                    Virtual memory creates a powerful illusion for every program: that it has access to a massive, private, and contiguous block of memory. In reality, the operating system and hardware work together to manage a complex mapping between the program's <strong class="text-slate-700">virtual addresses</strong> and the computer's limited, fragmented <strong class="text-slate-700">physical RAM</strong>.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-sky-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-lg text-sky-800">Process Isolation</h3>
+                        <p class="text-sm text-sky-700">Keeps programs from crashing each other, enhancing system stability and security.</p>
+                    </div>
+                    <div class="bg-sky-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-lg text-sky-800">Efficient Multitasking</h3>
+                        <p class="text-sm text-sky-700">Allows more programs to run than could physically fit in RAM by only loading active parts.</p>
+                    </div>
+                    <div class="bg-sky-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-lg text-sky-800">Simplified Programming</h3>
+                        <p class="text-sm text-sky-700">Frees developers from managing physical memory layouts and fragmentation.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="components" class="card p-6 md:p-8">
+                <h2 class="text-2xl font-bold text-center text-sky-600 mb-6">The Building Blocks: Pages, Frames & Page Tables</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h3 class="font-semibold text-slate-700 mb-2">1. Memory is Divided</h3>
+                        <p class="text-slate-600 text-sm mb-4">A program's virtual space is broken into fixed-size <strong class="text-blue-600">Pages</strong>. Physical RAM is broken into same-sized <strong class="text-green-600">Frames</strong>.</p>
+                        <div class="flex justify-around items-center space-x-4">
+                            <div class="text-center">
+                                <div class="w-20 h-20 bg-blue-100 border-2 border-blue-500 rounded flex items-center justify-center font-mono">Page N</div>
+                                <p class="text-sm font-semibold mt-1">Virtual Page</p>
+                            </div>
+                            <div class="text-4xl text-slate-400 font-light">→</div>
+                             <div class="text-center">
+                                <div class="w-20 h-20 bg-green-100 border-2 border-green-500 rounded flex items-center justify-center font-mono">Frame M</div>
+                                <p class="text-sm font-semibold mt-1">Physical Frame</p>
+                            </div>
+                        </div>
+                    </div>
+                     <div>
+                        <h3 class="font-semibold text-slate-700 mb-2">2. The OS Creates a Map</h3>
+                        <p class="text-slate-600 text-sm mb-4">The <strong class="text-purple-600">Page Table</strong> is a data structure that stores the mapping from each virtual page to its physical frame. This mapping is not necessarily in order.</p>
+                        <div class="bg-purple-50 p-3 rounded-lg border border-purple-200 font-mono text-sm">
+                            <div class="flex justify-between items-center border-b border-purple-200 pb-1 mb-1">
+                                <span>Page 0</span> <span class="text-slate-400">→</span> <span>Frame 5</span>
+                            </div>
+                             <div class="flex justify-between items-center border-b border-purple-200 pb-1 mb-1">
+                                <span>Page 1</span> <span class="text-slate-400">→</span> <span>Frame 2</span>
+                            </div>
+                             <div class="flex justify-between items-center">
+                                <span>Page 2</span> <span class="text-slate-400">→</span> <span>Frame 7</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 <div class="mt-6">
+                     <h3 class="font-semibold text-slate-700 mb-2 text-center">3. A Page Table Entry (PTE) Holds Key Info</h3>
+                     <p class="text-slate-600 text-sm mb-4 text-center max-w-xl mx-auto">Each entry in the page table doesn't just store the frame number; it also holds critical control bits used by the hardware.</p>
+                     <div class="flex flex-wrap justify-center gap-2 text-xs text-center">
+                        <div class="bg-slate-100 p-2 rounded-md border w-32"><strong class="block text-slate-700">Present Bit</strong>Is this page in RAM?</div>
+                        <div class="bg-slate-100 p-2 rounded-md border w-32"><strong class="block text-slate-700">Protection Bits</strong>Read/Write/Execute?</div>
+                        <div class="bg-slate-100 p-2 rounded-md border w-32"><strong class="block text-slate-700">Dirty Bit</strong>Has this page been modified?</div>
+                        <div class="bg-slate-100 p-2 rounded-md border w-32"><strong class="block text-slate-700">Accessed Bit</strong>Has this page been used?</div>
+                     </div>
+                 </div>
+            </section>
+            
+            <section id="translation" class="card p-6 md:p-8">
+                <h2 class="text-2xl font-bold text-center text-sky-600 mb-2">The Journey of an Address</h2>
+                <p class="text-slate-600 text-center max-w-3xl mx-auto mb-8">Every time your program accesses memory, the hardware performs a rapid translation from a virtual to a physical address. Here's the high-speed path and the slower backup plan.</p>
+                <div class="flex flex-col items-center space-y-4">
+                    <div class="bg-blue-100 p-3 rounded-lg shadow-sm text-center">
+                        <h4 class="font-bold">1. CPU Generates Virtual Address</h4>
+                    </div>
+                    <div class="text-4xl flow-arrow">↓</div>
+                    <div class="bg-green-100 border-2 border-green-400 p-4 rounded-lg shadow-sm text-center w-full max-w-sm">
+                        <h4 class="font-bold text-green-800">2. Check TLB (Super-Fast Cache)</h4>
+                        <p class="text-sm text-green-700">The Memory Management Unit (MMU) first checks the Translation Lookaside Buffer, a small on-chip cache of recent translations.</p>
+                    </div>
+                    <div class="flex w-full max-w-2xl justify-around items-start mt-4">
+                        <div class="flex flex-col items-center w-1/2">
+                            <div class="text-4xl flow-arrow">↙</div>
+                            <div class="bg-green-200 p-3 rounded-lg text-center mt-2 w-full max-w-xs">
+                                <h5 class="font-bold text-green-900">TLB Hit</h5>
+                                <p class="text-xs text-green-800">Success! Translation found. Physical address is formed instantly.</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-center w-1/2">
+                            <div class="text-4xl flow-arrow">↘</div>
+                            <div class="bg-amber-100 p-3 rounded-lg text-center mt-2 w-full max-w-xs">
+                                 <h5 class="font-bold text-amber-900">TLB Miss</h5>
+                                <p class="text-xs text-amber-800">Not in cache. Must perform a slower "Page Walk".</p>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="w-full max-w-2xl flex justify-end pr-0 md:pr-12">
+                        <div class="flex flex-col items-center">
+                             <div class="text-4xl flow-arrow">↓</div>
+                             <div class="bg-amber-200 p-3 rounded-lg text-center mt-2 w-full max-w-xs">
+                                 <h5 class="font-bold text-amber-900">3. Walk the Page Table</h5>
+                                <p class="text-xs text-amber-800">Hardware reads the Page Table from main memory to find the translation.</p>
+                             </div>
+                             <div class="text-4xl flow-arrow">↓</div>
+                             <div class="bg-slate-100 p-3 rounded-lg text-center mt-2 w-full max-w-xs">
+                                 <h5 class="font-bold">4. Update TLB</h5>
+                                <p class="text-xs">The new translation is cached in the TLB for future speed.</p>
+                             </div>
+                        </div>
+                     </div>
+                     <div class="flex flex-col items-center">
+                        <div class="text-4xl flow-arrow">↓</div>
+                        <div class="bg-sky-200 p-4 rounded-lg shadow-sm text-center">
+                            <h4 class="font-bold text-sky-900">5. Physical Address Sent to RAM</h4>
+                            <p class="text-sm text-sky-800">The access completes.</p>
+                        </div>
+                     </div>
+                </div>
+            </section>
+            
+            <section id="faults" class="card p-6 md:p-8">
+                 <h2 class="text-2xl font-bold text-center text-sky-600 mb-2">The Page Fault: A Feature, Not a Bug</h2>
+                 <p class="text-slate-600 text-center max-w-3xl mx-auto mb-8">When the page walk reveals the page isn't in RAM at all (the "present bit" is 0), it triggers a Page Fault. This is the normal mechanism for loading data from the disk on demand.</p>
+                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-slate-50 p-4 rounded-lg text-center">
+                        <div class="text-4xl mb-2">1️⃣</div>
+                        <h4 class="font-bold">Trap to OS</h4>
+                        <p class="text-sm text-slate-600">The hardware stops the program and hands control to the Operating System.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-lg text-center">
+                        <div class="text-4xl mb-2">2️⃣</div>
+                        <h4 class="font-bold">Find Free Frame</h4>
+                        <p class="text-sm text-slate-600">The OS finds an empty spot in RAM, or makes one by evicting an old page.</p>
+                    </div>
+                     <div class="bg-slate-50 p-4 rounded-lg text-center">
+                        <div class="text-4xl mb-2">3️⃣</div>
+                        <h4 class="font-bold">Load from Disk</h4>
+                        <p class="text-sm text-slate-600">The OS reads the required page data from the SSD/HDD into the empty frame.</p>
+                    </div>
+                     <div class="bg-slate-50 p-4 rounded-lg text-center">
+                        <div class="text-4xl mb-2">4️⃣</div>
+                        <h4 class="font-bold">Update Page Table</h4>
+                        <p class="text-sm text-slate-600">The OS updates its map (the PTE) to show the page is now present in RAM.</p>
+                    </div>
+                     <div class="bg-slate-50 p-4 rounded-lg text-center">
+                        <div class="text-4xl mb-2">5️⃣</div>
+                        <h4 class="font-bold">Update TLB</h4>
+                        <p class="text-sm text-slate-600">The new translation is cached for speed.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-lg text-center">
+                        <div class="text-4xl mb-2">6️⃣</div>
+                        <h4 class="font-bold">Restart Program</h4>
+                        <p class="text-sm text-slate-600">The program resumes exactly where it left off, and the memory access now succeeds.</p>
+                    </div>
+                 </div>
+            </section>
+            
+            <section id="comparison" class="card p-6 md:p-8">
+                 <h2 class="text-2xl font-bold text-center text-sky-600 mb-6">Paging vs. Segmentation</h2>
+                 <p class="text-slate-600 text-center max-w-3xl mx-auto mb-8">While paging is dominant today, segmentation is an alternative approach that views memory in logical, variable-sized chunks (like code, data, stack). Most modern systems use paging as the primary mechanism.</p>
+                 <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr>
+                                <th class="p-3 bg-slate-100 font-semibold border-b-2 border-slate-200">Feature</th>
+                                <th class="p-3 bg-blue-50 font-semibold border-b-2 border-blue-200">Paging</th>
+                                <th class="p-3 bg-green-50 font-semibold border-b-2 border-green-200">Segmentation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-slate-100">
+                                <td class="p-3 font-semibold">Division</td>
+                                <td class="p-3 bg-blue-50 text-blue-900">Fixed-size physical pages.</td>
+                                <td class="p-3 bg-green-50 text-green-900">Variable-size logical segments.</td>
+                            </tr>
+                             <tr class="border-b border-slate-100">
+                                <td class="p-3 font-semibold">Fragmentation</td>
+                                <td class="p-3 bg-blue-50 text-blue-900">Internal (wasted space in last page).</td>
+                                <td class="p-3 bg-green-50 text-green-900">External (wasted space between segments).</td>
+                            </tr>
+                            <tr class="border-b border-slate-100">
+                                <td class="p-3 font-semibold">OS Management</td>
+                                <td class="p-3 bg-blue-50 text-blue-900">Simpler. Manages a list of free frames.</td>
+                                <td class="p-3 bg-green-50 text-green-900">Complex. Manages variable-sized holes.</td>
+                            </tr>
+                             <tr>
+                                <td class="p-3 font-semibold">User View</td>
+                                <td class="p-3 bg-blue-50 text-blue-900">Invisible to the programmer.</td>
+                                <td class="p-3 bg-green-50 text-green-900">Visible. Programmer works with segments.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                 </div>
+            </section>
+
+            <section id="os" class="card p-6 md:p-8">
+                <h2 class="text-2xl font-bold text-center text-sky-600 mb-6">Real-World Page Replacement Strategies</h2>
+                <p class="text-slate-600 text-center max-w-3xl mx-auto mb-8">When memory is full, the OS must evict a "victim" page. Linux and Windows use sophisticated strategies to choose the best victim and minimize performance impact.</p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-slate-50 p-6 rounded-lg border">
+                        <h3 class="font-bold text-xl text-center mb-4">Linux: Active / Inactive Lists</h3>
+                        <p class="text-sm text-slate-600 mb-4">Linux maintains lists to approximate which pages are "hot" (frequently used) and "cold" (infrequently used). Pages are reclaimed from the cold list.</p>
+                        <div class="space-y-4">
+                            <div class="text-center font-semibold">Frequently Used Pages</div>
+                            <div class="bg-red-100 border border-red-300 p-3 rounded-lg text-center font-mono shadow-inner">Active List</div>
+                            <div class="flex justify-between items-center text-sky-500 font-bold px-4">
+                                <span>↑ Promoted on Access</span>
+                                <span>Demoted if Unused ↓</span>
+                            </div>
+                            <div class="bg-sky-100 border border-sky-300 p-3 rounded-lg text-center font-mono shadow-inner">Inactive List</div>
+                             <div class="text-center font-semibold">Infrequently Used Pages (Candidates for Eviction)</div>
+                        </div>
+                    </div>
+                     <div class="bg-slate-50 p-6 rounded-lg border">
+                        <h3 class="font-bold text-xl text-center mb-4">Windows: Working Sets & Standby List</h3>
+                        <p class="text-sm text-slate-600 mb-4">Windows trims pages from a process's "Working Set" (its pages in RAM). Clean pages go to a global Standby List, a cache for fast reuse.</p>
+                        <div class="space-y-4">
+                            <div class="text-center font-semibold">Pages in RAM for Process X</div>
+                            <div class="bg-green-100 border border-green-300 p-3 rounded-lg text-center font-mono shadow-inner">Working Set</div>
+                             <div class="text-center text-sky-500 font-bold">↓ Trimmed when memory is low ↓</div>
+                            <div class="bg-slate-100 p-3 rounded-lg text-center font-mono shadow-inner">Global Standby List (Clean Page Cache)</div>
+                             <div class="text-center font-semibold">Pages can be recalled instantly (Soft Fault)</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <footer class="text-center mt-12 pt-8 border-t border-sky-200">
+            <p class="text-slate-500 text-sm">Infographic based on the In-Depth Examination of Virtual Memory Systems report.</p>
+        </footer>
+
+    </div>
+</body>
+</html>
