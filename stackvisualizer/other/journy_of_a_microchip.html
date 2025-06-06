@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Journey of a Microchip: From Sand to Silicon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Slate & Amber -->
+    <!-- Application Structure Plan: A single-page application with a fixed top navigation bar for easy access to thematic sections. The structure deviates from the report's linear flow to promote exploration. Key sections include: 1) An interactive, clickable process flow for the core manufacturing stages. 2) A 'Technology Evolution' section with dynamic charts comparing key technological leaps (90nm vs 5nm, FinFET vs GAAFET). 3) An 'Industry Landscape' dashboard with market share data and business model explanations. 4) A 'Cleanroom & Environment' section highlighting the operational realities and sustainability challenges. This thematic, dashboard-like structure with interactive elements was chosen to make the dense, technical information more engaging and easier to digest than a simple long-scroll document, allowing users to compare concepts and explore topics of interest non-linearly. -->
+    <!-- Visualization & Content Choices: 
+        - Manufacturing Process: Report Info -> Step-by-step fabrication process. Goal -> Organize/Inform. Viz -> Interactive HTML/CSS process flow diagram. Interaction -> Clickable stages reveal detailed text content. Justification -> Transforms a long linear process into an engaging, user-controlled exploration. Method -> HTML/CSS with JS for click events.
+        - Node Comparison: Report Info -> CPU stats for 90nm vs 5nm nodes. Goal -> Compare. Viz -> Logarithmic Bar Chart. Interaction -> Hover tooltips show precise data. Justification -> A bar chart immediately visualizes the exponential leap in transistor density, which is the core message. A logarithmic scale is necessary to display values differing by orders of magnitude. Library -> Chart.js.
+        - Foundry Market Share: Report Info -> Q4 2024 revenue share. Goal -> Inform/Compare. Viz -> Donut Chart. Interaction -> Hover tooltips. Justification -> A donut chart is excellent for showing parts of a whole, clearly communicating market dominance. Library -> Chart.js.
+        - Lithography Comparison: Report Info -> DUV vs. EUV stats. Goal -> Compare. Viz -> Radar Chart. Interaction -> Hover tooltips. Justification -> A radar chart effectively compares multiple parameters (Wavelength, Cost, Resolution) for two subjects in a single, compact graphic. Library -> Chart.js.
+        - Transistor Architectures: Report Info -> FinFET vs GAAFET designs. Goal -> Compare. Viz -> Side-by-side illustrated cards. Interaction -> Static visual comparison. Justification -> Clear visual diagrams with key text points are most effective for explaining structural/architectural differences. Method -> HTML/CSS.
+        - Cleanroom Classes: Report Info -> ISO standards. Goal -> Inform. Viz -> Interactive tabs/accordion. Interaction -> Clicking a class reveals its specs. Justification -> Hides complexity, allowing users to focus on one class at a time without being overwhelmed. Method -> JS click events.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 45vh; }
+        @media (max-width: 768px) { .chart-container { height: 300px; max-height: 50vh; } }
+        .nav-link { transition: color 0.2s, border-color 0.2s; }
+        .section-fade-in { animation: fadeIn 1s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .process-step { transition: transform 0.2s, box-shadow 0.2s; }
+        .process-step:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-md">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold text-slate-900">🔬 From Sand to Silicon</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#process" class="nav-link text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent hover:border-amber-500">The Process</a>
+                        <a href="#evolution" class="nav-link text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent hover:border-amber-500">Tech Evolution</a>
+                        <a href="#industry" class="nav-link text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent hover:border-amber-500">Industry</a>
+                        <a href="#environment" class="nav-link text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent hover:border-amber-500">Environment</a>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-white">
+                        <span class="sr-only">Open main menu</span>
+                        <span class="block h-6 w-6" aria-hidden="true">☰</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#process" class="block text-slate-600 hover:text-slate-900 hover:bg-slate-100 px-3 py-2 rounded-md text-base font-medium">The Process</a>
+                <a href="#evolution" class="block text-slate-600 hover:text-slate-900 hover:bg-slate-100 px-3 py-2 rounded-md text-base font-medium">Tech Evolution</a>
+                <a href="#industry" class="block text-slate-600 hover:text-slate-900 hover:bg-slate-100 px-3 py-2 rounded-md text-base font-medium">Industry</a>
+                <a href="#environment" class="block text-slate-600 hover:text-slate-900 hover:bg-slate-100 px-3 py-2 rounded-md text-base font-medium">Environment</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+
+        <section id="hero" class="text-center mb-16 md:mb-24 section-fade-in">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-slate-900 leading-tight mb-4">The Journey of a Microchip</h1>
+            <p class="max-w-3xl mx-auto text-lg md:text-xl text-slate-600">Explore the intricate and fascinating process of microprocessor manufacturing, from a grain of sand to the powerful chips that drive our digital world. This interactive guide breaks down the complex stages, technologies, and industry dynamics behind the silicon revolution.</p>
+        </section>
+
+        <section id="process" class="mb-16 md:mb-24 section-fade-in">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-900">The Manufacturing Process</h2>
+                <p class="mt-2 text-lg text-slate-600 max-w-2xl mx-auto">From raw material to finished product, chip fabrication is a marvel of precision engineering involving hundreds of steps. Click on any stage below to learn more about how it works.</p>
+            </div>
+            
+            <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4 mb-8">
+                <div class="w-full md:w-auto flex flex-wrap justify-center gap-4">
+                    <button data-content="raw-material" class="process-button bg-white text-slate-700 font-semibold py-2 px-4 border border-slate-300 rounded-lg shadow-sm hover:bg-amber-100">1. Raw Material</button>
+                    <button data-content="wafer-fab" class="process-button bg-white text-slate-700 font-semibold py-2 px-4 border border-slate-300 rounded-lg shadow-sm hover:bg-amber-100">2. Wafer Fab</button>
+                    <button data-content="lithography" class="process-button bg-white text-slate-700 font-semibold py-2 px-4 border border-slate-300 rounded-lg shadow-sm hover:bg-amber-100">3. Lithography</button>
+                    <button data-content="etch-dope" class="process-button bg-white text-slate-700 font-semibold py-2 px-4 border border-slate-300 rounded-lg shadow-sm hover:bg-amber-100">4. Etch & Dope</button>
+                    <button data-content="layering" class="process-button bg-white text-slate-700 font-semibold py-2 px-4 border border-slate-300 rounded-lg shadow-sm hover:bg-amber-100">5. Layering</button>
+                    <button data-content="packaging" class="process-button bg-white text-slate-700 font-semibold py-2 px-4 border border-slate-300 rounded-lg shadow-sm hover:bg-amber-100">6. Packaging & Test</button>
+                </div>
+            </div>
+
+            <div id="process-content-area" class="mt-8 p-6 bg-white rounded-xl shadow-lg transition-all duration-500">
+                <div id="raw-material" class="process-content hidden">
+                    <h3 class="font-bold text-2xl text-slate-800 mb-3">Raw Material Preparation</h3>
+                    <p class="text-slate-600">The journey begins with silica sand, which is purified to an extraordinary 99.9999% purity to create metallurgical-grade silicon. This material is then melted and grown into large, single-crystal ingots using the Czochralski process. A seed crystal is dipped into molten silicon and slowly pulled out, forming a perfect cylindrical ingot. This initial purity and crystal uniformity is the non-negotiable foundation for all subsequent steps.</p>
+                </div>
+                <div id="wafer-fab" class="process-content hidden">
+                    <h3 class="font-bold text-2xl text-slate-800 mb-3">Wafer Fabrication</h3>
+                    <p class="text-slate-600">The silicon ingots are sliced into thin wafers, each just a fraction of a millimeter thick. These wafers are then lapped, polished, and meticulously cleaned to achieve near-atomic flatness. The dimensional tolerances are extreme; flatness variations must be less than a few micrometers across the entire 300mm wafer surface to ensure the subsequent lithography step is in perfect focus.</p>
+                </div>
+                 <div id="lithography" class="process-content">
+                    <h3 class="font-bold text-2xl text-slate-800 mb-3">Photolithography</h3>
+                    <p class="text-slate-600">This is the heart of chipmaking. A light-sensitive chemical called photoresist is applied to the wafer. Light (often Extreme Ultraviolet, or EUV) is projected through a patterned mask (a reticle) onto the wafer, creating a chemical blueprint of the circuit. The exposed or unexposed resist is then washed away, leaving a stencil that guides the next step. This process is repeated dozens of times to build the chip's complex layers.</p>
+                </div>
+                <div id="etch-dope" class="process-content hidden">
+                    <h3 class="font-bold text-2xl text-slate-800 mb-3">Etching & Doping</h3>
+                    <p class="text-slate-600">Etching selectively removes material from the wafer not protected by the photoresist mask, carving the circuit patterns into the silicon. This is typically done with highly reactive ionized gases (plasma etching). Doping follows, using ion implantation to embed impurities (like Boron or Phosphorus) into specific areas of the silicon. This precisely alters the electrical properties of the silicon, creating the conductive paths and functional parts of a transistor.</p>
+                </div>
+                <div id="layering" class="process-content hidden">
+                    <h3 class="font-bold text-2xl text-slate-800 mb-3">Transistor Design & Layering</h3>
+                    <p class="text-slate-600">Transistors and the wiring (interconnects) that connect them are built up layer by layer. This involves depositing thin films of conductive materials (like copper) and insulating materials (dielectrics). Each layer must be perfectly flattened using Chemical Mechanical Planarization (CMP) before the next is added. A modern CPU can have over 10 layers of intricate copper wiring, forming a microscopic electrical highway system.</p>
+                </div>
+                <div id="packaging" class="process-content hidden">
+                    <h3 class="font-bold text-2xl text-slate-800 mb-3">Packaging & Testing</h3>
+                    <p class="text-slate-600">The wafer is cut into individual chips (dies). Each die is then packaged to protect it and provide electrical connections to the outside world. Modern techniques include stacking multiple dies (3D Stacking) or combining smaller "chiplets" in a single package. Finally, every chip undergoes rigorous testing to identify defects and ensure it meets performance specifications before being shipped.</p>
+                </div>
+            </div>
+        </section>
+
+
+        <section id="evolution" class="mb-16 md:mb-24 section-fade-in">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-900">A Tale of Two Nodes: 90nm vs 5nm</h2>
+                <p class="mt-2 text-lg text-slate-600 max-w-2xl mx-auto">The evolution from the 90nm node (around 2004) to the 5nm node (around 2020) illustrates the incredible pace of Moore's Law. This scaling brings monumental gains in transistor density, performance, and power efficiency.</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h3 class="text-xl font-bold text-center text-slate-800 mb-4">Transistor Count: An Exponential Leap</h3>
+                 <p class="text-center text-sm text-slate-500 mb-4">(Note: Vertical axis is logarithmic to visualize the vast difference)</p>
+                <div class="chart-container">
+                    <canvas id="nodeComparisonChart"></canvas>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8 mt-12">
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold text-slate-800 mb-4 text-center">Architectural Shift: FinFET vs. GAAFET</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
+                        <div>
+                            <p class="font-bold text-lg text-slate-700">FinFET</p>
+                            <div class="w-full h-32 bg-slate-100 rounded-lg my-2 flex items-center justify-center p-2">
+                                <p class="text-slate-500 text-xs">A 3D "fin" of silicon is wrapped by the gate on three sides, offering excellent control over current flow and reducing leakage.</p>
+                            </div>
+                            <p class="text-sm text-slate-600">Dominant from 22nm to 5nm nodes.</p>
+                        </div>
+                        <div>
+                            <p class="font-bold text-lg text-slate-700">GAAFET</p>
+                            <div class="w-full h-32 bg-slate-100 rounded-lg my-2 flex items-center justify-center p-2">
+                                <p class="text-slate-500 text-xs">The Gate-All-Around design wraps the gate around the entire channel (nanosheets or nanowires), providing even better control for nodes at 3nm and beyond.</p>
+                            </div>
+                            <p class="text-sm text-slate-600">The next generation, enabling further scaling.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold text-slate-800 mb-4 text-center">Lithography's Light: DUV vs. EUV</h3>
+                    <div class="chart-container" style="height: 300px; max-height: 40vh;">
+                         <canvas id="lithographyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="industry" class="mb-16 md:mb-24 section-fade-in">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-900">Industry Landscape</h2>
+                <p class="mt-2 text-lg text-slate-600 max-w-2xl mx-auto">The semiconductor industry is defined by massive capital investment, intense competition, and specialized business models.</p>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold text-slate-800 mb-4">Foundry Business Models</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-lg text-slate-700">Fabless Companies</h4>
+                            <p class="text-slate-600">Design and sell chips, but outsource manufacturing. Focus on innovation and IP. <span class="font-semibold">Examples:</span> Apple, Nvidia, AMD, Qualcomm.</p>
+                        </div>
+                        <div class="border-t border-slate-200 pt-4">
+                            <h4 class="font-semibold text-lg text-slate-700">Pure-Play Foundries</h4>
+                            <p class="text-slate-600">Specialize only in manufacturing chips for other companies. Benefit from economies of scale. <span class="font-semibold">Examples:</span> TSMC, GlobalFoundries, UMC.</p>
+                        </div>
+                         <div class="border-t border-slate-200 pt-4">
+                            <h4 class="font-semibold text-lg text-slate-700">Integrated Device Manufacturers (IDMs)</h4>
+                            <p class="text-slate-600">Design, manufacture, and sell their own chips. Some also offer foundry services. <span class="font-semibold">Examples:</span> Intel, Samsung, Texas Instruments.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                     <h3 class="text-xl font-bold text-slate-800 mb-4 text-center">Foundry Market Share (Q4 2024 Est.)</h3>
+                     <div class="chart-container" style="height: 250px;">
+                        <canvas id="marketShareChart"></canvas>
+                    </div>
+                    <p class="text-xs text-center text-slate-500 mt-4">The market for cutting-edge chip manufacturing is highly concentrated, with a few key players dominating production.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="environment" class="section-fade-in">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-900">Cleanrooms & Environmental Impact</h2>
+                <p class="mt-2 text-lg text-slate-600 max-w-2xl mx-auto">Manufacturing at the nanoscale requires impossibly clean environments and has a significant ecological footprint, which the industry is actively working to address.</p>
+            </div>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold text-slate-800 mb-4">The Need for Clean</h3>
+                    <p class="text-slate-600 mb-4">Modern chip features are measured in nanometers. A single particle of dust, smaller than a bacterium, can be larger than a transistor gate and ruin a chip. This necessitates ultra-clean environments.</p>
+                    <div class="border-t border-slate-200 pt-4">
+                        <h4 class="font-semibold text-slate-700">Key Features:</h4>
+                        <ul class="list-disc list-inside text-slate-600 mt-2 space-y-1">
+                            <li><span class="font-semibold">Air Filtration:</span> ULPA filters capture 99.999% of particles.</li>
+                            <li><span class="font-semibold">Personnel:</span> Full-body "bunny suits" contain human-generated particles.</li>
+                            <li><span class="font-semibold">Environment:</span> Strict temperature and humidity control.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold text-slate-800 mb-4">Ecological Challenges</h3>
+                    <p class="text-slate-600 mb-4">The technology that powers our future also consumes vast resources. The industry is focused on mitigating these impacts through sustainability initiatives.</p>
+                     <div class="border-t border-slate-200 pt-4">
+                        <h4 class="font-semibold text-slate-700">Key Challenges:</h4>
+                        <ul class="list-disc list-inside text-slate-600 mt-2 space-y-1">
+                           <li><span class="font-semibold">Energy Use:</span> A single fab can use as much power as a small city.</li>
+                           <li><span class="font-semibold">Water Use:</span> Millions of gallons of ultrapure water are needed daily.</li>
+                           <li><span class="font-semibold">Chemicals:</span> Use of hazardous materials and high-GWP gases.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-800 text-white mt-16">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-sm">
+            <p>&copy; 2024 Interactive Report. Data synthesized from "Semiconductor Manufacturing Deep Dive Research".</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+            document.querySelectorAll('#mobile-menu a').forEach(link => {
+                link.addEventListener('click', () => mobileMenu.classList.add('hidden'));
+            });
+
+            const processButtons = document.querySelectorAll('.process-button');
+            const processContents = document.querySelectorAll('.process-content');
+
+            function showContent(contentId) {
+                 processContents.forEach(content => {
+                    if (content.id === contentId) {
+                        content.classList.remove('hidden');
+                    } else {
+                        content.classList.add('hidden');
+                    }
+                });
+            }
+            
+            showContent('lithography');
+
+            processButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const contentId = button.getAttribute('data-content');
+                    showContent(contentId);
+                    
+                    processButtons.forEach(btn => btn.classList.remove('bg-amber-200', 'ring-2', 'ring-amber-500'));
+                    button.classList.add('bg-amber-200', 'ring-2', 'ring-amber-500');
+                });
+            });
+            document.querySelector('[data-content="lithography"]').classList.add('bg-amber-200', 'ring-2', 'ring-amber-500');
+
+
+            const nodeCtx = document.getElementById('nodeComparisonChart').getContext('2d');
+            new Chart(nodeCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Intel Pentium 4 (90nm, 2004)', 'Apple A15 Bionic (5nm, 2021)'],
+                    datasets: [{
+                        label: 'Transistor Count',
+                        data: [125000000, 15000000000],
+                        backgroundColor: ['rgba(245, 158, 11, 0.6)', 'rgba(59, 130, 246, 0.6)'],
+                        borderColor: ['rgb(245, 158, 11)', 'rgb(59, 130, 246)'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            type: 'logarithmic',
+                             title: {
+                                display: true,
+                                text: 'Transistors (Logarithmic Scale)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.x !== null) {
+                                        label += context.parsed.x.toLocaleString();
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const marketCtx = document.getElementById('marketShareChart').getContext('2d');
+            new Chart(marketCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['TSMC', 'Samsung', 'SMIC', 'GlobalFoundries', 'UMC', 'Others'],
+                    datasets: [{
+                        label: 'Market Share %',
+                        data: [67.1, 8.1, 5.5, 4.8, 4.4, 10.1],
+                        backgroundColor: [
+                            'rgba(2, 132, 199, 0.7)',
+                            'rgba(219, 39, 119, 0.7)',
+                            'rgba(245, 158, 11, 0.7)',
+                            'rgba(16, 185, 129, 0.7)',
+                            'rgba(139, 92, 246, 0.7)',
+                            'rgba(107, 114, 128, 0.7)'
+                        ],
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                     plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10 } }
+                    }
+                }
+            });
+            
+            const lithographyCtx = document.getElementById('lithographyChart').getContext('2d');
+            new Chart(lithographyCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Wavelength (nm)', 'Resolution', 'Cost', 'Process Complexity'],
+                    datasets: [
+                        {
+                            label: 'DUV (193nm)',
+                            data: [193, 6, 4, 5],
+                            fill: true,
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderColor: 'rgb(255, 99, 132)',
+                            pointBackgroundColor: 'rgb(255, 99, 132)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(255, 99, 132)'
+                        }, 
+                        {
+                            label: 'EUV (13.5nm)',
+                            data: [13.5, 10, 10, 9],
+                            fill: true,
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgb(54, 162, 235)',
+                            pointBackgroundColor: 'rgb(54, 162, 235)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(54, 162, 235)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10 } },
+                        tooltip: { enabled: true }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: { display: true },
+                            suggestedMin: 0,
+                            suggestedMax: 10,
+                            pointLabels: { font: { size: 10 } },
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    if(index === 0) return 'Lower';
+                                    if(index === values.length-1) return 'Higher';
+                                    return '';
+                                },
+                                stepSize: 10
+                            }
+                        }
+                    }
+                }
+            });
+
+            const sections = document.querySelectorAll('section');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('section-fade-in');
+                    }
+                });
+            }, { threshold: 0.1 });
+            sections.forEach(section => observer.observe(section));
+        });
+    </script>
+</body>
+</html>

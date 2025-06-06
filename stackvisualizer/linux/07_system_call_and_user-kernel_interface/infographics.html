@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: The System Call Interface Market Analysis</title>
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: The infographic uses a single-page, top-to-bottom narrative structure to tell a compelling story about the "market" of system call technologies. It begins with a high-level "market size" (total syscalls) to hook the user, then explains the fundamental "market players" (User vs. Kernel Space). The core of the infographic is a "process flow" analysis (The Journey of a Syscall) and a "competitive landscape" analysis (Comparison of Interception & Tracing Tools) using a radar chart for multi-vector comparison. This structure was chosen to translate a dense technical report into an easily digestible, visually-driven business intelligence format, making complex computer science concepts accessible through a familiar market research narrative. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Total syscalls in x86_64 -> Goal: Inform -> Viz: Single Big Number. Justification: Creates a strong, immediate hook like a "Total Addressable Market" stat. Method: HTML/CSS.
+        - Report Info: User/Kernel privilege separation -> Goal: Organize -> Viz: HTML/CSS diagram. Justification: Clearly visualizes the two fundamental "operating environments" in this market. Method: Tailwind CSS.
+        - Report Info: The end-to-end process of a system call -> Goal: Organize/Change -> Viz: Multi-step flowchart. Justification: Perfectly illustrates a "value chain" or process flow, showing how a request moves through the system. Method: HTML/CSS with Tailwind. (NO SVG/Mermaid).
+        - Report Info: Categories of system calls -> Goal: Compare/Inform -> Viz: Donut Chart. Justification: Shows the "market segmentation" by functionality, highlighting the largest categories of services. Method: Chart.js Canvas.
+        - Report Info: Comparison of various interception/tracing tools -> Goal: Compare/Relationships -> Viz: Radar Chart. Justification: Provides a powerful "competitive analysis," comparing different "products" (tools) across key performance indicators like Safety, Performance, and Ease of Use. Method: Chart.js Canvas.
+        - Report Info: Evolution of syscall mechanisms -> Goal: Change -> Viz: Timeline. Justification: Shows "technology adoption rates" and market maturity over time. Method: HTML/CSS.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F0F9FF; }
+        .card { background-color: white; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+        .chart-container { position: relative; width: 100%; max-width: 500px; margin-left: auto; margin-right: auto; height: 350px; max-height: 40vh; }
+        @media (min-width: 768px) { .chart-container { height: 400px; max-height: 50vh; } }
+        .flow-arrow { position: relative; }
+        .flow-arrow::after { content: '➡️'; font-size: 1.5rem; color: #00A1E4; position: absolute; left: 50%; bottom: -1.75rem; transform: translateX(-50%); }
+    </style>
+</head>
+<body class="text-gray-700">
+
+    <div class="container mx-auto p-4 md:p-8">
+
+        <header class="text-center my-12">
+            <h1 class="text-4xl md:text-6xl font-black text-gray-800">The System Call Interface</h1>
+            <p class="text-xl md:text-2xl font-bold text-[#00A1E4] mt-2">A Market Analysis of Kernel-Level Technologies</p>
+        </header>
+
+        <section class="card p-6 md:p-8 mb-12 text-center">
+            <h2 class="text-xl font-bold text-gray-500 uppercase tracking-wider">Total Addressable Market</h2>
+            <p class="text-7xl md:text-8xl font-black text-[#007AB3] my-4">322</p>
+            <p class="text-lg text-gray-600 max-w-2xl mx-auto">Distinct system call services available on the popular x86_64 architecture, forming the fundamental API between applications and the kernel.</p>
+        </section>
+
+        <section id="market-structure" class="card p-6 md:p-8 mb-12">
+            <h2 class="text-3xl font-bold text-center mb-8 text-gray-800">Market Structure: The Two Key Environments</h2>
+            <p class="text-center text-gray-600 max-w-3xl mx-auto mb-10">The entire operational market is segmented into two distinct privilege environments. This fundamental separation ensures security and stability, defining how "consumers" (applications) can access "provider" (kernel) services.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
+                <div class="border-4 border-dashed border-[#B9E7F8] rounded-lg p-6">
+                    <p class="text-5xl mb-4">🛡️</p>
+                    <h3 class="text-2xl font-bold text-[#007AB3]">User Space (The Consumer Zone)</h3>
+                    <p class="mt-2 text-gray-600">This is the non-privileged environment where all consumer applications run. Access to hardware and critical system resources is strictly prohibited to prevent instability and data corruption.</p>
+                </div>
+                <div class="border-4 border-solid border-[#00A1E4] rounded-lg p-6 bg-[#EBF8FF]">
+                    <p class="text-5xl mb-4">⚙️</p>
+                    <h3 class="text-2xl font-bold text-[#004C6D]">Kernel Space (The Provider Core)</h3>
+                    <p class="mt-2 text-gray-600">The highly privileged core where the OS kernel operates. It has full, unrestricted access to manage hardware, memory, and all system processes. Services are provided via system calls.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="value-chain" class="card p-6 md:p-8 mb-12">
+            <h2 class="text-3xl font-bold text-center mb-8 text-gray-800">Value Chain Analysis: The Journey of a Service Request</h2>
+            <p class="text-center text-gray-600 max-w-3xl mx-auto mb-12">A request for a kernel service follows a precise, high-speed value chain, transitioning from the consumer zone to the provider core and back. This process ensures every request is secure and properly handled.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-12 gap-x-6">
+                <div class="text-center flow-arrow">
+                    <div class="bg-[#B9E7F8] text-[#004C6D] w-16 h-16 rounded-full flex items-center justify-center text-3xl font-black mx-auto mb-3">1</div>
+                    <h3 class="font-bold text-lg">Library Wrapper</h3>
+                    <p class="text-sm">Application calls a standard library function (e.g., `glibc`), which prepares the request by loading arguments into CPU registers.</p>
+                </div>
+                <div class="text-center flow-arrow">
+                    <div class="bg-[#7ED3F1] text-[#004C6D] w-16 h-16 rounded-full flex items-center justify-center text-3xl font-black mx-auto mb-3">2</div>
+                    <h3 class="font-bold text-lg">Mode Switch</h3>
+                    <p class="text-sm">A `syscall` instruction triggers a hardware-level switch from non-privileged User Mode to privileged Kernel Mode.</p>
+                </div>
+                <div class="text-center flow-arrow">
+                    <div class="bg-[#32B8E9] text-white w-16 h-16 rounded-full flex items-center justify-center text-3xl font-black mx-auto mb-3">3</div>
+                    <h3 class="font-bold text-lg">Kernel Dispatch</h3>
+                    <p class="text-sm">The kernel's dispatcher uses the request's ID number to find the correct service handler in the System Call Table.</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-[#00A1E4] text-white w-16 h-16 rounded-full flex items-center justify-center text-3xl font-black mx-auto mb-3">4</div>
+                    <h3 class="font-bold text-lg">Execution & Return</h3>
+                    <p class="text-sm">The kernel service executes, placing the result in a register, and control is safely returned to the user application.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section class="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-12">
+            <div class="lg:col-span-2 card p-6 md:p-8 flex flex-col justify-center">
+                <h2 class="text-3xl font-bold text-gray-800">Market Segmentation</h2>
+                <p class="mt-4 text-gray-600">The system call "market" is segmented by functionality. While hundreds of calls exist, the bulk of application interactions fall into a few key categories, with Process Control and File Management representing the largest segments of service requests.</p>
+            </div>
+            <div class="lg:col-span-3 card p-6 md:p-8">
+                 <div class="chart-container h-96 max-h-[60vh] md:h-[450px]">
+                    <canvas id="categoriesChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="tech-adoption" class="card p-6 md:p-8 mb-12">
+            <h2 class="text-3xl font-bold text-center mb-8 text-gray-800">Technology Adoption & Performance Evolution</h2>
+            <p class="text-center text-gray-600 max-w-3xl mx-auto mb-12">The technology for invoking kernel services has evolved significantly, reflecting a market trend towards higher speed and lower overhead. Each new generation delivers substantial performance gains.</p>
+            <div class="relative border-l-4 border-[#00A1E4] ml-4 md:ml-0">
+                <div class="mb-8 ml-8">
+                    <div class="absolute w-6 h-6 bg-[#00A1E4] rounded-full -left-3.5 border-4 border-white"></div>
+                    <h3 class="text-xl font-bold text-[#007AB3]">Legacy: `int 0x80`</h3>
+                    <p class="text-gray-600">The original software interrupt method. Reliable but slow due to the overhead of interrupt handling.</p>
+                </div>
+                <div class="mb-8 ml-8">
+                    <div class="absolute w-6 h-6 bg-[#32B8E9] rounded-full -left-3.5 border-4 border-white"></div>
+                    <h3 class="text-xl font-bold text-[#007AB3]">Modern Standard: `syscall` / `sysenter`</h3>
+                    <p class="text-gray-600">Optimized hardware instructions introduced in modern CPUs. Significantly faster by streamlining the mode transition process.</p>
+                </div>
+                <div class="ml-8">
+                    <div class="absolute w-6 h-6 bg-[#7ED3F1] rounded-full -left-3.5 border-4 border-white"></div>
+                    <h3 class="text-xl font-bold text-[#007AB3]">High-Frequency Optimization: VDSO & vsyscalls</h3>
+                    <p class="text-gray-600">The cutting edge. For certain frequent calls like getting the time, the kernel maps a shared object (VDSO) into user space, allowing the call to complete without a full mode switch, yielding maximum performance.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="competitive-landscape" class="card p-6 md:p-8">
+            <h2 class="text-3xl font-bold text-center mb-2 text-gray-800">Competitive Landscape: Interception & Tracing Tools</h2>
+            <p class="text-center text-gray-600 max-w-3xl mx-auto mb-10">A diverse market of tools exists to trace, debug, and monitor system call activity. Key players compete on vectors like performance impact, safety, and operational scope. eBPF is emerging as a dominant, modern player due to its high safety and performance profile.</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <div class="chart-container">
+                    <canvas id="toolsRadarChart"></canvas>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <h3 class="font-bold text-lg text-[#007AB3]">eBPF (Extended Berkeley Packet Filter)</h3>
+                        <p class="text-sm text-gray-600">A revolutionary technology allowing safe, sandboxed programs to run in the kernel. Offers unparalleled visibility with low overhead and high safety, making it a market leader for security and observability.</p>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-[#007AB3]">strace</h3>
+                        <p class="text-sm text-gray-600">The ubiquitous, easy-to-use debugging tool. Excellent for quick diagnostics but suffers from high performance overhead, making it unsuitable for production monitoring.</p>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-[#007AB3]">LKM Hooking (Loadable Kernel Module)</h3>
+                        <p class="text-sm text-gray-600">The "high-risk, high-reward" legacy approach. Offers total control by directly modifying kernel memory, but is extremely unsafe, can crash the system, and is often blocked by modern security features.</p>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-[#007AB3]">LD_PRELOAD</h3>
+                        <p class="text-sm text-gray-600">A user-space technique that intercepts library calls, not true system calls. Easy to deploy but has significant blind spots and is ineffective against statically linked applications.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const brilliantBlues = {
+                primary: '#00A1E4',
+                secondary: '#32B8E9',
+                tertiary: '#7ED3F1',
+                light: '#B9E7F8',
+                dark: '#004C6D',
+                accent: '#FFC107'
+            };
+
+            const processLabel = (label, maxLength = 16) => {
+                if (typeof label !== 'string' || label.length <= maxLength) {
+                    return label;
+                }
+                const words = label.split(' ');
+                const lines = [];
+                let currentLine = '';
+                for (const word of words) {
+                    if ((currentLine + ' ' + word).trim().length > maxLength) {
+                        lines.push(currentLine.trim());
+                        currentLine = word;
+                    } else {
+                        currentLine = (currentLine + ' ' + word).trim();
+                    }
+                }
+                if (currentLine) {
+                    lines.push(currentLine);
+                }
+                return lines;
+            };
+
+            const tooltipTitleCallback = (tooltipItems) => {
+                const item = tooltipItems[0];
+                let label = item.chart.data.labels[item.dataIndex];
+                if (Array.isArray(label)) {
+                    return label.join(' ');
+                }
+                return label;
+            };
+
+            const defaultTooltipOptions = {
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: tooltipTitleCallback
+                        }
+                    }
+                }
+            };
+            
+            // Categories Chart
+            const catCtx = document.getElementById('categoriesChart')?.getContext('2d');
+            if (catCtx) {
+                new Chart(catCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Process Control', 'File Management', 'Networking', 'System Info', 'Device & Signal Mgmt'],
+                        datasets: [{
+                            label: 'System Call Categories',
+                            data: [35, 30, 15, 10, 10],
+                            backgroundColor: [
+                                brilliantBlues.primary,
+                                brilliantBlues.secondary,
+                                brilliantBlues.tertiary,
+                                brilliantBlues.light,
+                                '#A0DFF7'
+                            ],
+                            borderColor: '#ffffff',
+                            borderWidth: 4,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                             tooltip: {
+                                callbacks: {
+                                    title: tooltipTitleCallback
+                                }
+                            },
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    font: {
+                                        size: 14,
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '60%'
+                    }
+                });
+            }
+
+            // Tools Radar Chart
+            const radarCtx = document.getElementById('toolsRadarChart')?.getContext('2d');
+            if (radarCtx) {
+                new Chart(radarCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Safety', 'Performance Impact (Lower is Better)', 'Scope (Kernel Insight)', 'Ease of Use', 'Flexibility'],
+                        datasets: [
+                            {
+                                label: 'eBPF',
+                                data: [5, 1, 5, 3, 5],
+                                backgroundColor: 'rgba(0, 161, 228, 0.2)',
+                                borderColor: brilliantBlues.primary,
+                                borderWidth: 2,
+                                pointBackgroundColor: brilliantBlues.primary,
+                            },
+                            {
+                                label: 'LKM Hooking',
+                                data: [1, 4, 5, 1, 4],
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                borderColor: 'rgb(255, 99, 132)',
+                                borderWidth: 2,
+                                pointBackgroundColor: 'rgb(255, 99, 132)',
+                            },
+                             {
+                                label: 'strace',
+                                data: [4, 5, 2, 5, 2],
+                                backgroundColor: 'rgba(255, 193, 7, 0.2)',
+                                borderColor: brilliantBlues.accent,
+                                borderWidth: 2,
+                                pointBackgroundColor: brilliantBlues.accent,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 5,
+                                min: 0,
+                                ticks: {
+                                    stepSize: 1,
+                                    display: false
+                                },
+                                pointLabels: {
+                                  font: {
+                                    size: 13
+                                  }
+                                },
+                                angleLines: {
+                                  color: 'rgba(0, 0, 0, 0.1)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: tooltipTitleCallback
+                                }
+                            },
+                            legend: {
+                                position: 'top',
+                            },
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

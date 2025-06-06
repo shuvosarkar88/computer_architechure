@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide to Linux Kernel Security</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .nav-link {
+            transition: color 0.3s, border-color 0.3s;
+        }
+        .nav-link.active {
+            color: #FCA311;
+            border-bottom-color: #FCA311;
+        }
+        .card {
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .attack-step {
+            transition: opacity 0.5s, transform 0.5s;
+            opacity: 0.3;
+            transform: scale(0.95);
+        }
+        .attack-step.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+    </style>
+    <!-- Chosen Palette: Calm Harmony -->
+    <!-- Application Structure Plan: A thematic, guided-tour single-page application. It starts with a high-level "Defense-in-Depth" concept, then allows users to dive into four key mechanisms (Capabilities, SELinux, Namespaces, Seccomp) via an interactive navigation grid. Each section uses a primary interactive element (e.g., a chart, a simulator) to explain the core concept. The journey culminates in a scroll-animated "Attack Scenario" that synthesizes all concepts by showing how they work together to thwart a threat. This structure was chosen to transform a descriptive report into an exploratory learning tool, promoting understanding through interaction rather than passive reading. -->
+    <!-- Visualization & Content Choices: 
+        - Capabilities: Interactive Chart.js bar chart to compare granular privileges vs. full root, demonstrating 'least privilege'.
+        - SELinux: HTML/CSS based policy simulator to make abstract MAC rules tangible (Subject -> Action -> Object -> Decision).
+        - Namespaces: Interactive grid of icons (Unicode) to explain different isolation types, more engaging than a table.
+        - Seccomp: A dynamic list that simulates a syscall filter, showing how profiles block dangerous calls.
+        - Synergy: A scroll-animated flowchart using HTML/CSS and the Intersection Observer API to visually narrate the defense-in-depth scenario.
+        These choices prioritize interactivity and visual storytelling to simplify complex technical concepts for a broader audience. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 border-b border-gray-200">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="font-bold text-xl text-gray-900">🛡️ Kernel Security</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#home" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent">Home</a>
+                        <a href="#capabilities" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent">Capabilities</a>
+                        <a href="#selinux" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent">SELinux</a>
+                        <a href="#namespaces" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent">Namespaces</a>
+                        <a href="#seccomp" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent">Seccomp</a>
+                        <a href="#synergy" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent">Synergy</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="home" class="py-20 md:py-28 bg-white">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <h1 class="text-4xl md:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight">The Layers of Linux Security</h1>
+                <p class="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-gray-600">
+                    The Linux kernel isn't protected by a single wall, but by a sophisticated, multi-layered defense strategy. This interactive guide explores the four fundamental pillars that work in concert to isolate processes, control privileges, and secure the system from the inside out.
+                </p>
+                <div class="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <a href="#capabilities" class="card block p-6 bg-gray-50 rounded-xl border border-gray-200 hover:border-blue-400">
+                        <h3 class="text-xl font-bold text-gray-900">Capabilities</h3>
+                        <p class="mt-2 text-gray-600">Granular privilege control beyond the all-or-nothing 'root' user.</p>
+                    </a>
+                    <a href="#selinux" class="card block p-6 bg-gray-50 rounded-xl border border-gray-200 hover:border-green-400">
+                        <h3 class="text-xl font-bold text-gray-900">SELinux</h3>
+                        <p class="mt-2 text-gray-600">Mandatory Access Control that dictates who can talk to whom.</p>
+                    </a>
+                    <a href="#namespaces" class="card block p-6 bg-gray-50 rounded-xl border border-gray-200 hover:border-yellow-400">
+                        <h3 class="text-xl font-bold text-gray-900">Namespaces</h3>
+                        <p class="mt-2 text-gray-600">Virtualizing system resources to create isolated environments.</p>
+                    </a>
+                    <a href="#seccomp" class="card block p-6 bg-gray-50 rounded-xl border border-gray-200 hover:border-red-400">
+                        <h3 class="text-xl font-bold text-gray-900">Seccomp</h3>
+                        <p class="mt-2 text-gray-600">A kernel firewall that filters system calls an app can make.</p>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section id="capabilities" class="py-20">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h2 class="text-base font-semibold text-blue-600 tracking-wide uppercase">Privilege Management</h2>
+                    <p class="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight sm:text-4xl">Linux Capabilities</p>
+                    <p class="mt-4 max-w-2xl mx-auto text-xl text-gray-500">This section explores how Linux Capabilities deconstruct the monolithic `root` power into fine-grained privileges. The goal is to grant processes only the specific permissions they need, drastically reducing the attack surface if a process is compromised.
+                    </p>
+                </div>
+
+                <div class="mt-12 lg:grid lg:grid-cols-2 lg:gap-12 lg:items-center">
+                    <div class="relative">
+                        <h3 class="text-2xl font-extrabold text-gray-900 tracking-tight sm:text-3xl">Root vs. Least Privilege</h3>
+                        <p class="mt-3 text-lg text-gray-500">
+                            Instead of running a web server as the all-powerful `root` user just to bind to port 80, we can grant it only `CAP_NET_BIND_SERVICE`. Use the selector below to see the dramatic difference in exposed privileges. Full `root` has over 40 capabilities; a secured process needs only a few.
+                        </p>
+                        <div class="mt-6">
+                            <label for="capability-selector" class="block text-sm font-medium text-gray-700">Select Process Profile:</label>
+                            <select id="capability-selector" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                <option value="webserver">Web Server (Needs Port 80)</option>
+                                <option value="ping">Ping Tool (Needs Raw Sockets)</option>
+                                <option value="fullroot">Full Root (Unrestricted)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mt-10 lg:mt-0">
+                         <div class="chart-container relative w-full max-w-xl mx-auto h-80 md:h-96">
+                            <canvas id="capabilitiesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="selinux" class="py-20 bg-white">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h2 class="text-base font-semibold text-green-600 tracking-wide uppercase">Mandatory Access Control</h2>
+                    <p class="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight sm:text-4xl">SELinux Policy Simulator</p>
+                    <p class="mt-4 max-w-2xl mx-auto text-xl text-gray-500">
+                        SELinux adds a critical layer of security by labeling every process and resource, and enforcing policies on how they can interact. Unlike standard permissions, these rules are mandatory and cannot be changed by users. This simulator shows how SELinux decides whether to allow or deny an action based on context labels.
+                    </p>
+                </div>
+                
+                <div class="mt-12 max-w-4xl mx-auto p-8 bg-gray-50 rounded-2xl border border-gray-200">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center text-center">
+                        <div>
+                            <label for="selinux-subject" class="font-bold text-gray-700">Subject (Process)</label>
+                             <select id="selinux-subject" class="mt-2 block w-full p-2 border-gray-300 rounded-md">
+                                <option value="httpd_t">Web Server (httpd_t)</option>
+                                <option value="mysqld_t">Database (mysqld_t)</option>
+                            </select>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-400">→</div>
+                        <div>
+                            <label for="selinux-object" class="font-bold text-gray-700">Object (Resource)</label>
+                            <select id="selinux-object" class="mt-2 block w-full p-2 border-gray-300 rounded-md">
+                                <option value="httpd_sys_content_t">Web Content (httpd_sys_content_t)</option>
+                                <option value="shadow_t">Password File (shadow_t)</option>
+                                <option value="mysqld_db_t">Database Files (mysqld_db_t)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-8 text-center">
+                        <button id="selinux-check-btn" class="px-8 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition">Check Policy</button>
+                    </div>
+                    <div id="selinux-result" class="mt-8 p-6 rounded-lg text-center transition-all duration-500">
+                        <p class="text-2xl font-bold"></p>
+                        <p class="mt-2 text-gray-600"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="namespaces" class="py-20">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h2 class="text-base font-semibold text-yellow-600 tracking-wide uppercase">Resource Virtualization</h2>
+                    <p class="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight sm:text-4xl">Linux Namespaces</p>
+                    <p class="mt-4 max-w-2xl mx-auto text-xl text-gray-500">
+                        Namespaces are a cornerstone of containerization, creating the illusion that a process has its own dedicated system resources. This section provides an overview of the different namespace types that isolate processes from each other and the host. Click on a namespace to learn about the specific resource it virtualizes.
+                    </p>
+                </div>
+                <div class="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+                </div>
+                <div id="namespace-info" class="mt-8 max-w-3xl mx-auto p-6 bg-white rounded-lg border border-gray-200 shadow-sm transition-opacity duration-300 opacity-0">
+                    <h4 id="namespace-info-title" class="text-xl font-bold text-gray-900"></h4>
+                    <p id="namespace-info-desc" class="mt-2 text-gray-600"></p>
+                </div>
+            </div>
+        </section>
+
+        <section id="seccomp" class="py-20 bg-white">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                 <div class="text-center">
+                    <h2 class="text-base font-semibold text-red-600 tracking-wide uppercase">System Call Filtering</h2>
+                    <p class="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight sm:text-4xl">Seccomp Profiles</p>
+                     <p class="mt-4 max-w-2xl mx-auto text-xl text-gray-500">
+                         Seccomp acts as a firewall for the kernel, allowing you to define exactly which system calls a process is allowed to make. By creating a whitelist of necessary calls, you can drastically reduce the kernel's attack surface. This is a critical defense against both known and unknown vulnerabilities.
+                     </p>
+                </div>
+
+                <div class="mt-12 max-w-4xl mx-auto">
+                    <div class="flex justify-center space-x-4 mb-6">
+                        <button data-profile="default" class="seccomp-profile-btn px-6 py-2 font-semibold rounded-lg bg-red-500 text-white">Default Docker Profile</button>
+                        <button data-profile="unrestricted" class="seccomp-profile-btn px-6 py-2 font-semibold rounded-lg bg-gray-200 text-gray-700">Unrestricted</button>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <p class="text-center font-semibold mb-4">Dangerous System Calls</p>
+                        <ul id="syscall-list" class="space-y-2"></ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="synergy" class="py-20">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                     <h2 class="text-base font-semibold text-purple-600 tracking-wide uppercase">Defense-in-Depth</h2>
+                     <p class="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight sm:text-4xl">Anatomy of an Attack Defense</p>
+                     <p class="mt-4 max-w-3xl mx-auto text-xl text-gray-500">
+                        No single security layer is foolproof. True system resilience comes from their synergy. The following scenario demonstrates how namespaces, capabilities, SELinux, and seccomp work together to contain and neutralize a threat, even after an initial compromise. Scroll down to see each defense layer activate.
+                     </p>
+                </div>
+
+                <div class="mt-20 max-w-3xl mx-auto relative">
+                    <div class="absolute left-1/2 -ml-0.5 w-1 h-full bg-gray-200"></div>
+                    
+                    <div class="attack-step mb-16 flex items-center">
+                        <div class="w-1/2 pr-8 text-right">
+                            <h3 class="text-xl font-bold text-gray-800">1. Initial Compromise</h3>
+                            <p class="text-gray-600">Attacker exploits a web app vulnerability and gains shell access inside a container.</p>
+                        </div>
+                        <div class="w-1/2 pl-8">
+                           <div class="bg-red-100 border border-red-300 p-4 rounded-lg">💥 Attack Initiated</div>
+                        </div>
+                    </div>
+                    
+                    <div class="attack-step mb-16 flex items-center">
+                         <div class="w-1/2 pr-8">
+                             <div class="bg-yellow-100 border border-yellow-300 p-4 rounded-lg text-right">🛡️ Namespaces Contain</div>
+                        </div>
+                        <div class="w-1/2 pl-8">
+                           <h3 class="text-xl font-bold text-gray-800">2. Namespace Containment</h3>
+                            <p class="text-gray-600">The attacker is trapped. Namespaces (PID, NET, MNT) prevent them from seeing or affecting host processes, network, or files.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="attack-step mb-16 flex items-center">
+                        <div class="w-1/2 pr-8 text-right">
+                            <h3 class="text-xl font-bold text-gray-800">3. Capability Limitation</h3>
+                            <p class="text-gray-600">Attacker tries to escalate. But the container runtime dropped most capabilities. They lack `CAP_SYS_ADMIN` and can't load kernel modules or alter the host.</p>
+                        </div>
+                         <div class="w-1/2 pl-8">
+                           <div class="bg-blue-100 border border-blue-300 p-4 rounded-lg">🛡️ Capabilities Restrict</div>
+                        </div>
+                    </div>
+
+                     <div class="attack-step mb-16 flex items-center">
+                         <div class="w-1/2 pr-8">
+                            <div class="bg-green-100 border border-green-300 p-4 rounded-lg text-right">🛡️ SELinux Denies</div>
+                        </div>
+                        <div class="w-1/2 pl-8">
+                           <h3 class="text-xl font-bold text-gray-800">4. SELinux Enforcement</h3>
+                            <p class="text-gray-600">The attacker attempts to read `/etc/shadow`. SELinux, based on the process's `httpd_t` label, denies access to the `shadow_t` file type. Access blocked.</p>
+                        </div>
+                    </div>
+
+                    <div class="attack-step flex items-center">
+                        <div class="w-1/2 pr-8 text-right">
+                            <h3 class="text-xl font-bold text-gray-800">5. Seccomp Filtering</h3>
+                            <p class="text-gray-600">As a last resort, the attacker tries a dangerous, uncommon syscall (`bpf`) to probe the kernel. The container's Seccomp profile blocks it. The process is killed. Attack neutralized.</p>
+                        </div>
+                        <div class="w-1/2 pl-8">
+                           <div class="bg-red-100 border border-red-300 p-4 rounded-lg">🛡️ Seccomp Blocks</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-white border-t border-gray-200">
+        <div class="container mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-gray-500">
+            <p>&copy; 2025 Interactive Kernel Security Guide. Created to make complex security concepts accessible.</p>
+        </div>
+    </footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // Capabilities Chart
+    const capabilitiesData = {
+        labels: ['Required Capabilities', 'Total Potential Capabilities (Root)'],
+        datasets: [{
+            label: '# of Capabilities',
+            data: [1, 41],
+            backgroundColor: [
+                'rgba(59, 130, 246, 0.5)',
+                'rgba(239, 68, 68, 0.5)',
+            ],
+            borderColor: [
+                'rgba(59, 130, 246, 1)',
+                'rgba(239, 68, 68, 1)',
+            ],
+            borderWidth: 1
+        }]
+    };
+
+    const capabilitiesConfig = {
+        type: 'bar',
+        data: capabilitiesData,
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.x !== null) {
+                                label += context.parsed.x;
+                            }
+                            if (context.label === 'Required Capabilities') {
+                                let capName = '';
+                                const selector = document.getElementById('capability-selector');
+                                if (selector.value === 'webserver') capName = 'CAP_NET_BIND_SERVICE';
+                                if (selector.value === 'ping') capName = 'CAP_NET_RAW';
+                                if (selector.value === 'fullroot') capName = 'ALL';
+                                label += ` (${capName})`
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: 45
+                }
+            }
+        }
+    };
+
+    const ctx = document.getElementById('capabilitiesChart').getContext('2d');
+    const myChart = new Chart(ctx, capabilitiesConfig);
+
+    document.getElementById('capability-selector').addEventListener('change', (event) => {
+        const value = event.target.value;
+        if (value === 'webserver') {
+            myChart.data.datasets[0].data[0] = 1;
+        } else if (value === 'ping') {
+            myChart.data.datasets[0].data[0] = 1;
+        } else {
+            myChart.data.datasets[0].data[0] = 41;
+        }
+        myChart.update();
+    });
+
+    // SELinux Simulator
+    const selinuxCheckBtn = document.getElementById('selinux-check-btn');
+    const selinuxResultEl = document.getElementById('selinux-result');
+    selinuxCheckBtn.addEventListener('click', () => {
+        const subject = document.getElementById('selinux-subject').value;
+        const object = document.getElementById('selinux-object').value;
+        let result = {};
+
+        if (subject === 'httpd_t' && object === 'httpd_sys_content_t') {
+            result = { allowed: true, text: "The web server (`httpd_t`) is allowed to access web content (`httpd_sys_content_t`). This is expected behavior." };
+        } else if (subject === 'httpd_t' && object === 'shadow_t') {
+            result = { allowed: false, text: "The web server (`httpd_t`) is DENIED access to the password file (`shadow_t`). This prevents a compromised web server from stealing credentials." };
+        } else if (subject === 'httpd_t' && object === 'mysqld_db_t') {
+            result = { allowed: false, text: "The web server (`httpd_t`) is DENIED access to database files (`mysqld_db_t`). This enforces separation of concerns between application tiers." };
+        } else if (subject === 'mysqld_t' && object === 'mysqld_db_t') {
+            result = { allowed: true, text: "The database process (`mysqld_t`) is allowed to access its own database files (`mysqld_db_t`)." };
+        } else {
+            result = { allowed: false, text: "Access is DENIED. The policy does not have an explicit rule to allow this interaction, defaulting to a secure state."};
+        }
+        
+        selinuxResultEl.classList.remove('bg-green-100', 'bg-red-100', 'border-green-300', 'border-red-300');
+        if (result.allowed) {
+             selinuxResultEl.classList.add('bg-green-100', 'border-green-300');
+             selinuxResultEl.querySelector('p:first-child').textContent = '✅ ALLOWED';
+        } else {
+             selinuxResultEl.classList.add('bg-red-100', 'border-red-300');
+             selinuxResultEl.querySelector('p:first-child').textContent = '❌ DENIED';
+        }
+        selinuxResultEl.querySelector('p:last-child').textContent = result.text;
+    });
+
+    // Namespaces
+    const namespacesData = [
+        { name: 'PID', icon: '🆔', desc: 'Isolates Process IDs. A process inside this namespace has its own process tree, with its main process being PID 1.' },
+        { name: 'NET', icon: '🌐', desc: 'Isolates network interfaces, IP addresses, and ports. Each namespace has its own virtual network stack.' },
+        { name: 'MNT', icon: '📁', desc: 'Isolates filesystem mount points. Processes see a completely different filesystem hierarchy.' },
+        { name: 'UTS', icon: '💻', desc: 'Isolates the hostname and domain name, allowing each container to have its own unique identity on the network.' },
+        { name: 'IPC', icon: '↔️', desc: 'Isolates inter-process communication resources like message queues and shared memory.' },
+        { name: 'User', icon: '👤', desc: 'Isolates User and Group IDs. A process can have root privileges inside the namespace but be an unprivileged user on the host.' },
+        { name: 'Cgroup', icon: '📊', desc: 'Isolates the control group hierarchy, preventing processes from seeing the resource limits of the host.' },
+        { name: 'Time', icon: '⏰', desc: 'Isolates system time, allowing processes to have a different view of the boot and monotonic clocks.' },
+    ];
+    const nsContainer = document.querySelector('#namespaces .grid');
+    const nsInfo = document.getElementById('namespace-info');
+    const nsInfoTitle = document.getElementById('namespace-info-title');
+    const nsInfoDesc = document.getElementById('namespace-info-desc');
+
+    namespacesData.forEach(ns => {
+        const nsElement = document.createElement('div');
+        nsElement.className = 'card p-4 bg-white rounded-lg border border-gray-200 text-center cursor-pointer hover:border-yellow-400';
+        nsElement.innerHTML = `<div class="text-4xl">${ns.icon}</div><p class="mt-2 font-semibold text-gray-800">${ns.name}</p>`;
+        nsElement.addEventListener('click', () => {
+            nsInfoTitle.textContent = `${ns.icon} ${ns.name} Namespace`;
+            nsInfoDesc.textContent = ns.desc;
+            nsInfo.style.opacity = '1';
+            document.querySelectorAll('#namespaces .card').forEach(c => c.classList.remove('bg-yellow-100'));
+            nsElement.classList.add('bg-yellow-100');
+        });
+        nsContainer.appendChild(nsElement);
+    });
+
+    // Seccomp
+    const syscalls = [
+        { name: 'clone', desc: 'Create a new process', dangerous: true },
+        { name: 'kexec_load', desc: 'Load a new kernel for execution', dangerous: true },
+        { name: 'mount', desc: 'Mount a filesystem', dangerous: true },
+        { name: 'reboot', desc: 'Reboot the system', dangerous: true },
+        { name: 'bpf', desc: 'Run a BPF program', dangerous: true },
+        { name: 'open', desc: 'Open a file', dangerous: false },
+        { name: 'read', desc: 'Read from a file', dangerous: false },
+        { name: 'write', desc: 'Write to a file', dangerous: false },
+        { name: 'close', desc: 'Close a file descriptor', dangerous: false },
+    ];
+    const syscallList = document.getElementById('syscall-list');
+    const profileButtons = document.querySelectorAll('.seccomp-profile-btn');
+
+    function renderSyscalls(profile) {
+        syscallList.innerHTML = '';
+        syscalls.forEach(call => {
+            const isBlocked = profile === 'default' && call.dangerous;
+            const li = document.createElement('li');
+            li.className = `flex justify-between items-center p-2 rounded ${isBlocked ? 'bg-red-100 text-gray-500 line-through' : 'bg-green-100 text-gray-800'}`;
+            li.innerHTML = `
+                <span>
+                    <code class="font-mono font-bold">${call.name}()</code>
+                    <span class="text-sm ml-2">${call.desc}</span>
+                </span>
+                <span class="text-sm font-bold">${isBlocked ? 'BLOCKED' : 'ALLOWED'}</span>
+            `;
+            syscallList.appendChild(li);
+        });
+    }
+
+    profileButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            profileButtons.forEach(b => b.classList.replace('bg-red-500', 'bg-gray-200') || b.classList.remove('text-white'));
+            btn.classList.add('bg-red-500', 'text-white');
+            btn.classList.remove('bg-gray-200');
+            renderSyscalls(btn.dataset.profile);
+        });
+    });
+    renderSyscalls('default');
+    
+    // Synergy Scroll Animation
+    const attackSteps = document.querySelectorAll('.attack-step');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.5 });
+    attackSteps.forEach(step => observer.observe(step));
+    
+    // Nav link highlighting
+    const sections = document.querySelectorAll('section');
+    const navLinks = document.querySelectorAll('.nav-link');
+    const navObserver = new IntersectionObserver((entries) => {
+         entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').substring(1) === entry.target.id) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+         });
+    }, { rootMargin: '-50% 0px -50% 0px' });
+    sections.forEach(section => navObserver.observe(section));
+
+});
+</script>
+
+</body>
+</html>

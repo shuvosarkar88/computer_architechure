@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kernel Debugging & Profiling Tools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: "Warm Neutrals" - A calm, professional palette with off-white/beige background, muted blues for navigation/accents, and dark grays for text. -->
+    <!-- Application Structure Plan: A single-page application with a primary tab-based navigation for 'Overview', 'kgdb', 'ftrace', 'perf', 'SystemTap', and 'Comparison'. This task-oriented structure allows users to directly access information on a specific tool or concept, which is more efficient than a linear document. The 'Overview' section grounds the user in core concepts, while dedicated tool sections provide deep dives. The 'Comparison' section synthesizes information with a visual chart and a detailed table, facilitating analysis. This non-linear, organized approach was chosen to enhance usability and make complex technical information more digestible and explorable. -->
+    <!-- Visualization & Content Choices: 
+        - Goal: Inform/Organize -> 'Overview' & Tool Sections. Method: Styled cards (HTML/Tailwind) for definitions, structured lists for features, and tables for file systems. Interaction: Hover effects on tables. Justification: Breaks down text-heavy content into readable chunks.
+        - Goal: Organize -> 'SystemTap' workflow. Method: Visual diagram using styled divs and arrows (HTML/Tailwind). Justification: More engaging and clearer than a text description.
+        - Goal: Compare -> 'Comparison' Section. Method: Polar Area Chart (Chart.js/Canvas) and a detailed HTML table. Interaction: Chart.js tooltips and clickable legend to filter data. Justification: The chart provides a quick visual summary of tool strengths, while the table offers detailed side-by-side information.
+        - All choices support the tabbed application structure by presenting focused information within each view. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #fdfcf9; }
+        .tab-active { border-bottom-color: #3b82f6; color: #3b82f6; }
+        .tab-inactive { border-bottom-color: transparent; color: #4b5563; }
+        .content-section { display: none; }
+        .content-active { display: block; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 400px; } }
+        .icon-placeholder {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">Linux Kernel Debugging & Profiling Tools</h1>
+            <p class="text-lg text-gray-600 mt-2">An interactive guide to understanding the tools that power kernel analysis.</p>
+        </header>
+
+        <nav class="border-b border-gray-200 mb-8">
+            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="nav-tabs">
+                <li><a href="#" class="nav-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="overview">Overview</a></li>
+                <li><a href="#" class="nav-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="kgdb">kgdb</a></li>
+                <li><a href="#" class="nav-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="ftrace">ftrace</a></li>
+                <li><a href="#" class="nav-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="perf">perf</a></li>
+                <li><a href="#" class="nav-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="systemtap">SystemTap</a></li>
+                <li><a href="#" class="nav-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="comparison">Comparison</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <!-- Overview Section -->
+            <section id="overview" class="content-section">
+                <div class="prose max-w-none">
+                    <p class="text-lg text-gray-700">This section provides a foundational understanding of kernel diagnostics. It distinguishes between debugging and profiling—two complementary disciplines—and introduces common issues like kernel panics and memory bugs. Understanding these concepts is the first step toward effectively using the specialized tools covered in this guide.</p>
+                    <div class="grid md:grid-cols-2 gap-6 mt-6">
+                        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                            <h3 class="text-xl font-semibold mb-2 text-blue-600">Debugging: Finding the "Why"</h3>
+                            <p>The systematic process of identifying, isolating, and rectifying errors. Kernel debugging involves inspecting internal states, setting breakpoints, and stepping through code to understand *why* an anomaly occurred.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                            <h3 class="text-xl font-semibold mb-2 text-green-600">Profiling: Understanding the "How"</h3>
+                            <p>Focuses on performance analysis to determine where the system expends its resources. Profiling seeks to understand *how efficiently* a system is operating by analyzing function calls, execution time, and resource consumption.</p>
+                        </div>
+                    </div>
+                    <h3 class="text-2xl font-semibold mt-8 mb-4">Common Kernel Issues</h3>
+                    <div class="space-y-4">
+                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200"><strong>Oops:</strong> A non-fatal error indicating an inconsistent state. The kernel terminates the offending process but attempts to continue running.</div>
+                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200"><strong>Kernel Panic:</strong> A fatal error from which the kernel cannot recover, forcing a complete system halt to prevent further data corruption.</div>
+                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200"><strong>Memory Bugs:</strong> Issues like use-after-free, buffer overflows, or memory leaks that are a pervasive source of instability.</div>
+                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200"><strong>Locking Problems:</strong> Concurrency issues like deadlocks or improper lock usage that can cause system freezes.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- kgdb Section -->
+            <section id="kgdb" class="content-section">
+                <div class="prose max-w-none">
+                    <p class="text-lg text-gray-700">`kgdb` is the standard interactive, source-level debugger for the Linux kernel. It allows developers to halt the kernel, inspect memory and variables, and step through code line-by-line, much like GDB for user-space applications. It operates in a client-server model, requiring a host machine for the GDB client and a target machine running the kernel to be debugged.</p>
+                    <h3 class="text-2xl font-semibold mt-8 mb-4">Core Capabilities</h3>
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200"><strong>Breakpoints:</strong> Halt execution at any specified line of kernel code.</div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200"><strong>Memory Inspection:</strong> Read from and write to any kernel memory address.</div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200"><strong>Step Execution:</strong> Execute code line-by-line or function-by-function.</div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200"><strong>Source-Level Debugging:</strong> View and debug C source code, not just assembly.</div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200"><strong>Crash Analysis:</strong> Automatically halts at the faulting instruction when a crash occurs.</div>
+                    </div>
+                    <h3 class="text-2xl font-semibold mt-8 mb-4">Setup Workflow</h3>
+                    <ol class="list-decimal list-inside space-y-2 mt-4 pl-4 bg-gray-50 p-6 rounded-lg border">
+                        <li>Compile kernel with `CONFIG_DEBUG_INFO` and `CONFIG_KGDB`.</li>
+                        <li>Boot target machine with `kgdboc` and `kgdbwait` parameters.</li>
+                        <li>Connect from host machine using a GDB client over a serial or network link.</li>
+                        <li>Enter the debugger at runtime using the Magic SysRq key (`echo g > /proc/sysrq-trigger`).</li>
+                    </ol>
+                </div>
+            </section>
+            
+            <!-- ftrace Section -->
+            <section id="ftrace" class="content-section">
+                <div class="prose max-w-none">
+                    <p class="text-lg text-gray-700">`ftrace` is a powerful internal tracing framework built directly into the Linux kernel. It is not a single tool, but a collection of tracers designed to help developers and administrators understand what is happening inside the kernel. It is particularly effective for analyzing latency, performance issues, and the sequence of function calls over time, often with very low overhead.</p>
+                     <h3 class="text-2xl font-semibold mt-8 mb-4">Key Tracers</h3>
+                     <div class="grid md:grid-cols-2 gap-4">
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200"><strong>Function Tracer:</strong> Records every kernel function call.</div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200"><strong>Function Graph:</strong> Shows function entry/exit and measures execution time.</div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200"><strong>Latency Tracers:</strong> Measure periods where interrupts or preemption are disabled.</div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200"><strong>Event Tracing:</strong> Monitors specific, static tracepoints in the kernel (e.g., scheduler events).</div>
+                     </div>
+                     <h3 class="text-2xl font-semibold mt-8 mb-4">Configuration via `tracefs`</h3>
+                     <p>`ftrace` is controlled via a virtual filesystem, typically at `/sys/kernel/debug/tracing/`. Here are some key control files:</p>
+                     <div class="overflow-x-auto mt-4">
+                         <table class="min-w-full bg-white border rounded-lg shadow-sm">
+                             <thead class="bg-gray-100">
+                                 <tr>
+                                     <th class="px-4 py-2 text-left">File</th>
+                                     <th class="px-4 py-2 text-left">Purpose</th>
+                                 </tr>
+                             </thead>
+                             <tbody class="divide-y divide-gray-200">
+                                 <tr class="hover:bg-gray-50">
+                                     <td class="px-4 py-2 font-mono">current_tracer</td>
+                                     <td class="px-4 py-2">Sets the active tracer (e.g., `function`, `nop`).</td>
+                                 </tr>
+                                 <tr class="hover:bg-gray-50">
+                                     <td class="px-4 py-2 font-mono">tracing_on</td>
+                                     <td class="px-4 py-2">Enables (1) or disables (0) recording to the trace buffer.</td>
+                                 </tr>
+                                  <tr class="hover:bg-gray-50">
+                                     <td class="px-4 py-2 font-mono">trace</td>
+                                     <td class="px-4 py-2">View the captured trace log.</td>
+                                 </tr>
+                                 <tr class="hover:bg-gray-50">
+                                     <td class="px-4 py-2 font-mono">set_ftrace_filter</td>
+                                     <td class="px-4 py-2">Limits tracing to specific functions (supports wildcards).</td>
+                                 </tr>
+                                 <tr class="hover:bg-gray-50">
+                                     <td class="px-4 py-2 font-mono">set_ftrace_pid</td>
+                                     <td class="px-4 py-2">Limits tracing to a specific process ID.</td>
+                                 </tr>
+                             </tbody>
+                         </table>
+                     </div>
+                </div>
+            </section>
+
+            <!-- perf Section -->
+            <section id="perf" class="content-section">
+                 <div class="prose max-w-none">
+                     <p class="text-lg text-gray-700">`perf` is the primary performance analysis tool for Linux. It provides a rich set of commands to collect and analyze performance data from both hardware (CPU Performance Monitoring Units) and software sources. `perf` is incredibly versatile, used for everything from high-level system-wide statistics to detailed, low-level profiling of specific applications or kernel functions.</p>
+                     <h3 class="text-2xl font-semibold mt-8 mb-4">Core Commands & Event Types</h3>
+                     <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="text-xl font-semibold mb-2">Key Commands</h4>
+                            <ul class="list-disc list-inside space-y-2">
+                                <li><strong>`perf stat`</strong>: Gathers aggregate performance counts for a command.</li>
+                                <li><strong>`perf record`</strong>: Records performance data via sampling for later analysis.</li>
+                                <li><strong>`perf report`</strong>: Analyzes a `perf.data` file and displays a profile.</li>
+                                <li><strong>`perf top`</strong>: Provides a real-time view of function hot spots.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-semibold mb-2">Event Types</h4>
+                            <ul class="list-disc list-inside space-y-2">
+                                <li><strong>Hardware Events:</strong> `cycles`, `instructions`, `cache-misses`, `branch-misses`.</li>
+                                <li><strong>Software Events:</strong> `context-switches`, `page-faults`.</li>
+                                <li><strong>Tracepoint Events:</strong> Integrates with `ftrace` static tracepoints.</li>
+                             </ul>
+                        </div>
+                     </div>
+                     <h3 class="text-2xl font-semibold mt-8 mb-4">Example Hardware Performance Counters</h3>
+                     <p>These events, provided by the CPU's Performance Monitoring Unit (PMU), are fundamental for diagnosing low-level performance issues.</p>
+                      <div class="overflow-x-auto mt-4">
+                         <table class="min-w-full bg-white border rounded-lg shadow-sm">
+                             <thead class="bg-gray-100">
+                                 <tr>
+                                     <th class="px-4 py-2 text-left">Event</th>
+                                     <th class="px-4 py-2 text-left">Relevance to Performance</th>
+                                 </tr>
+                             </thead>
+                             <tbody class="divide-y divide-gray-200">
+                                 <tr class="hover:bg-gray-50">
+                                     <td class="px-4 py-2 font-mono">cycles</td>
+                                     <td class="px-4 py-2">Measures raw CPU activity. High values suggest heavy computation.</td>
+                                 </tr>
+                                 <tr class="hover:bg-gray-50">
+                                     <td class="px-4 py-2 font-mono">instructions</td>
+                                     <td class="px-4 py-2">Reflects work done. A low Instructions-Per-Cycle (IPC) ratio can indicate stalls.</td>
+                                 </tr>
+                                 <tr class="hover:bg-gray-50">
+                                     <td class="px-4 py-2 font-mono">cache-misses</td>
+                                     <td class="px-4 py-2">High values indicate memory access bottlenecks and poor data locality.</td>
+                                 </tr>
+                                 <tr class="hover:bg-gray-50">
+                                     <td class="px-4 py-2 font-mono">branch-misses</td>
+                                     <td class="px-4 py-2">High values suggest CPU pipeline stalls from mispredicted branches.</td>
+                                 </tr>
+                             </tbody>
+                         </table>
+                     </div>
+                 </div>
+            </section>
+
+            <!-- SystemTap Section -->
+            <section id="systemtap" class="content-section">
+                <div class="prose max-w-none">
+                    <p class="text-lg text-gray-700">`SystemTap` is a dynamic tracing and instrumentation framework that allows developers to write simple scripts to examine the activities of a running Linux system. It translates these scripts into C, compiles them as kernel modules, and loads them on the fly. This provides immense flexibility for custom, targeted analysis of both kernel and user-space events, making it ideal for diagnosing complex or intermittent bugs in production environments.</p>
+                    <h3 class="text-2xl font-semibold mt-8 mb-4">Instrumentation Workflow</h3>
+                    <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4 my-6">
+                        <div class="text-center">
+                            <div class="bg-blue-100 text-blue-800 p-4 rounded-lg shadow-sm">SystemTap Script (.stp)</div>
+                            <div class="font-mono text-sm text-gray-600">User-written probe logic</div>
+                        </div>
+                        <div class="text-2xl text-gray-400 font-sans transform md:-translate-y-3">&#8594;</div>
+                        <div class="text-center">
+                            <div class="bg-indigo-100 text-indigo-800 p-4 rounded-lg shadow-sm">stap Translator</div>
+                             <div class="font-mono text-sm text-gray-600">Generates C code</div>
+                        </div>
+                        <div class="text-2xl text-gray-400 font-sans transform md:-translate-y-3">&#8594;</div>
+                        <div class="text-center">
+                            <div class="bg-purple-100 text-purple-800 p-4 rounded-lg shadow-sm">Kernel Module (.ko)</div>
+                             <div class="font-mono text-sm text-gray-600">Compiled & Loaded</div>
+                        </div>
+                         <div class="text-2xl text-gray-400 font-sans transform md:-translate-y-3">&#8594;</div>
+                        <div class="text-center">
+                            <div class="bg-green-100 text-green-800 p-4 rounded-lg shadow-sm">Live Kernel</div>
+                            <div class="font-mono text-sm text-gray-600">Dynamic Instrumentation</div>
+                        </div>
+                    </div>
+                     <h3 class="text-2xl font-semibold mt-8 mb-4">Key Features</h3>
+                     <ul class="list-disc list-inside space-y-2 bg-gray-50 p-6 rounded-lg border">
+                        <li><strong>Flexible Scripting:</strong> Write custom logic using an `awk`-like scripting language.</li>
+                        <li><strong>Dynamic Probes:</strong> Insert instrumentation into a running kernel without recompiling.</li>
+                        <li><strong>Kernel & Userspace:</strong> Capable of probing both kernel functions and user-space applications.</li>
+                        <li><strong>Low Overhead:</strong> Designed to be safe and efficient for use on production systems.</li>
+                        <li><strong>Rich Data Aggregation:</strong> Scripts can collect, filter, and summarize data in-kernel before printing output.</li>
+                     </ul>
+                </div>
+            </section>
+            
+            <!-- Comparison Section -->
+            <section id="comparison" class="content-section">
+                <div class="prose max-w-none">
+                     <p class="text-lg text-gray-700">Choosing the right tool depends on the specific problem you are trying to solve. An interactive debugger like `kgdb` is ideal for deep, functional bugs, while a profiler like `perf` excels at identifying performance hot spots. Tracing tools like `ftrace` and `SystemTap` are best for understanding system behavior over time. This section provides a direct comparison to help guide your choice.</p>
+                     
+                     <h3 class="text-2xl font-semibold mt-8 mb-4 text-center">Tool Characteristics at a Glance</h3>
+                     <p class="text-center text-gray-600 mb-6">This chart compares the tools on several key characteristics. Higher values indicate a stronger leaning towards that attribute. You can click the labels at the bottom to hide or show a tool.</p>
+                     <div class="chart-container bg-white p-4 rounded-lg shadow-sm border">
+                         <canvas id="comparisonChart"></canvas>
+                     </div>
+
+                     <h3 class="text-2xl font-semibold mt-12 mb-4">Detailed Feature Comparison</h3>
+                     <div class="overflow-x-auto">
+                         <table class="min-w-full bg-white border rounded-lg shadow-sm">
+                             <thead class="bg-gray-100">
+                                 <tr>
+                                     <th class="px-4 py-2 text-left">Feature</th>
+                                     <th class="px-4 py-2 text-left">kgdb</th>
+                                     <th class="px-4 py-2 text-left">ftrace</th>
+                                     <th class="px-4 py-2 text-left">perf</th>
+                                     <th class="px-4 py-2 text-left">SystemTap</th>
+                                 </tr>
+                             </thead>
+                             <tbody class="divide-y divide-gray-200">
+                                 <tr class="hover:bg-gray-50">
+                                     <td class="px-4 py-2 font-semibold">Primary Use</td>
+                                     <td class="px-4 py-2">Interactive Debugging</td>
+                                     <td class="px-4 py-2">Kernel Tracing</td>
+                                     <td class="px-4 py-2">Performance Profiling</td>
+                                     <td class="px-4 py-2">Dynamic Instrumentation</td>
+                                 </tr>
+                                 <tr class="hover:bg-gray-50">
+                                     <td class="px-4 py-2 font-semibold">Overhead (Active)</td>
+                                     <td class="px-4 py-2">High (halts system)</td>
+                                     <td class="px-4 py-2">Low to Medium</td>
+                                     <td class="px-4 py-2">Low to Medium</td>
+                                     <td class="px-4 py-2">Low</td>
+                                 </tr>
+                                 <tr class="hover:bg-gray-50">
+                                     <td class="px-4 py-2 font-semibold">Setup Complexity</td>
+                                     <td class="px-4 py-2">High</td>
+                                     <td class="px-4 py-2">Low (built-in)</td>
+                                     <td class="px-4 py-2">Low</td>
+                                     <td class="px-4 py-2">Medium to High</td>
+                                 </tr>
+                                  <tr class="hover:bg-gray-50">
+                                     <td class="px-4 py-2 font-semibold">Source-Level Info</td>
+                                     <td class="px-4 py-2">Excellent</td>
+                                     <td class="px-4 py-2">Limited (function names)</td>
+                                     <td class="px-4 py-2">Good (with debuginfo)</td>
+                                     <td class="px-4 py-2">Excellent (with debuginfo)</td>
+                                 </tr>
+                                 <tr class="hover:bg-gray-50">
+                                     <td class="px-4 py-2 font-semibold">Production Use</td>
+                                     <td class="px-4 py-2">No</td>
+                                     <td class="px-4 py-2">Yes (with care)</td>
+                                     <td class="px-4 py-2">Yes</td>
+                                     <td class="px-4 py-2">Yes</td>
+                                 </tr>
+                             </tbody>
+                         </table>
+                     </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabs = document.querySelectorAll('.nav-tab');
+            const sections = document.querySelectorAll('.content-section');
+
+            function setActiveTab(tabId) {
+                tabs.forEach(tab => {
+                    const isTabActive = tab.dataset.tab === tabId;
+                    tab.classList.toggle('tab-active', isTabActive);
+                    tab.classList.toggle('tab-inactive', !isTabActive);
+                });
+
+                sections.forEach(section => {
+                    section.classList.toggle('content-active', section.id === tabId);
+                });
+            }
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const tabId = this.dataset.tab;
+                    setActiveTab(tabId);
+                    
+                    if (tabId === 'comparison' && !window.comparisonChartInstance) {
+                        createComparisonChart();
+                    }
+                });
+            });
+
+            // Set initial active tab
+            setActiveTab('overview');
+
+            function createComparisonChart() {
+                const ctx = document.getElementById('comparisonChart').getContext('2d');
+                const chartData = {
+                    labels: ['Interactivity (Debugging)', 'Low Overhead (Tracing)', 'Flexibility (Custom Probes)', 'Ease of Setup', 'Performance Profiling'],
+                    datasets: [{
+                        label: 'kgdb',
+                        data: [5, 1, 1, 1, 2],
+                        backgroundColor: 'rgba(239, 68, 68, 0.5)',
+                        borderColor: 'rgb(239, 68, 68)',
+                        borderWidth: 1
+                    }, {
+                        label: 'ftrace',
+                        data: [2, 4, 3, 5, 3],
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 1
+                    }, {
+                        label: 'perf',
+                        data: [1, 3, 2, 4, 5],
+                        backgroundColor: 'rgba(34, 197, 94, 0.5)',
+                        borderColor: 'rgb(34, 197, 94)',
+                        borderWidth: 1
+                    }, {
+                        label: 'SystemTap',
+                        data: [3, 5, 5, 2, 4],
+                        backgroundColor: 'rgba(168, 85, 247, 0.5)',
+                        borderColor: 'rgb(168, 85, 247)',
+                        borderWidth: 1
+                    }]
+                };
+
+                window.comparisonChartInstance = new Chart(ctx, {
+                    type: 'polarArea',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                pointLabels: {
+                                    display: true,
+                                    centerPointLabels: true,
+                                    font: {
+                                        size: 12
+                                    }
+                                },
+                                ticks: {
+                                    z: 1,
+                                    backdropColor: 'rgba(0,0,0,0)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        label += context.raw;
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
