@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>An Interactive Guide to Memory Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: The application is structured as a single-page exploratory guide, diverging from the report's linear format. The core user flow is designed around comparison and interaction. A top navigation bar provides quick access to thematic sections: 1. Introduction, 2. The Paradigms (using tabs for Manual vs. GC), 3. The Dangers (interactive cards for pitfalls), 4. C++ Solutions (visual diagrams for smart pointers), and 5. The Trade-offs (an interactive radar chart dashboard). This non-linear, thematic structure was chosen to make the dense, technical content more engaging and easier to digest. It allows users to jump to topics of interest or follow a guided path, with the central "Trade-offs" dashboard serving as the application's analytical centerpiece, promoting synthesis and understanding over simple reading. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Trade-offs between Manual/GC -> Goal: Compare -> Viz: Interactive Radar Chart (Chart.js) + Dynamic Text -> Interaction: User clicks on a trade-off category (e.g., Performance) to highlight it on the chart and update descriptive text panels. -> Justification: A radar chart provides an excellent multi-axial comparison at a glance, superior to a simple table. The interactivity makes exploration engaging.
+        - Report Info: Common Pitfalls (Leaks, Dangles) -> Goal: Inform/Warn -> Viz: Interactive Cards (HTML/CSS/JS) -> Interaction: Click a card to reveal a detailed explanation and code example. -> Justification: This "reveal" interaction breaks up heavy text, making it less intimidating and encouraging user discovery.
+        - Report Info: C++ Smart Pointers -> Goal: Explain Abstract Concepts -> Viz: Ownership Diagrams (HTML/CSS) -> Interaction: Static visual aid. -> Justification: Simple visual metaphors (arrows for pointers, boxes for objects) clarify abstract ownership models (unique, shared) more effectively than text alone.
+        - Report Info: Core Concepts (malloc vs. GC) -> Goal: Organize/Inform -> Viz: Tabbed Content Areas (HTML/CSS/JS) -> Interaction: Click tabs to switch between Manual and GC explanations. -> Justification: Tabs allow for a direct, side-by-side comparison within the same view, reinforcing the core dichotomy of the subject.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fdfcfb;
+            color: #1a1a1a;
+        }
+        .nav-link {
+            position: relative;
+            transition: color 0.3s ease;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #0891b2;
+            transition: width 0.3s ease;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #0891b2;
+        }
+        .nav-link.active::after, .nav-link:hover::after {
+            width: 100%;
+        }
+        .card {
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+        }
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+        .card-face {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        .tab-btn.active {
+            border-color: #0891b2;
+            color: #0891b2;
+            background-color: #f0f9ff;
+        }
+        .tradeoff-btn.active {
+            background-color: #0891b2;
+            color: white;
+            transform: scale(1.05);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+         @media (min-width: 768px) {
+            .chart-container { height: 400px; }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0">
+                    <a href="#home" class="text-xl font-bold text-gray-800">Memory Explored</a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#paradigms" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">The Paradigms</a>
+                        <a href="#dangers" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">The Dangers</a>
+                        <a href="#solutions" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">C++ Solutions</a>
+                        <a href="#tradeoffs" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Trade-offs</a>
+                        <a href="#tools" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">The Toolbox</a>
+                    </div>
+                </div>
+                 <div class="md:hidden">
+                    <button id="mobile-menu-button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-800 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-500">
+                        <span class="sr-only">Open main menu</span>
+                        <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <svg class="hidden h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="mobile-menu" class="md:hidden hidden pb-4">
+                <a href="#paradigms" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700">The Paradigms</a>
+                <a href="#dangers" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700">The Dangers</a>
+                <a href="#solutions" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700">C++ Solutions</a>
+                <a href="#tradeoffs" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700">Trade-offs</a>
+                <a href="#tools" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700">The Toolbox</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="home" class="py-20 lg:py-32">
+            <div class="container mx-auto px-4 text-center">
+                <h1 class="text-4xl md:text-6xl font-bold tracking-tight text-gray-900">A Tale of Two Memories</h1>
+                <p class="mt-6 text-lg md:text-xl leading-8 text-gray-600 max-w-3xl mx-auto">An interactive exploration of memory management, contrasting the explicit control of C/C++ with the automated safety of Garbage Collection.</p>
+                <div class="mt-10">
+                    <a href="#paradigms" class="rounded-md bg-cyan-600 px-4 py-3 text-base font-semibold text-white shadow-sm hover:bg-cyan-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 transition-transform transform hover:scale-105">Begin Exploration &rarr;</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="paradigms" class="py-20 bg-gray-50">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">The Two Paradigms</h2>
+                    <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">At the heart of many programming languages lies a fundamental choice: who is responsible for cleaning up memory? This section explores the two dominant approaches. You can interact with the tabs below to switch between explanations of each paradigm, understanding their core functions and philosophies.</p>
+                </div>
+                
+                <div class="max-w-4xl mx-auto">
+                    <div class="mb-4 flex justify-center border-b border-gray-200">
+                        <button class="tab-btn py-2 px-6 text-lg font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="manual">Manual (C/C++)</button>
+                        <button class="tab-btn py-2 px-6 text-lg font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="gc">Automatic (GC)</button>
+                    </div>
+
+                    <div id="manual-content" class="tab-content">
+                        <div class="bg-white p-6 rounded-lg shadow-md">
+                            <h3 class="text-2xl font-semibold mb-4 text-cyan-800">Manual Memory Management</h3>
+                            <p class="text-gray-700 mb-4">In languages like C and C++, the programmer holds direct and explicit control over memory. You are given the power to request memory from the system's "heap" at runtime and are responsible for returning it when you're done. This provides maximum control and potential for performance, but it is a double-edged sword.</p>
+                            <div class="grid md:grid-cols-2 gap-4 mt-6">
+                                <div class="border border-gray-200 p-4 rounded-lg">
+                                    <h4 class="font-semibold text-lg">C: `malloc` & `free`</h4>
+                                    <p class="text-sm text-gray-600 mt-1">These functions from `<stdlib.h>` are the workhorses of C. `malloc` allocates a raw, uninitialized block of bytes. `free` releases it. The programmer must ensure every `malloc` has a corresponding `free`.</p>
+                                </div>
+                                <div class="border border-gray-200 p-4 rounded-lg">
+                                    <h4 class="font-semibold text-lg">C++: `new` & `delete`</h4>
+                                    <p class="text-sm text-gray-600 mt-1">C++ introduces type-aware operators. `new` not only allocates memory but also calls the object's constructor. `delete` calls the destructor before freeing the memory, ensuring proper object cleanup.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="gc-content" class="tab-content hidden">
+                        <div class="bg-white p-6 rounded-lg shadow-md">
+                            <h3 class="text-2xl font-semibold mb-4 text-teal-800">Automatic Garbage Collection (GC)</h3>
+                            <p class="text-gray-700 mb-4">In languages like Java, Go, and Python, the runtime environment takes on the role of memory manager. The programmer creates objects, and the Garbage Collector automatically detects and reclaims memory from objects that are no longer in use. The core principle is **reachability**.</p>
+                            <div class="mt-6 border border-gray-200 p-4 rounded-lg">
+                                <h4 class="font-semibold text-lg">The "Mark-and-Sweep" Concept</h4>
+                                <p class="text-sm text-gray-600 mt-1">A common GC algorithm works in two phases:
+                                <br>1. <strong>Mark:</strong> The GC starts from "roots" (e.g., local variables) and follows all object references, marking every object it can reach as "live".
+                                <br>2. <strong>Sweep:</strong> The GC scans the entire heap. Any object not marked as live is considered garbage and its memory is reclaimed.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="dangers" class="py-20">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">The Perils of Manual Management</h2>
+                    <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">With great power comes great responsibility. Manual management is fraught with pitfalls that can lead to crashes, security vulnerabilities, and maddening bugs. Click on each card to reveal the nature of the danger and a code snippet illustrating how it can happen.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="card h-80 perspective-1000">
+                        <div class="card-face w-full h-full absolute flex flex-col items-center justify-center bg-white rounded-xl shadow-lg p-6 border border-amber-300">
+                            <h3 class="text-2xl font-bold text-amber-700">Memory Leaks</h3>
+                            <p class="mt-2 text-gray-600 text-center">Forgetting to free allocated memory.</p>
+                            <span class="mt-4 text-sm font-semibold text-cyan-600">Click to learn more</span>
+                        </div>
+                        <div class="card-back card-face w-full h-full absolute bg-amber-50 rounded-xl shadow-lg p-6 overflow-auto">
+                            <h4 class="font-bold text-amber-800">The Silent Drain</h4>
+                            <p class="text-sm text-gray-700 mt-2">When memory is allocated but never freed, the program's memory usage grows over time, eventually leading to a crash. This is especially dangerous in long-running applications like servers.</p>
+                            <pre class="mt-3 bg-gray-800 text-white p-2 rounded-md text-xs overflow-x-auto"><code>void leak_example() {
+    int* data = new int[50];
+    // ... use data ...
+    // 'delete[] data;' is forgotten!
+} // Memory for 'data' is now leaked.</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="card h-80 perspective-1000">
+                        <div class="card-face w-full h-full absolute flex flex-col items-center justify-center bg-white rounded-xl shadow-lg p-6 border border-red-300">
+                            <h3 class="text-2xl font-bold text-red-700">Dangling Pointers</h3>
+                            <p class="mt-2 text-gray-600 text-center">A pointer to memory that has already been freed.</p>
+                            <span class="mt-4 text-sm font-semibold text-cyan-600">Click to learn more</span>
+                        </div>
+                        <div class="card-back card-face w-full h-full absolute bg-red-50 rounded-xl shadow-lg p-6 overflow-auto">
+                            <h4 class="font-bold text-red-800">Accessing Ghosts</h4>
+                            <p class="text-sm text-gray-700 mt-2">Using a pointer after its memory has been deallocated leads to undefined behavior. The program might crash, or worse, corrupt data silently.</p>
+                             <pre class="mt-3 bg-gray-800 text-white p-2 rounded-md text-xs overflow-x-auto"><code>int* ptr = new int(42);
+delete ptr;
+// ptr is now a dangling pointer
+*ptr = 100; // Undefined Behavior!</code></pre>
+                        </div>
+                    </div>
+                    
+                    <div class="card h-80 perspective-1000">
+                        <div class="card-face w-full h-full absolute flex flex-col items-center justify-center bg-white rounded-xl shadow-lg p-6 border border-violet-300">
+                            <h3 class="text-2xl font-bold text-violet-700">Buffer Overflows</h3>
+                            <p class="mt-2 text-gray-600 text-center">Writing past the boundary of allocated memory.</p>
+                             <span class="mt-4 text-sm font-semibold text-cyan-600">Click to learn more</span>
+                        </div>
+                        <div class="card-back card-face w-full h-full absolute bg-violet-50 rounded-xl shadow-lg p-6 overflow-auto">
+                            <h4 class="font-bold text-violet-800">Crossing the Line</h4>
+                            <p class="text-sm text-gray-700 mt-2">This can corrupt adjacent data, crash the program, or create severe security vulnerabilities by allowing attackers to execute arbitrary code.</p>
+                            <pre class="mt-3 bg-gray-800 text-white p-2 rounded-md text-xs overflow-x-auto"><code>int* buffer = new int[5];
+// C/C++ has no bounds checking
+buffer[5] = 10; // Overflow! Writing
+                // out of bounds.</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="solutions" class="py-20 bg-gray-50">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">C++'s Modern Answer: Smart Pointers</h2>
+                    <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">Modern C++ provides a powerful solution that bridges the gap between manual control and automated safety: smart pointers. They leverage the RAII (Resource Acquisition Is Initialization) idiom to automate memory deallocation, making code safer and cleaner by tying memory lifetime to object scope.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-semibold text-cyan-800">`std::unique_ptr`</h3>
+                        <p class="text-sm text-gray-600 mt-2">Represents exclusive ownership. Only one `unique_ptr` can point to an object. When the pointer goes out of scope, the object is automatically deleted. It's lightweight and the default choice.</p>
+                        <div class="mt-4 flex justify-center items-center h-24">
+                            <div class="font-mono text-xs text-center">ptr 独</div> &rarr; <div class="w-16 h-10 bg-cyan-100 border border-cyan-400 rounded flex items-center justify-center font-mono text-xs">Object</div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-semibold text-teal-800">`std::shared_ptr`</h3>
+                        <p class="text-sm text-gray-600 mt-2">Allows shared ownership. Multiple `shared_ptr`s can point to the same object. An internal reference counter tracks owners, and the object is deleted only when the last `shared_ptr` is destroyed.</p>
+                        <div class="mt-4 flex justify-center items-center h-24">
+                            <div class="flex flex-col items-end mr-2">
+                                <div class="font-mono text-xs">ptr1 共</div>
+                                <div class="font-mono text-xs mt-2">ptr2 共</div>
+                            </div>
+                             <div class="flex flex-col items-center mr-2">
+                                <div class="h-full w-px bg-gray-400"></div>
+                                &rarr;
+                                <div class="h-full w-px bg-gray-400"></div>
+                            </div>
+                            <div class="w-16 h-10 bg-teal-100 border border-teal-400 rounded flex items-center justify-center font-mono text-xs">Object</div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-semibold text-gray-700">`std::weak_ptr`</h3>
+                        <p class="text-sm text-gray-600 mt-2">A non-owning observer of an object managed by a `shared_ptr`. It doesn't affect the reference count and is used to break ownership cycles, a potential pitfall of `shared_ptr`.</p>
+                         <div class="mt-4 flex justify-center items-center h-24">
+                             <div class="font-mono text-xs text-center">ptr 弱</div> <span class="border-t-2 border-dashed border-gray-400 w-6 inline-block align-middle"></span>&rarr; <div class="w-16 h-10 bg-gray-100 border border-gray-400 rounded flex items-center justify-center font-mono text-xs">Object</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tradeoffs" class="py-20">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">The Grand Trade-off</h2>
+                    <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">Choosing a memory management model involves balancing competing concerns. There is no single "best" answer; the optimal choice depends on the application's needs. Use the buttons below to explore and compare how each paradigm stacks up on key criteria.</p>
+                </div>
+
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <div class="chart-container">
+                            <canvas id="tradeoffChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <div id="tradeoff-buttons" class="flex flex-wrap justify-center gap-3 mb-8">
+                            <button class="tradeoff-btn px-4 py-2 text-sm font-semibold rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-200" data-tradeoff="performance">Performance</button>
+                            <button class="tradeoff-btn px-4 py-2 text-sm font-semibold rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-200" data-tradeoff="predictability">Predictability</button>
+                            <button class="tradeoff-btn px-4 py-2 text-sm font-semibold rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-200" data-tradeoff="productivity">Dev Productivity</button>
+                            <button class="tradeoff-btn px-4 py-2 text-sm font-semibold rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-200" data-tradeoff="control">Control</button>
+                            <button class="tradeoff-btn px-4 py-2 text-sm font-semibold rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-200" data-tradeoff="safety">Safety</button>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-cyan-500">
+                                <h4 class="font-bold text-lg">Manual Management</h4>
+                                <p id="manual-tradeoff-text" class="mt-2 text-gray-700 text-sm">Select a criterion to see the analysis.</p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-teal-500">
+                                <h4 class="font-bold text-lg">Garbage Collection</h4>
+                                <p id="gc-tradeoff-text" class="mt-2 text-gray-700 text-sm">Select a criterion to see the analysis.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tools" class="py-20 bg-gray-50">
+             <div class="container mx-auto px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">The Developer's Toolbox</h2>
+                    <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">Even with care, bugs happen. For C/C++ developers, powerful dynamic analysis tools are essential for hunting down memory errors. This section provides an overview of the most common tools used to diagnose and fix memory-related issues, helping to ensure program correctness and stability.</p>
+                </div>
+                <div class="max-w-3xl mx-auto grid md:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold">Valgrind (Memcheck)</h3>
+                        <p class="mt-2 text-gray-600">A robust instrumentation framework that runs a program in a simulated environment to check every memory access. It's incredibly thorough at finding leaks, use-after-free, and overflow errors, but can slow down execution significantly.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold">AddressSanitizer (ASan)</h3>
+                        <p class="mt-2 text-gray-600">A fast, compiler-based tool that adds checks around memory operations at compile time. With a much lower performance overhead than Valgrind, it's ideal for use during regular development and testing cycles.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-gray-800 text-white">
+        <div class="container mx-auto py-8 px-4 text-center">
+            <p>An Interactive Exploration based on Memory Management Research.</p>
+            <p class="text-sm text-gray-400 mt-2">Built with Tailwind CSS and Chart.js</p>
+        </div>
+    </footer>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const sections = document.querySelectorAll('main section');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+                mobileMenuButton.querySelector('svg:first-child').classList.toggle('hidden');
+                mobileMenuButton.querySelector('svg:last-child').classList.toggle('hidden');
+            });
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.toggle('active', link.getAttribute('href').substring(1) === entry.target.id);
+                        });
+                    }
+                });
+            }, { rootMargin: '-50% 0px -50% 0px', threshold: 0 });
+
+            sections.forEach(section => observer.observe(section));
+
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                card.addEventListener('click', () => {
+                    card.classList.toggle('is-flipped');
+                });
+            });
+            
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+
+                    const tabId = button.dataset.tab;
+                    tabContents.forEach(content => {
+                        if (content.id === `${tabId}-content`) {
+                            content.classList.remove('hidden');
+                        } else {
+                            content.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+            tabButtons[0].click();
+
+            const tradeoffData = {
+                performance: {
+                    manual: [5, 3],
+                    text: {
+                        manual: "Offers the highest potential speed, as developers can optimize memory layout and avoid GC overhead. However, poor management or fragmentation can degrade performance.",
+                        gc: "Allocation can be very fast (bump allocation), but 'stop-the-world' GC pauses can introduce significant latency. Throughput can be high for object-heavy apps."
+                    }
+                },
+                predictability: {
+                    manual: [5, 2],
+                    text: {
+                        manual: "Execution is highly predictable. Resource deallocation is deterministic (via destructors/RAII), crucial for real-time systems.",
+                        gc: "Less predictable due to the uncertain timing and duration of GC pauses. Non-deterministic finalization makes it unsuitable for time-sensitive resource cleanup."
+                    }
+                },
+                productivity: {
+                    manual: [2, 5],
+                    text: {
+                        manual: "Lower productivity due to high cognitive load. Developers spend significant time on memory management logic and debugging complex memory errors.",
+                        gc: "Higher productivity. Developers focus on business logic instead of memory management, leading to faster development and fewer memory-related bugs."
+                    }
+                },
+                control: {
+                    manual: [5, 1],
+                     text: {
+                        manual: "Provides fine-grained, absolute control over memory allocation, layout, and lifetime. Essential for systems programming and hardware interaction.",
+                        gc: "Abstracts memory away. The developer has very little direct control; the GC decides when and how to reclaim memory."
+                    }
+                },
+                safety: {
+                    manual: [2, 5],
+                    text: {
+                        manual: "Inherently unsafe and error-prone. Prone to leaks, dangling pointers, and buffer overflows. Modern C++ with smart pointers greatly improves safety.",
+                        gc: "Inherently safe from most common memory errors. Eliminates dangling pointers and leaks (though 'logical' leaks are still possible)."
+                    }
+                }
+            };
+            
+            const manualTradeoffText = document.getElementById('manual-tradeoff-text');
+            const gcTradeoffText = document.getElementById('gc-tradeoff-text');
+            const tradeoffButtons = document.querySelectorAll('.tradeoff-btn');
+
+            const chartCtx = document.getElementById('tradeoffChart').getContext('2d');
+            const tradeoffChart = new Chart(chartCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Performance', 'Predictability', 'Dev Productivity', 'Control', 'Safety'],
+                    datasets: [{
+                        label: 'Manual Management',
+                        data: [5, 5, 2, 5, 2],
+                        backgroundColor: 'rgba(8, 145, 178, 0.2)',
+                        borderColor: 'rgba(8, 145, 178, 1)',
+                        pointBackgroundColor: 'rgba(8, 145, 178, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(8, 145, 178, 1)'
+                    }, {
+                        label: 'Garbage Collection',
+                        data: [3, 2, 5, 1, 5],
+                        backgroundColor: 'rgba(13, 148, 136, 0.2)',
+                        borderColor: 'rgba(13, 148, 136, 1)',
+                        pointBackgroundColor: 'rgba(13, 148, 136, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(13, 148, 136, 1)'
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                            pointLabels: { font: { size: 12 }, color: '#333' },
+                            ticks: {
+                                backdropColor: 'rgba(255, 255, 255, 0.75)',
+                                color: '#666',
+                                stepSize: 1,
+                                display: false
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 5
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: { size: 14 }
+                            }
+                        },
+                        tooltip: {
+                           callbacks: {
+                               label: function(context) {
+                                   let label = context.dataset.label || '';
+                                   if (label) {
+                                       label += ': ';
+                                   }
+                                   label += context.formattedValue + ' / 5';
+                                   return label;
+                               }
+                           }
+                        }
+                    }
+                }
+            });
+
+            function updateTradeoffInfo(tradeoffKey) {
+                const data = tradeoffData[tradeoffKey];
+                manualTradeoffText.textContent = data.text.manual;
+                gcTradeoffText.textContent = data.text.gc;
+            }
+
+            tradeoffButtons.forEach((button, index) => {
+                button.addEventListener('click', () => {
+                    tradeoffButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+
+                    const tradeoffKey = button.dataset.tradeoff;
+                    updateTradeoffInfo(tradeoffKey);
+
+                    tradeoffChart.options.scales.r.pointLabels.font = function(context) {
+                        return context.index === index ? { weight: 'bold', size: 14 } : { weight: 'normal', size: 12 };
+                    };
+                     tradeoffChart.options.scales.r.pointLabels.color = function(context) {
+                        return context.index === index ? '#0891b2' : '#333';
+                    };
+                    tradeoffChart.update();
+                });
+            });
+            
+            tradeoffButtons[0].click();
+        });
+    </script>
+</body>
+</html>

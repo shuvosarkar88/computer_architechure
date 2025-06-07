@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide to Garbage Collection</title>
+    <!-- Chosen Palette: "Cool Slate" - A modern, tech-focused palette with a light neutral base, slate blues for primary elements, and subtle teal/amber accents for interaction highlights. -->
+    <!-- Application Structure Plan: A single-page dashboard with top navigation to anchor-linked sections. This non-linear, thematic structure (Introduction, Algorithms, Approaches, Languages, Performance) allows users to explore topics based on interest rather than following the report's linear flow. The core interaction loop is 'select and view': users click a topic (e.g., an algorithm tab, a language icon) to reveal detailed information and corresponding visualizations. This design prioritizes discoverability and bite-sized learning, making dense technical information more digestible and engaging than a long scrolling page. Interactive charts and diagrams are central to each section to provide immediate visual reinforcement of concepts. -->
+    <!-- Visualization & Content Choices: 
+        - Intro (Manual vs. Auto): Goal: Compare. Method: Two-column layout with icons. Interaction: N/A. Justification: Clear, simple visual separation.
+        - Algorithms: Goal: Compare & Organize. Method: Tabbed content for each algorithm. Visuals: HTML/CSS animated diagrams to show process flow, and a Chart.js polar area chart to compare characteristics. Interaction: Clicking tabs reveals content. Justification: Tabs organize complex info cleanly. Animations make abstract processes concrete. Polar chart offers a quick multi-faceted comparison.
+        - Approaches (Tracing vs. RC): Goal: Compare. Method: Two-column layout and a Chart.js horizontal bar chart. Interaction: Hovering on chart bars. Justification: Side-by-side text for direct comparison, bar chart for quantitative trade-offs.
+        - Languages: Goal: Organize & Inform. Method: Interactive grid of logos. Interaction: Clicking a logo filters the detailed view. Justification: Visually appealing and intuitive filtering mechanism that encourages exploration.
+        - Performance: Goal: Show Relationships & Change. Method: Interactive Chart.js radar chart and a CSS-animated timeline for STW pauses. Interaction: Buttons to update radar chart data. Justification: Radar chart perfectly illustrates the tension and trade-offs between performance goals. The animated timeline visualizes the disruptive nature of STW pauses effectively.
+        - Library/Method: Chart.js for all charts, custom HTML/CSS/JS for diagrams and interactive elements.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #334155; /* slate-700 */
+        }
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #0f172a; /* slate-900 */
+            border-bottom-color: #3b82f6; /* blue-500 */
+        }
+        .section-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: all 0.3s ease-in-out;
+        }
+        .tab.active {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+        }
+        .lang-logo.active {
+            transform: scale(1.1);
+            box-shadow: 0 0 0 3px #3b82f6; /* blue-500 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 50vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 400px; }
+        }
+        /* Animation for Mark-Sweep Diagram */
+        .mem-block { width: 40px; height: 40px; border: 1px solid #cbd5e1; transition: all 0.5s ease-in-out; }
+        .mem-block.live { background-color: #dbeafe; }
+        .mem-block.marked { background-color: #60a5fa; color: white; }
+        .mem-block.swept { background-color: #f1f5f9; border-style: dashed; }
+        /* Animation for Stop-Copy Diagram */
+        @keyframes copy-anim {
+            0% { transform: translate(0, 0); opacity: 1; }
+            50% { transform: translate(150px, -20px); opacity: 0.5; }
+            100% { transform: translate(300px, 0); opacity: 1; }
+        }
+        .copy-animating { animation: copy-anim 1.5s ease-in-out; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-xl font-bold text-slate-800">Garbage Collection Explorer</h1>
+                <div class="hidden sm:flex sm:space-x-8">
+                    <a href="#introduction" class="nav-link font-medium text-slate-600 px-1 py-2">Introduction</a>
+                    <a href="#algorithms" class="nav-link font-medium text-slate-600 px-1 py-2">Algorithms</a>
+                    <a href="#approaches" class="nav-link font-medium text-slate-600 px-1 py-2">Approaches</a>
+                    <a href="#languages" class="nav-link font-medium text-slate-600 px-1 py-2">Languages</a>
+                    <a href="#performance" class="nav-link font-medium text-slate-600 px-1 py-2">Performance</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-16">
+
+        <!-- Introduction Section -->
+        <section id="introduction" class="section-card p-6 md:p-8">
+            <h2 class="text-3xl font-bold text-slate-900 mb-4">What is Garbage Collection?</h2>
+            <p class="text-lg text-slate-600 mb-6">Garbage Collection (GC) is a form of automatic memory management. It's a process where a runtime system, like the Java Virtual Machine (JVM) or a JavaScript engine, automatically reclaims memory occupied by objects that are no longer in use by a program. This section introduces the fundamental choice between manual control and automatic safety.</p>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="border border-slate-200 rounded-lg p-6">
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-3 flex items-center">
+                        <span class="text-3xl mr-3">🛠️</span> Manual Management
+                    </h3>
+                    <p class="text-slate-600 mb-4">The developer is fully responsible for explicitly allocating and deallocating memory. Think `malloc()` and `free()` in C/C++.</p>
+                    <ul class="space-y-2">
+                        <li class="flex items-start"><span class="text-green-500 mr-2 mt-1">✓</span><div><strong class="font-semibold">Total Control:</strong> Fine-grained optimization for performance-critical tasks.</div></li>
+                        <li class="flex items-start"><span class="text-red-500 mr-2 mt-1">✗</span><div><strong class="font-semibold">Error-Prone:</strong> High risk of memory leaks, dangling pointers, and crashes.</div></li>
+                        <li class="flex items-start"><span class="text-red-500 mr-2 mt-1">✗</span><div><strong class="font-semibold">Complex:</strong> Increases cognitive load and development time significantly.</div></li>
+                    </ul>
+                </div>
+                <div class="border border-slate-200 rounded-lg p-6">
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-3 flex items-center">
+                        <span class="text-3xl mr-3">🤖</span> Automatic Management (GC)
+                    </h3>
+                    <p class="text-slate-600 mb-4">The runtime system automatically identifies and reclaims memory from objects that are no longer reachable.</p>
+                    <ul class="space-y-2">
+                         <li class="flex items-start"><span class="text-green-500 mr-2 mt-1">✓</span><div><strong class="font-semibold">Safer & Simpler:</strong> Prevents many common memory errors, increasing productivity.</div></li>
+                        <li class="flex items-start"><span class="text-red-500 mr-2 mt-1">✗</span><div><strong class="font-semibold">Performance Overhead:</strong> GC cycles consume CPU and can cause application pauses ("stop-the-world").</div></li>
+                        <li class="flex items-start"><span class="text-red-500 mr-2 mt-1">✗</span><div><strong class="font-semibold">Less Control:</strong> Developers relinquish direct control over memory deallocation timing.</div></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Algorithms Section -->
+        <section id="algorithms" class="section-card p-6 md:p-8">
+            <h2 class="text-3xl font-bold text-slate-900 mb-4">Core GC Algorithms</h2>
+            <p class="text-lg text-slate-600 mb-6">Modern garbage collectors are built upon a few fundamental algorithms. Each has a unique strategy for finding and reclaiming "garbage" memory. Click the tabs below to explore an animated explanation of each process and see how they compare.</p>
+            
+            <div class="mb-6 border-b border-slate-200">
+                <nav class="-mb-px flex space-x-6" id="algo-tabs">
+                    <button class="tab py-3 px-4 font-medium text-slate-600 rounded-t-lg transition-colors duration-200 active" data-tab="mark-sweep">Mark-and-Sweep</button>
+                    <button class="tab py-3 px-4 font-medium text-slate-600 rounded-t-lg transition-colors duration-200" data-tab="stop-copy">Stop-and-Copy</button>
+                    <button class="tab py-3 px-4 font-medium text-slate-600 rounded-t-lg transition-colors duration-200" data-tab="generational">Generational</button>
+                </nav>
+            </div>
+
+            <div id="algo-content" class="grid lg:grid-cols-2 gap-8 items-center">
+                <!-- Content will be injected by JS -->
+            </div>
+            
+            <div class="mt-12">
+                <h3 class="text-2xl font-semibold text-slate-800 mb-4 text-center">Algorithm Characteristics Compared</h3>
+                 <p class="text-center text-slate-600 mb-6">This chart provides a visual comparison of the core algorithms across key characteristics. Higher values indicate a stronger presence of that characteristic (e.g., higher fragmentation is worse, higher cycle handling is better).</p>
+                <div class="chart-container">
+                    <canvas id="algoComparisonChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Approaches Section -->
+        <section id="approaches" class="section-card p-6 md:p-8">
+            <h2 class="text-3xl font-bold text-slate-900 mb-4">Two Major Approaches</h2>
+            <p class="text-lg text-slate-600 mb-8">GC techniques largely fall into two families: Tracing and Reference Counting. They answer the question "Is this object garbage?" in fundamentally different ways, leading to different performance trade-offs.</p>
+            <div class="grid lg:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-3">Tracing Garbage Collection</h3>
+                    <p class="text-slate-600 mb-4"><strong>Analogy: Following a map.</strong> Starts from "roots" (e.g., global variables, active function calls) and traces all reachable objects. Anything not reached is garbage.</p>
+                    <ul class="list-disc list-inside space-y-2 text-slate-600">
+                        <li><strong class="font-medium text-slate-700">Pros:</strong> Naturally handles reference cycles without extra work.</li>
+                        <li><strong class="font-medium text-slate-700">Cons:</strong> Can lead to noticeable "stop-the-world" pauses while tracing the entire object graph.</li>
+                        <li><strong class="font-medium text-slate-700">Examples:</strong> Most GCs in Java, JavaScript (V8), and Go are tracing-based.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-3">Reference Counting</h3>
+                    <p class="text-slate-600 mb-4"><strong>Analogy: A popularity contest.</strong> Each object has a counter for how many references point to it. When the count hits zero, it's garbage.</p>
+                     <ul class="list-disc list-inside space-y-2 text-slate-600">
+                        <li><strong class="font-medium text-slate-700">Pros:</strong> Reclaims memory immediately, leading to smoother, more distributed performance.</li>
+                        <li><strong class="font-medium text-slate-700">Cons:</strong> Cannot handle reference cycles on its own, requiring a backup cycle detector. Incurs overhead on every reference change.</li>
+                        <li><strong class="font-medium text-slate-700">Examples:</strong> The primary mechanism in Python (CPython) and Apple's Swift (ARC).</li>
+                    </ul>
+                </div>
+            </div>
+             <div class="mt-12">
+                <h3 class="text-2xl font-semibold text-slate-800 mb-4 text-center">Approach Trade-offs</h3>
+                 <p class="text-center text-slate-600 mb-6">This chart highlights the key differences in how each approach performs. A longer bar indicates a more prominent or challenging characteristic.</p>
+                <div class="chart-container">
+                    <canvas id="approachComparisonChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Languages Section -->
+        <section id="languages" class="section-card p-6 md:p-8">
+            <h2 class="text-3xl font-bold text-slate-900 mb-4">Memory Management in Popular Languages</h2>
+            <p class="text-lg text-slate-600 mb-8">Language designers make specific choices about memory management that reflect their goals for performance, safety, and concurrency. Click a language to see its approach.</p>
+            <div id="lang-selector" class="flex flex-wrap justify-center gap-4 md:gap-6 mb-8">
+                <!-- Language logos injected by JS -->
+            </div>
+            <div id="lang-details-container" class="bg-slate-50 border border-slate-200 rounded-lg p-6 min-h-[200px] transition-all duration-300">
+                <!-- Language details injected by JS -->
+            </div>
+        </section>
+
+        <!-- Performance Section -->
+        <section id="performance" class="section-card p-6 md:p-8">
+            <h2 class="text-3xl font-bold text-slate-900 mb-4">The Performance Balancing Act</h2>
+            <p class="text-lg text-slate-600 mb-8">GC tuning is a game of trade-offs between three competing goals. Optimizing for one often means sacrificing another. Use the buttons to see how prioritizing one goal affects the others in this interactive chart.</p>
+            
+            <div class="grid lg:grid-cols-2 gap-8 items-center">
+                 <div>
+                    <div class="flex justify-center space-x-4 mb-6" id="perf-buttons">
+                        <button data-perf="throughput" class="perf-btn bg-blue-500 text-white px-4 py-2 rounded-lg font-medium shadow">Prioritize Throughput</button>
+                        <button data-perf="latency" class="perf-btn bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium">Prioritize Low Latency</button>
+                        <button data-perf="footprint" class="perf-btn bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium">Prioritize Footprint</button>
+                    </div>
+                    <div class="chart-container h-80 md:h-96">
+                        <canvas id="performanceTradeoffChart"></canvas>
+                    </div>
+                </div>
+                
+                <div id="perf-explanation" class="text-slate-600 space-y-4">
+                    <!-- Explanation injected by JS -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+    
+    <footer class="text-center py-6 border-t border-slate-200">
+        <p class="text-slate-500">Interactive GC Guide | Built from research report data.</p>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // --- Data ---
+        const algoData = {
+            'mark-sweep': {
+                title: 'Mark-and-Sweep',
+                description: "The classic algorithm. First, it traverses all application objects from the 'roots' (global variables, etc.), marking every reachable object as 'live'. Then, it scans the entire heap and reclaims the memory of any 'unmarked' object. Its main drawback is potential memory fragmentation.",
+                animationHtml: `
+                    <div class="p-4 bg-slate-100 rounded-lg">
+                        <div id="ms-diag" class="grid grid-cols-5 gap-2 mb-4"></div>
+                        <div class="flex space-x-2 justify-center">
+                            <button id="ms-mark" class="px-3 py-1 bg-blue-500 text-white rounded shadow">1. Mark</button>
+                            <button id="ms-sweep" class="px-3 py-1 bg-green-500 text-white rounded shadow">2. Sweep</button>
+                            <button id="ms-reset" class="px-3 py-1 bg-slate-500 text-white rounded shadow">Reset</button>
+                        </div>
+                    </div>`
+            },
+            'stop-copy': {
+                title: 'Stop-and-Copy',
+                description: "This algorithm divides the heap into two halves: 'From-Space' and 'To-Space'. New objects are allocated in From-Space. When a GC is needed, it copies all live objects from From-Space to To-Space, packing them together. This eliminates fragmentation but wastes half the memory.",
+                 animationHtml: `
+                    <div class="p-4 bg-slate-100 rounded-lg text-center">
+                        <div class="flex justify-around mb-4">
+                            <div><h4 class="font-semibold">From-Space</h4><div id="sc-from" class="w-32 h-32 bg-white border-2 border-slate-300 rounded-md p-2 flex flex-wrap gap-1"></div></div>
+                            <div><h4 class="font-semibold">To-Space</h4><div id="sc-to" class="w-32 h-32 bg-white border-2 border-slate-300 rounded-md p-2"></div></div>
+                        </div>
+                        <button id="sc-copy" class="px-3 py-1 bg-blue-500 text-white rounded shadow">Copy Live Objects</button>
+                        <button id="sc-reset" class="px-3 py-1 bg-slate-500 text-white rounded shadow">Reset</button>
+                    </div>`
+            },
+            'generational': {
+                title: 'Generational GC',
+                description: "Based on the 'generational hypothesis': most objects die young. The heap is split into a 'Young Generation' (for new objects) and an 'Old Generation'. The Young Generation is collected frequently and quickly with a Stop-and-Copy algorithm. Objects that survive long enough are 'promoted' to the Old Generation, which is collected less often with a Mark-and-Sweep algorithm.",
+                 animationHtml: `
+                    <div class="p-4 text-center">
+                        <div class="bg-blue-100 border-2 border-blue-300 rounded-lg p-4 mb-2">
+                            <h4 class="font-bold text-blue-800">Young Generation (Nursery)</h4>
+                            <p class="text-sm text-blue-700">Frequent 'Minor GCs' using Stop-and-Copy. Most objects reclaimed here.</p>
+                        </div>
+                        <div class="text-2xl font-bold my-2 text-slate-500">⬇️ Promotion</div>
+                        <div class="bg-indigo-100 border-2 border-indigo-300 rounded-lg p-4">
+                            <h4 class="font-bold text-indigo-800">Old Generation (Tenured)</h4>
+                            <p class="text-sm text-indigo-700">Infrequent 'Major GCs' using Mark-and-Sweep for long-lived objects.</p>
+                        </div>
+                    </div>`
+            }
+        };
+
+        const langData = {
+            java: {
+                name: 'Java (JVM)',
+                icon: '☕',
+                strategy: 'Tracing GC',
+                details: "The JVM is famous for its highly advanced, tunable, and generational garbage collectors. It divides the heap into Young and Old generations. Modern defaults like G1GC (Garbage-First) and low-latency options like ZGC are designed for large, high-performance server applications, balancing throughput and pause times."
+            },
+            python: {
+                name: 'Python (CPython)',
+                icon: '🐍',
+                strategy: 'Reference Counting + Tracing GC',
+                details: "CPython's primary mechanism is immediate object deallocation via reference counting. This handles most objects smoothly. To solve the issue of reference cycles, Python employs a secondary, periodic, generational tracing GC that specifically finds and reclaims these cycles."
+            },
+            javascript: {
+                name: 'JavaScript (V8)',
+                icon: '📜',
+                strategy: 'Tracing GC',
+                details: "The V8 engine (used in Chrome/Node.js) uses a generational collector. A fast 'Scavenger' (Stop-and-Copy) handles the small Young Generation (New Space) frequently. Long-lived objects are promoted to the Old Space, which is managed by a less frequent Mark-Sweep-Compact collector that uses concurrent marking to minimize pauses."
+            },
+            go: {
+                name: 'Go',
+                icon: '🐹',
+                strategy: 'Tracing GC',
+                details: "Go is designed for concurrency and low latency. It uses a concurrent, non-moving, tri-color mark-and-sweep collector. Most work runs concurrently with the application, minimizing 'stop-the-world' pauses to sub-millisecond durations. It relies on a write barrier to maintain correctness during concurrent marking."
+            },
+            rust: {
+                name: 'Rust',
+                icon: '🦀',
+                strategy: 'Ownership & Borrowing (No GC)',
+                details: "Rust guarantees memory safety without a runtime garbage collector. It uses a strict compile-time system of ownership, borrowing, and lifetimes. The compiler enforces rules that ensure memory is freed deterministically when it goes out of scope. This gives C++-like performance with guaranteed safety."
+            }
+        };
+
+        const perfData = {
+            throughput: {
+                title: "Prioritizing Throughput",
+                description: "This focus aims to maximize the time your application spends doing useful work. It's ideal for batch jobs or scientific computing. This is achieved by letting the heap get larger to minimize GC frequency, which can lead to longer but less frequent pauses.",
+                chartData: [5, 2, 4]
+            },
+            latency: {
+                title: "Prioritizing Low Latency",
+                description: "This focus aims to minimize GC pause times to keep the application responsive. It's critical for UI applications, games, and high-frequency trading. This often involves more frequent, smaller collections and concurrent GC work, which can use more CPU and slightly reduce overall throughput.",
+                chartData: [2, 5, 3]
+            },
+            footprint: {
+                title: "Prioritizing Memory Footprint",
+                description: "This focus aims to minimize the RAM used by the application. It's essential for containerized environments, mobile devices, or when running many application instances on one machine. This forces more frequent GC on a smaller heap, which can increase latency and lower throughput.",
+                chartData: [3, 3, 5]
+            }
+        };
+
+
+        // --- Navigation ---
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('section');
+
+        const onScroll = () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 80) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('active');
+                }
+            });
+        };
+        window.addEventListener('scroll', onScroll);
+        onScroll(); // Initial check
+
+        // --- Algorithms Section ---
+        const algoTabs = document.getElementById('algo-tabs');
+        const algoContent = document.getElementById('algo-content');
+
+        const renderAlgoContent = (tabName) => {
+            const data = algoData[tabName];
+            algoContent.innerHTML = `
+                <div class="prose prose-slate max-w-none">
+                    <h3 class="text-2xl font-semibold text-slate-800">${data.title}</h3>
+                    <p>${data.description}</p>
+                </div>
+                <div>${data.animationHtml}</div>
+            `;
+            if (tabName === 'mark-sweep') setupMarkSweepAnimation();
+            if (tabName === 'stop-copy') setupStopCopyAnimation();
+        };
+
+        const setupMarkSweepAnimation = () => {
+            const diag = document.getElementById('ms-diag');
+            const blocks = [];
+            const createBlocks = () => {
+                diag.innerHTML = '';
+                blocks.length = 0;
+                for (let i = 0; i < 10; i++) {
+                    const block = document.createElement('div');
+                    block.classList.add('mem-block', 'flex', 'items-center', 'justify-center', 'font-mono');
+                    block.textContent = i;
+                    const isLive = Math.random() > 0.4;
+                    block.dataset.live = isLive;
+                    if (isLive) block.classList.add('live');
+                    diag.appendChild(block);
+                    blocks.push(block);
+                }
+            };
+
+            document.getElementById('ms-mark').addEventListener('click', () => {
+                blocks.forEach(b => {
+                    if (b.dataset.live === 'true') {
+                        b.classList.add('marked');
+                        b.textContent = '✓';
+                    }
+                });
+            });
+
+            document.getElementById('ms-sweep').addEventListener('click', () => {
+                 blocks.forEach(b => {
+                    if (b.dataset.live !== 'true') {
+                       b.classList.add('swept');
+                       b.textContent = '';
+                    }
+                });
+            });
+            document.getElementById('ms-reset').addEventListener('click', createBlocks);
+            createBlocks();
+        };
+        
+        const setupStopCopyAnimation = () => {
+            const fromSpace = document.getElementById('sc-from');
+            const toSpace = document.getElementById('sc-to');
+            const createBlocks = () => {
+                fromSpace.innerHTML = '';
+                toSpace.innerHTML = '';
+                for (let i = 0; i < 5; i++) {
+                    const block = document.createElement('div');
+                    block.className = 'w-5 h-5 rounded-sm';
+                    const isLive = Math.random() > 0.4;
+                    block.dataset.live = isLive;
+                    block.style.backgroundColor = isLive ? '#60a5fa' : '#e2e8f0';
+                    fromSpace.appendChild(block);
+                }
+            };
+            
+            document.getElementById('sc-copy').addEventListener('click', () => {
+                const liveBlocks = Array.from(fromSpace.children).filter(b => b.dataset.live === 'true');
+                toSpace.innerHTML = '';
+                liveBlocks.forEach(b => {
+                    toSpace.appendChild(b.cloneNode(true));
+                });
+                fromSpace.style.opacity = '0.3';
+            });
+            
+            document.getElementById('sc-reset').addEventListener('click', () => {
+                fromSpace.style.opacity = '1';
+                createBlocks();
+            });
+            
+            createBlocks();
+        };
+
+        algoTabs.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                const tabName = e.target.dataset.tab;
+                algoTabs.querySelector('.active').classList.remove('active');
+                e.target.classList.add('active');
+                renderAlgoContent(tabName);
+            }
+        });
+
+        // --- Algorithm Comparison Chart ---
+        const algoCtx = document.getElementById('algoComparisonChart').getContext('2d');
+        new Chart(algoCtx, {
+            type: 'polarArea',
+            data: {
+                labels: ['Handles Cycles', 'No Fragmentation', 'Low Memory Overhead', 'Simple Implementation', 'Low Pause Times'],
+                datasets: [{
+                    label: 'Mark-Sweep-Compact',
+                    data: [5, 5, 4, 3, 2],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                }, {
+                    label: 'Stop-and-Copy',
+                    data: [5, 5, 1, 4, 4],
+                    backgroundColor: 'rgba(16, 185, 129, 0.5)',
+                }, {
+                    label: 'Generational',
+                    data: [5, 4, 3, 2, 5],
+                    backgroundColor: 'rgba(249, 115, 22, 0.5)',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        pointLabels: { font: { size: 14 } },
+                        suggestedMin: 0,
+                        suggestedMax: 5
+                    }
+                },
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `${context.dataset.label}: ${context.raw}`
+                        }
+                    }
+                }
+            }
+        });
+        
+        // --- Approach Comparison Chart ---
+        const approachCtx = document.getElementById('approachComparisonChart').getContext('2d');
+        new Chart(approachCtx, {
+            type: 'bar',
+            data: {
+                 labels: ['Cycle Handling Difficulty', 'Pause Time Predictability', 'Pointer Update Overhead', 'Throughput Impact'],
+                datasets: [{
+                    label: 'Tracing GC',
+                    data: [1, 2, 1, 2],
+                    backgroundColor: '#3b82f6', // blue-500
+                    borderColor: '#1e40af', // blue-800
+                    borderWidth: 1
+                }, {
+                    label: 'Reference Counting',
+                    data: [5, 4, 5, 4],
+                    backgroundColor: '#10b981', // emerald-500
+                    borderColor: '#047857', // emerald-700
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 5,
+                        title: { display: true, text: 'Relative Impact / Difficulty (1=Low, 5=High)' }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `${context.dataset.label}: Score ${context.raw}`
+                        }
+                    }
+                }
+            }
+        });
+
+        // --- Languages Section ---
+        const langSelector = document.getElementById('lang-selector');
+        const langDetailsContainer = document.getElementById('lang-details-container');
+
+        Object.keys(langData).forEach(key => {
+            const lang = langData[key];
+            const logoEl = document.createElement('button');
+            logoEl.className = 'lang-logo p-4 bg-white rounded-full text-4xl shadow-md transition-all duration-200 hover:shadow-lg hover:scale-105';
+            logoEl.dataset.lang = key;
+            logoEl.title = lang.name;
+            logoEl.textContent = lang.icon;
+            langSelector.appendChild(logoEl);
+        });
+
+        const renderLangDetails = (langKey) => {
+            const lang = langData[langKey];
+            langDetailsContainer.innerHTML = `
+                <h3 class="text-2xl font-bold text-slate-800 mb-2">${lang.name}</h3>
+                <span class="inline-block bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full mb-4">${lang.strategy}</span>
+                <p class="text-slate-600">${lang.details}</p>
+            `;
+
+            langSelector.querySelector('.active')?.classList.remove('active');
+            langSelector.querySelector(`[data-lang=${langKey}]`).classList.add('active');
+        };
+
+        langSelector.addEventListener('click', (e) => {
+            const button = e.target.closest('button');
+            if (button) {
+                renderLangDetails(button.dataset.lang);
+            }
+        });
+
+
+        // --- Performance Section ---
+        const perfButtons = document.getElementById('perf-buttons');
+        const perfExplanation = document.getElementById('perf-explanation');
+        const perfCtx = document.getElementById('performanceTradeoffChart').getContext('2d');
+        
+        const perfChart = new Chart(perfCtx, {
+            type: 'radar',
+            data: {
+                labels: ['Throughput', 'Low Latency', 'Low Memory Footprint'],
+                datasets: [{
+                    label: 'GC Goal Priority',
+                    data: perfData.throughput.chartData,
+                    fill: true,
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: 'rgb(59, 130, 246)',
+                    pointBackgroundColor: 'rgb(59, 130, 246)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(59, 130, 246)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { display: true },
+                        suggestedMin: 0,
+                        suggestedMax: 5,
+                        ticks: { display: false }
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        const updatePerfSection = (perfKey) => {
+            const data = perfData[perfKey];
+            perfChart.data.datasets[0].data = data.chartData;
+            perfChart.update();
+
+            perfExplanation.innerHTML = `
+                <h4 class="font-semibold text-xl text-slate-800">${data.title}</h4>
+                <p>${data.description}</p>
+            `;
+
+            perfButtons.querySelector('.bg-blue-500').classList.replace('bg-blue-500', 'bg-slate-200');
+            perfButtons.querySelector('.text-white').classList.replace('text-white', 'text-slate-700');
+            const activeBtn = perfButtons.querySelector(`[data-perf=${perfKey}]`);
+            activeBtn.classList.replace('bg-slate-200', 'bg-blue-500');
+            activeBtn.classList.replace('text-slate-700', 'text-white');
+        }
+
+        perfButtons.addEventListener('click', (e) => {
+             const button = e.target.closest('button');
+            if (button) {
+                updatePerfSection(button.dataset.perf);
+            }
+        });
+
+        // --- Initial State ---
+        renderAlgoContent('mark-sweep');
+        renderLangDetails('java');
+        updatePerfSection('throughput');
+    });
+    </script>
+</body>
+</html>

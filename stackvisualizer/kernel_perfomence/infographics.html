@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: Kernel Performance Market Trends - Linux vs. Windows</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues & Vibrant Teal -->
+    <!-- 
+        Primary Blue (Linux): #005F73
+        Secondary Teal (Windows): #0A9396
+        Accent Aqua: #94D2BD
+        Highlight Coral: #EE9B00
+        Background/Neutral: #E9D8A6
+        Dark Text/Elements: #001219
+    -->
+    <!-- 
+    Application Structure Plan: The infographic follows a top-down narrative, starting with a high-level market overview and progressively drilling down into technical specifics and performance analysis.
+    1.  **Header:** A bold title to establish the theme of a market comparison.
+    2.  **Market Dominance:** Instantly shows where each 'player' wins using donut charts for key market segments (Server, Desktop, HPC). This gives immediate context.
+    3.  **Core Technology Analysis:** A simplified HTML/CSS flowchart to explain the fundamental architectural difference (Monolithic vs. Hybrid), which is the root of all performance variations.
+    4.  **Competitive Feature Analysis:** A section with multiple charts comparing the kernels on key performance vectors (CPU Scheduling, I/O Control, Memory Management). This acts as the main "product feature" comparison.
+    5.  **Real-World Performance Benchmarks:** Uses grouped bar charts to show head-to-head results in specific use cases like Gaming and Server workloads, representing "consumer reports".
+    6.  **Market Position Summary (SWOT):** A final, clear two-column summary of strengths and weaknesses, concluding the competitive analysis.
+    This structure guides the user from a broad understanding to specific details in a logical, story-like manner.
+    -->
+    <!-- 
+    Visualization & Content Choices:
+    - Market Dominance (Server/Desktop/HPC): Goal: Inform. Viz: Donut Charts. Justification: Instantly conveys market share percentages, which is a primary metric in market research. (Library: Chart.js).
+    - Kernel Architecture: Goal: Organize/Inform. Viz: HTML/CSS Flowchart. Justification: Clearly illustrates the structural difference between Monolithic and Hybrid kernels without complex visuals. Avoids SVG/Mermaid as required. (Method: Tailwind CSS).
+    - CPU Scheduler Comparison: Goal: Compare. Viz: Radar Chart. Justification: Ideal for comparing multiple qualitative attributes (Fairness, Responsiveness, etc.) for two entities simultaneously. (Library: Chart.js).
+    - I/O & Memory Tunability: Goal: Compare. Viz: Horizontal Bar Charts. Justification: Provides a simple, clear visual scale to compare abstract concepts like "User Control" or "Efficiency". (Library: Chart.js).
+    - Gaming/Server Benchmarks: Goal: Compare. Viz: Grouped Bar Charts. Justification: The best method for direct, quantitative comparison of performance metrics between two competitors across multiple categories (e.g., different games or database workloads). (Library: Chart.js).
+    - Strengths/Weaknesses: Goal: Organize. Viz: Two-column list in styled cards. Justification: A standard and highly readable format for SWOT analysis. (Method: Tailwind CSS).
+    CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fc;
+        }
+        .text-balance { text-wrap: balance; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            max-width: 600px;
+            height: 300px;
+            max-height: 40vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-[#001219]">
+
+    <div class="container mx-auto px-4 py-8 md:py-16">
+
+        <!-- Header -->
+        <header class="text-center mb-16">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-[#005F73] leading-tight text-balance">Operating System Kernel</h1>
+            <h2 class="text-3xl md:text-5xl font-bold text-[#0A9396] text-balance">A Market Performance Analysis</h2>
+            <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-600">
+                An infographic deep-dive into the two titans of computing, Linux and Windows, examining their core technology, market position, and performance benchmarks across key industry verticals.
+            </p>
+        </header>
+
+        <!-- Market Share Section -->
+        <section class="mb-20">
+            <h3 class="text-3xl font-bold text-center mb-10">Market Dominance by Segment</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Server Market -->
+                <div class="bg-white p-6 rounded-lg shadow-xl text-center">
+                    <h4 class="text-2xl font-semibold mb-4 text-[#005F73]">Web Server Market</h4>
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="serverMarketChart"></canvas>
+                    </div>
+                    <p class="mt-4 text-gray-600">Linux overwhelmingly dominates the server market, powering the majority of the internet's infrastructure due to its efficiency, stability, and open-source nature.</p>
+                </div>
+                <!-- Desktop Market -->
+                <div class="bg-white p-6 rounded-lg shadow-xl text-center">
+                    <h4 class="text-2xl font-semibold mb-4 text-[#0A9396]">Desktop OS Market</h4>
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="desktopMarketChart"></canvas>
+                    </div>
+                    <p class="mt-4 text-gray-600">Windows maintains its stronghold on the desktop, prized for its vast software compatibility, user-friendly interface, and widespread adoption in corporate environments.</p>
+                </div>
+                <!-- HPC Market -->
+                <div class="bg-white p-6 rounded-lg shadow-xl text-center">
+                    <h4 class="text-2xl font-semibold mb-4 text-[#EE9B00]">Supercomputer (HPC) Market</h4>
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="hpcMarketChart"></canvas>
+                    </div>
+                    <p class="mt-4 text-gray-600">In High-Performance Computing, Linux has achieved near-total dominance. 100% of the TOP500 supercomputers run on Linux, chosen for its scalability and customizability.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Kernel Architecture -->
+        <section class="mb-20">
+            <h3 class="text-3xl font-bold text-center mb-10">Core Technology: Architectural Blueprints</h3>
+            <div class="bg-white p-8 rounded-lg shadow-2xl">
+                <p class="text-center max-w-4xl mx-auto text-lg text-gray-600 mb-10">The fundamental performance differences stem from their core design. Linux uses a monolithic architecture for maximum efficiency, while Windows uses a hybrid model to balance performance and modularity.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                    <!-- Linux Monolithic Flow -->
+                    <div class="border-2 border-[#005F73] rounded-lg p-6">
+                        <h4 class="text-2xl font-bold text-center text-[#005F73] mb-6">Linux: Monolithic Architecture</h4>
+                        <div class="space-y-4 text-center">
+                            <div class="bg-blue-100 p-3 rounded-md shadow">User Applications</div>
+                            <div class="text-3xl font-bold text-[#005F73]">↓</div>
+                            <div class="bg-[#005F73] text-white p-4 rounded-lg shadow-lg">
+                                <h5 class="font-bold text-lg">Unified Kernel Space</h5>
+                                <div class="mt-2 text-sm bg-black bg-opacity-20 p-2 rounded">
+                                    CPU Scheduling | Memory Mgmt | I/O | Drivers
+                                </div>
+                            </div>
+                            <div class="text-3xl font-bold text-[#005F73]">↓</div>
+                            <div class="bg-gray-300 p-3 rounded-md shadow">Hardware</div>
+                        </div>
+                        <p class="mt-6 text-sm text-gray-500 text-center">All core services run in a single address space, enabling ultra-fast internal communication. Modularity is achieved via Loadable Kernel Modules (LKMs).</p>
+                    </div>
+                    <!-- Windows Hybrid Flow -->
+                    <div class="border-2 border-[#0A9396] rounded-lg p-6">
+                        <h4 class="text-2xl font-bold text-center text-[#0A9396] mb-6">Windows: Hybrid Architecture</h4>
+                        <div class="space-y-4 text-center">
+                            <div class="bg-teal-100 p-3 rounded-md shadow">User Applications</div>
+                            <div class="text-3xl font-bold text-[#0A9396]">↓</div>
+                            <div class="bg-gray-200 p-3 rounded-md">User-Mode Subsystems (e.g., Win32)</div>
+                             <div class="text-3xl font-bold text-[#0A9396]">↓</div>
+                            <div class="bg-[#0A9396] text-white p-4 rounded-lg shadow-lg">
+                                <h5 class="font-bold text-lg">Kernel Mode</h5>
+                                <div class="mt-2 text-sm bg-black bg-opacity-20 p-2 rounded">
+                                    NT Executive | Kernel | Drivers | HAL
+                                </div>
+                            </div>
+                            <div class="text-3xl font-bold text-[#0A9396]">↓</div>
+                            <div class="bg-gray-300 p-3 rounded-md shadow">Hardware</div>
+                        </div>
+                        <p class="mt-6 text-sm text-gray-500 text-center">A microkernel-inspired design with critical services (like graphics and drivers) running in kernel mode for performance, creating a "hybrid" approach.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- Feature Comparison -->
+        <section class="mb-20">
+            <h3 class="text-3xl font-bold text-center mb-10">Competitive Feature Analysis</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- CPU Scheduling -->
+                <div class="bg-white p-6 rounded-lg shadow-xl col-span-1 lg:col-span-2">
+                    <h4 class="text-2xl font-semibold text-center mb-4">CPU Scheduling Philosophy</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                        <div>
+                            <p class="text-gray-600 text-lg">
+                                A kernel's scheduler dictates how processes share CPU time. Linux's **Completely Fair Scheduler (CFS)** prioritizes fairness and throughput, making it highly adaptable. Windows' **MLFQ scheduler** focuses on foreground application responsiveness, ensuring the active window feels fast.
+                            </p>
+                        </div>
+                        <div class="chart-container" style="height: 300px;">
+                            <canvas id="cpuSchedulerChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <!-- I/O and Memory Control -->
+                <div class="bg-white p-6 rounded-lg shadow-xl">
+                    <h4 class="text-2xl font-semibold text-center mb-4">I/O Scheduler Control</h4>
+                     <p class="text-center text-gray-600 mb-4 h-20">Linux offers direct control via pluggable I/O schedulers, allowing admins to tune performance for specific storage hardware (HDD vs. SSD).</p>
+                    <div class="chart-container" style="height: 200px;">
+                        <canvas id="ioControlChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-xl">
+                    <h4 class="text-2xl font-semibold text-center mb-4">Memory Management Tunability</h4>
+                    <p class="text-center text-gray-600 mb-4 h-20">Linux exposes deep tunability (e.g., 'swappiness'), while Windows uses a more automated, "black box" approach for memory management.</p>
+                    <div class="chart-container" style="height: 200px;">
+                        <canvas id="memControlChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Real-world Benchmarks -->
+        <section class="mb-20">
+            <h3 class="text-3xl font-bold text-center mb-10">Head-to-Head Performance Benchmarks</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-xl">
+                    <h4 class="text-2xl font-semibold text-center mb-2">Gaming Performance (DirectX 12)</h4>
+                     <p class="text-center text-gray-500 text-sm mb-4">Relative performance via Proton on Linux vs. Native Windows.</p>
+                    <div class="chart-container">
+                        <canvas id="gamingBenchmarkChart"></canvas>
+                    </div>
+                    <p class="mt-4 text-gray-600">While Windows is the native DirectX platform, Linux with Proton is highly competitive. AMD GPUs often see smaller performance gaps due to robust open-source Vulkan drivers. NVIDIA performance on Linux can lag in DX12 titles with features like Ray Tracing.</p>
+                </div>
+                 <div class="bg-white p-6 rounded-lg shadow-xl">
+                    <h4 class="text-2xl font-semibold text-center mb-2">Server Database Performance</h4>
+                     <p class="text-center text-gray-500 text-sm mb-4">Relative performance for popular database workloads.</p>
+                    <div class="chart-container">
+                        <canvas id="serverBenchmarkChart"></canvas>
+                    </div>
+                    <p class="mt-4 text-gray-600">Linux excels with open-source databases like PostgreSQL due to architectural alignment. Microsoft has optimized SQL Server to be highly performant on both platforms, making it a competitive choice on Linux.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SWOT Analysis -->
+        <section>
+            <h3 class="text-3xl font-bold text-center mb-10">Market Position Summary</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 <!-- Linux Strengths/Weaknesses -->
+                <div class="bg-white p-6 rounded-lg shadow-xl border-t-8 border-[#005F73]">
+                    <h4 class="text-2xl font-bold mb-4 flex items-center"><span class="text-4xl mr-3">🐧</span> Linux</h4>
+                    <div class="mb-6">
+                        <h5 class="font-semibold text-lg text-green-700">Key Strengths</h5>
+                        <ul class="mt-2 list-disc list-inside space-y-1 text-gray-600">
+                            <li>Superior efficiency and lower overhead</li>
+                            <li>Unmatched tunability and control</li>
+                            <li>Dominant server and HPC performance</li>
+                             <li>Highly adaptable CPU scheduler</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-semibold text-lg text-red-700">Key Weaknesses</h5>
+                         <ul class="mt-2 list-disc list-inside space-y-1 text-gray-600">
+                            <li>Steeper learning curve for optimization</li>
+                            <li>Niche gaming performance can lag (e.g., DX12 RT)</li>
+                            <li>Desktop software compatibility can be a hurdle</li>
+                        </ul>
+                    </div>
+                </div>
+                 <!-- Windows Strengths/Weaknesses -->
+                <div class="bg-white p-6 rounded-lg shadow-xl border-t-8 border-[#0A9396]">
+                    <h4 class="text-2xl font-bold mb-4 flex items-center"><span class="text-4xl mr-3">🪟</span> Windows</h4>
+                     <div class="mb-6">
+                        <h5 class="font-semibold text-lg text-green-700">Key Strengths</h5>
+                        <ul class="mt-2 list-disc list-inside space-y-1 text-gray-600">
+                             <li>Vast hardware and software compatibility</li>
+                             <li>Excellent foreground application responsiveness</li>
+                             <li>Top-tier native gaming performance (DirectX)</li>
+                             <li>User-friendly, automated system management</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-semibold text-lg text-red-700">Key Weaknesses</h5>
+                         <ul class="mt-2 list-disc list-inside space-y-1 text-gray-600">
+                             <li>Higher system resource overhead</li>
+                             <li>Less adaptable scheduler for some new CPUs</li>
+                             <li>Limited transparency and expert tuning options</li>
+                             <li>Perceived UI sluggishness in some areas</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+<script>
+    const chartTooltipTitleCallback = (tooltipItems) => {
+        const item = tooltipItems[0];
+        let label = item.chart.data.labels[item.dataIndex];
+        if (Array.isArray(label)) {
+            return label.join(' ');
+        }
+        return label;
+    };
+
+    const wrapLabel = (label) => {
+        if (label.length > 16) {
+            const words = label.split(' ');
+            const lines = [];
+            let currentLine = '';
+            words.forEach(word => {
+                if ((currentLine + word).length > 16 && currentLine.length > 0) {
+                    lines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    currentLine += (currentLine ? ' ' : '') + word;
+                }
+            });
+            lines.push(currentLine);
+            return lines;
+        }
+        return label;
+    };
+
+    const brilliantBluesPalette = {
+        primary: '#005F73',    // Primary Blue (Linux)
+        secondary: '#0A9396',  // Secondary Teal (Windows)
+        accent: '#94D2BD',     // Accent Aqua
+        highlight: '#EE9B00',  // Highlight Coral
+        neutral: '#E9D8A6',    // Background/Neutral
+        dark: '#001219'        // Dark Text
+    };
+
+    // Market Share Charts
+    new Chart(document.getElementById('serverMarketChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Linux', 'Windows Server', 'Other'],
+            datasets: [{
+                data: [75, 20, 5],
+                backgroundColor: [brilliantBluesPalette.primary, brilliantBluesPalette.secondary, brilliantBluesPalette.neutral],
+                borderColor: '#ffffff',
+                borderWidth: 4
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { title: chartTooltipTitleCallback } } }
+        }
+    });
+
+    new Chart(document.getElementById('desktopMarketChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Windows', 'macOS', 'Linux'],
+            datasets: [{
+                data: [74, 15, 4],
+                backgroundColor: [brilliantBluesPalette.secondary, brilliantBluesPalette.accent, brilliantBluesPalette.primary],
+                 borderColor: '#ffffff',
+                borderWidth: 4
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { title: chartTooltipTitleCallback } } }
+        }
+    });
+
+    new Chart(document.getElementById('hpcMarketChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Linux'],
+            datasets: [{
+                data: [100],
+                backgroundColor: [brilliantBluesPalette.primary],
+                 borderColor: '#ffffff',
+                borderWidth: 4
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { title: chartTooltipTitleCallback } } }
+        }
+    });
+
+    // CPU Scheduler Chart
+    new Chart(document.getElementById('cpuSchedulerChart'), {
+        type: 'radar',
+        data: {
+            labels: ['Fairness', 'Throughput', 'Adaptability', 'Foreground Responsiveness', 'Simplicity'],
+            datasets: [{
+                label: 'Linux (CFS)',
+                data: [9, 8, 9, 6, 7],
+                backgroundColor: 'rgba(0, 95, 115, 0.4)',
+                borderColor: brilliantBluesPalette.primary,
+                pointBackgroundColor: brilliantBluesPalette.primary,
+            }, {
+                label: 'Windows (MLFQ)',
+                data: [6, 7, 6, 9, 8],
+                backgroundColor: 'rgba(10, 147, 150, 0.4)',
+                borderColor: brilliantBluesPalette.secondary,
+                pointBackgroundColor: brilliantBluesPalette.secondary,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: { r: { suggestedMin: 0, suggestedMax: 10, grid: { color: '#ddd' }, pointLabels: { font: { size: 12 } } } },
+            plugins: { legend: { position: 'top' }, tooltip: { callbacks: { title: chartTooltipTitleCallback } } }
+        }
+    });
+
+    // I/O & Memory Control Charts
+    new Chart(document.getElementById('ioControlChart'), {
+        type: 'bar',
+        data: {
+            labels: ['User Control Level'],
+            datasets: [{
+                label: 'Linux',
+                data: [90],
+                backgroundColor: brilliantBluesPalette.primary,
+            }, {
+                label: 'Windows',
+                data: [40],
+                backgroundColor: brilliantBluesPalette.secondary,
+            }]
+        },
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            scales: { x: { display: false, max: 100 }, y: { display: false } },
+            plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { title: chartTooltipTitleCallback } } }
+        }
+    });
+
+     new Chart(document.getElementById('memControlChart'), {
+        type: 'bar',
+        data: {
+            labels: ['User Control Level'],
+            datasets: [{
+                label: 'Linux',
+                data: [85],
+                backgroundColor: brilliantBluesPalette.primary,
+            }, {
+                label: 'Windows',
+                data: [30],
+                backgroundColor: brilliantBluesPalette.secondary,
+            }]
+        },
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            scales: { x: { display: false, max: 100 }, y: { display: false } },
+            plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { title: chartTooltipTitleCallback } } }
+        }
+    });
+
+    // Benchmark Charts
+    new Chart(document.getElementById('gamingBenchmarkChart'), {
+        type: 'bar',
+        data: {
+            labels: [wrapLabel('DX12 on AMD GPU'), wrapLabel('DX12 on NVIDIA GPU'), wrapLabel('Vulkan Native')],
+            datasets: [{
+                label: 'Linux (Proton)',
+                data: [95, 75, 105],
+                backgroundColor: brilliantBluesPalette.primary,
+                borderColor: '#001219',
+                borderWidth: 1
+            }, {
+                label: 'Windows (Native)',
+                data: [100, 100, 100],
+                backgroundColor: brilliantBluesPalette.secondary,
+                borderColor: '#001219',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { callback: value => value + '%' } } },
+            plugins: { legend: { position: 'top' }, tooltip: { callbacks: { title: chartTooltipTitleCallback } } }
+        }
+    });
+    
+    new Chart(document.getElementById('serverBenchmarkChart'), {
+        type: 'bar',
+        data: {
+            labels: ['PostgreSQL', 'SQL Server'],
+            datasets: [{
+                label: 'Linux',
+                data: [100, 98],
+                backgroundColor: brilliantBluesPalette.primary,
+                borderColor: '#001219',
+                borderWidth: 1
+            }, {
+                label: 'Windows',
+                data: [80, 100],
+                backgroundColor: brilliantBluesPalette.secondary,
+                borderColor: '#001219',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { callback: value => value + '%' } } },
+            plugins: { legend: { position: 'top' }, tooltip: { callbacks: { title: chartTooltipTitleCallback } } }
+        }
+    });
+</script>
+
+</body>
+</html>
