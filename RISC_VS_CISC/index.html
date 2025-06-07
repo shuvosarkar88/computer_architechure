@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RISC vs. CISC: An Interactive Exploration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Blue-Red Tech Contrast -->
+    <!-- Application Structure Plan: A multi-section SPA with sticky top navigation. The structure is thematic rather than linear: Core Concepts -> Architecture Deep Dive -> Performance Engine -> Modern Battleground -> Use Cases. This structure was chosen because the source material is highly comparative, and a thematic approach allows for direct, side-by-side comparisons within each section, which is more effective for learning. The user flow is flexible, encouraging exploration based on interest rather than forcing a start-to-finish read. -->
+    <!-- Visualization & Content Choices: The application uses a mix of visualizations to achieve different goals. For comparing quantitative data like instruction counts, a Bar Chart (Chart.js) is used for direct visual magnitude comparison. For conceptual comparisons like instruction length and pipelining, custom interactive diagrams built with HTML/CSS/JS are used as they are more illustrative of the dynamic processes. To explain the micro-op translation process, a static flowchart built with HTML/CSS is used for clarity. A Radar Chart (Chart.js) compares the multifaceted modern architectures (ARM64 vs x86-64). Finally, interactive HTML cards are used for the 'Use Cases' section to present layered information in a clean, user-driven manner. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1f2937;
+        }
+        .section-title {
+            @apply text-3xl font-bold text-gray-800 text-center mb-4;
+        }
+        .section-subtitle {
+            @apply text-lg text-gray-600 text-center max-w-3xl mx-auto mb-12;
+        }
+        .nav-link {
+            @apply px-3 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors duration-200;
+        }
+        .nav-link.active {
+            @apply text-blue-600 font-semibold;
+        }
+        .card {
+            @apply bg-white p-6 rounded-xl shadow-md border border-gray-200 transition-all duration-300;
+        }
+        .risc-color { color: #3b82f6; }
+        .cisc-color { color: #ef4444; }
+        .risc-bg { background-color: #3b82f6; }
+        .cisc-bg { background-color: #ef4444; }
+        .risc-border { border-color: #3b82f6; }
+        .cisc-border { border-color: #ef4444; }
+
+        .pipeline-stage {
+            @apply w-1/5 h-16 flex items-center justify-center border-r border-gray-300 text-sm font-semibold text-gray-700;
+        }
+        .pipeline-stage:last-child {
+            @apply border-r-0;
+        }
+        .pipeline-instruction {
+            @apply h-12 rounded-lg text-white flex items-center justify-center font-bold text-sm absolute transition-all duration-500 ease-in-out;
+        }
+        .use-case-card .back {
+            transform: rotateY(180deg);
+        }
+        .use-case-card.flipped .front {
+            transform: rotateY(-180deg);
+        }
+        .use-case-card.flipped .back {
+            transform: rotateY(0deg);
+        }
+        .use-case-card-inner {
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .use-case-card .front, .use-case-card .back {
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+         @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Header & Navigation -->
+    <header id="header" class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 border-b border-gray-200">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl font-bold text-gray-800">RISC vs. CISC</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div id="nav-links" class="ml-10 flex items-baseline space-x-4">
+                        <a href="#concepts" class="nav-link">Core Concepts</a>
+                        <a href="#deep-dive" class="nav-link">Deep Dive</a>
+                        <a href="#performance" class="nav-link">Performance</a>
+                        <a href="#modern-era" class="nav-link">Modern Era</a>
+                        <a href="#use-cases" class="nav-link">Use Cases</a>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                    <select id="mobile-nav" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                        <option value="#concepts">Core Concepts</option>
+                        <option value="#deep-dive">Deep Dive</option>
+                        <option value="#performance">Performance</option>
+                        <option value="#modern-era">Modern Era</option>
+                        <option value="#use-cases">Use Cases</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="pt-10 pb-20">
+        <!-- Section 1: Core Concepts -->
+        <section id="concepts" class="py-16 scroll-mt-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="section-title">Core Architectural Philosophies</h2>
+                <p class="section-subtitle">At the heart of processor design lie two competing philosophies. CISC embeds complexity in hardware to make software's job easier, while RISC simplifies the hardware and relies on smart software (compilers) to manage complexity. This section explores their fundamental goals and trade-offs.</p>
+                
+                <div class="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- RISC Card -->
+                    <div class="card border-t-4 risc-border">
+                        <h3 class="text-2xl font-bold risc-color mb-4">RISC: The Reductionist</h3>
+                        <p class="text-gray-600 mb-4">The Reduced Instruction Set Computer philosophy prioritizes speed and efficiency through simplicity.</p>
+                        <ul class="space-y-3 text-gray-700">
+                            <li class="flex items-start"><span class="risc-color font-bold text-xl mr-3">&#x2713;</span><span><strong>Few, Simple Instructions:</strong> A small, highly optimized set of instructions that perform single operations.</span></li>
+                            <li class="flex items-start"><span class="risc-color font-bold text-xl mr-3">&#x2713;</span><span><strong>Single-Cycle Execution:</strong> Instructions are designed to be executed in a single clock cycle in a pipeline.</span></li>
+                            <li class="flex items-start"><span class="risc-color font-bold text-xl mr-3">&#x2713;</span><span><strong>Compiler-Heavy:</strong> Relies on intelligent compilers to break down complex tasks into simple instruction sequences and optimize them.</span></li>
+                            <li class="flex items-start"><span class="risc-color font-bold text-xl mr-3">&#x2713;</span><span><strong>Load-Store Architecture:</strong> Only specific `LOAD` and `STORE` instructions access memory; calculations happen on registers.</span></li>
+                        </ul>
+                    </div>
+                    
+                    <!-- CISC Card -->
+                    <div class="card border-t-4 cisc-border">
+                        <h3 class="text-2xl font-bold cisc-color mb-4">CISC: The Completist</h3>
+                        <p class="text-gray-600 mb-4">The Complex Instruction Set Computer philosophy aims to accomplish tasks in as few lines of assembly code as possible.</p>
+                        <ul class="space-y-3 text-gray-700">
+                            <li class="flex items-start"><span class="cisc-color font-bold text-xl mr-3">&#x2713;</span><span><strong>Many, Complex Instructions:</strong> A single instruction can perform multi-step operations (e.g., load, calculate, store).</span></li>
+                            <li class="flex items-start"><span class="cisc-color font-bold text-xl mr-3">&#x2713;</span><span><strong>Multi-Cycle Execution:</strong> Instructions have variable execution times, some taking many cycles.</span></li>
+                            <li class="flex items-start"><span class="cisc-color font-bold text-xl mr-3">&#x2713;</span><span><strong>Hardware-Heavy:</strong> The hardware's complexity aims to simplify the compiler's job and reduce instruction count.</span></li>
+                            <li class="flex items-start"><span class="cisc-color font-bold text-xl mr-3">&#x2713;</span><span><strong>Direct Memory Access:</strong> Many instructions can directly operate on memory, not just registers.</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Architecture Deep Dive -->
+        <section id="deep-dive" class="py-16 bg-gray-100 scroll-mt-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="section-title">Architecture Deep Dive</h2>
+                <p class="section-subtitle">The design philosophy of an architecture is directly reflected in its Instruction Set Architecture (ISA). This section provides a tangible comparison of how RISC and CISC differ in instruction count, length, and addressing modes, and how this impacts code density.</p>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <div class="card">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Instruction Count Comparison</h3>
+                        <p class="text-sm text-gray-600 mb-4">CISC architectures have a vast library of instructions, while RISC focuses on a minimal, orthogonal set. This chart illustrates the typical difference in scale.</p>
+                        <div class="chart-container h-64 md:h-80">
+                            <canvas id="instructionCountChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Instruction Length & Format</h3>
+                        <p class="text-sm text-gray-600 mb-4">RISC's fixed-length instructions simplify decoding. CISC's variable-length instructions improve code density but complicate the hardware's decoding process.</p>
+                        <div class="space-y-6 mt-6">
+                            <div>
+                                <h4 class="font-semibold risc-color">RISC: Fixed Length (e.g., 32-bit)</h4>
+                                <div class="flex space-x-1 mt-2">
+                                    <div class="h-8 w-full risc-bg rounded flex items-center justify-center text-white text-xs">Opcode | Reg | Reg | Addr</div>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Simple, uniform blocks are easy to fetch and decode.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold cisc-color">CISC: Variable Length (e.g., 1-15 bytes)</h4>
+                                <div class="flex space-x-1 mt-2">
+                                    <div class="h-8 w-1/4 cisc-bg rounded flex items-center justify-center text-white text-xs">Opcode</div>
+                                    <div class="h-8 w-1/2 cisc-bg rounded flex items-center justify-center text-white text-xs">Opcode | Mode | Data</div>
+                                    <div class="h-8 w-full cisc-bg rounded flex items-center justify-center text-white text-xs">Prefix | Op | Mode | Displacement | Imm</div>
+                                </div>
+                                 <p class="text-xs text-gray-500 mt-1">Varied lengths make decoding a multi-step process.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Performance Engine -->
+        <section id="performance" class="py-16 scroll-mt-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="section-title">The Performance Engine: Pipelining</h2>
+                <p class="section-subtitle">Pipelining is like an assembly line for instructions, dramatically increasing throughput. RISC's simplicity makes it a natural fit for this technique. CISC's complexity creates challenges that can stall the entire line. Press the buttons below to see how a simple sequence of instructions flows through each architecture.</p>
+                
+                <div class="card p-4 md:p-8">
+                    <div class="bg-gray-100 rounded-lg border border-gray-200">
+                        <div class="flex">
+                            <div class="pipeline-stage">Fetch (IF)</div>
+                            <div class="pipeline-stage">Decode (ID)</div>
+                            <div class="pipeline-stage">Execute (EX)</div>
+                            <div class="pipeline-stage">Memory (MEM)</div>
+                            <div class="pipeline-stage">Writeback (WB)</div>
+                        </div>
+                        <div id="pipeline-lanes" class="relative h-48 p-4 space-y-2">
+                            <!-- JS will generate instructions here -->
+                        </div>
+                    </div>
+                    <div class="mt-6 flex flex-col sm:flex-row justify-center items-center gap-4">
+                        <button id="runRisc" class="w-full sm:w-auto px-6 py-3 risc-bg text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-all">Simulate RISC Pipeline</button>
+                        <button id="runCisc" class="w-full sm:w-auto px-6 py-3 cisc-bg text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition-all">Simulate CISC Pipeline</button>
+                        <button id="resetPipeline" class="w-full sm:w-auto px-6 py-3 bg-gray-500 text-white font-semibold rounded-lg shadow-md hover:bg-gray-600 transition-all">Reset</button>
+                    </div>
+                     <p id="pipeline-status" class="text-center text-gray-600 mt-4 h-6"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Modern Era -->
+        <section id="modern-era" class="py-16 bg-gray-100 scroll-mt-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="section-title">The Modern Battleground</h2>
+                <p class="section-subtitle">The lines between RISC and CISC have blurred. High-performance CISC chips use a RISC-like core internally, while modern RISC chips have grown more complex. This section explores the hybrid nature of today's CPUs and the rise of the open-source RISC-V standard.</p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Micro-Ops -->
+                    <div class="card h-full flex flex-col">
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">The RISC Inside CISC: Micro-Ops</h3>
+                        <p class="text-sm text-gray-600 mb-6">Modern x86 (CISC) processors don't execute complex instructions directly. They translate them into simple, RISC-like "micro-operations" (μops) that can be executed efficiently in a highly optimized internal pipeline.</p>
+                        <div class="flex-grow flex flex-col items-center justify-center bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <div class="cisc-bg text-white px-4 py-2 rounded-lg text-center shadow">CISC Instruction<br>(e.g., ADD [mem], EAX)</div>
+                            <div class="text-3xl text-gray-400 my-3">&#x2193;</div>
+                            <div class="font-semibold text-gray-700">Decoder & Microcode</div>
+                            <div class="text-3xl text-gray-400 my-3">&#x2193;</div>
+                            <div class="bg-white p-3 rounded-lg border-2 border-dashed risc-border w-full text-center">
+                                <p class="font-semibold risc-color mb-2">RISC-like Micro-ops</p>
+                                <div class="space-y-1 text-sm text-gray-800">
+                                    <div class="bg-blue-100 p-1 rounded">μop 1: LOAD temp_reg, [mem]</div>
+                                    <div class="bg-blue-100 p-1 rounded">μop 2: ADD EAX, temp_reg</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ARM vs x86 -->
+                    <div class="card h-full">
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">ARM64 vs. x86-64: The New Rivalry</h3>
+                        <p class="text-sm text-gray-600 mb-4">The competition is no longer just about ISA philosophy. It's a battle of microarchitecture, ecosystem, and power efficiency. This chart provides a relative comparison of their modern strengths.</p>
+                        <div class="chart-container">
+                            <canvas id="archComparisonChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                 <!-- RISC-V -->
+                 <div class="mt-8 card">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                        <div class="md:col-span-1 text-center">
+                             <div class="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-indigo-600">RISC-V</div>
+                             <p class="mt-2 font-semibold text-gray-700">The Open Standard ISA</p>
+                        </div>
+                        <div class="md:col-span-2">
+                             <p class="text-gray-700">RISC-V represents a major shift: an open-source, royalty-free ISA. Its key features are modularity and extensibility, allowing anyone to design custom processors, from tiny microcontrollers to powerful supercomputer nodes. This "democratization" of chip design is lowering barriers to entry and fueling innovation in custom silicon, IoT, and AI accelerators, posing a long-term challenge to the proprietary models of ARM and x86.</p>
+                        </div>
+                    </div>
+                 </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Use Cases -->
+        <section id="use-cases" class="py-16 scroll-mt-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="section-title">Architectures in the Wild</h2>
+                <p class="section-subtitle">The "best" architecture depends entirely on the job. Power efficiency is king in mobile devices, while raw performance and legacy support have historically defined desktops and servers. Click on a card to see which architecture typically wins and why.</p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Mobile Card -->
+                    <div class="use-case-card h-80 perspective-1000">
+                        <div class="use-case-card-inner relative w-full h-full">
+                            <div class="front absolute w-full h-full card flex flex-col justify-center items-center text-center cursor-pointer bg-cover bg-center" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(https://placehold.co/600x400/3b82f6/ffffff?text=+)">
+                                <h3 class="text-3xl font-bold text-white">Mobile Devices</h3>
+                                <p class="text-white/80 mt-2">Smartphones & Tablets</p>
+                            </div>
+                            <div class="back absolute w-full h-full card flex flex-col justify-center text-gray-700">
+                                <h4 class="font-bold text-xl risc-color mb-2">Winner: RISC (ARM)</h4>
+                                <p class="text-sm">Power efficiency is paramount for battery life. ARM's low-power RISC design and customizable IP licensing model make it the undisputed leader, powering over 99% of smartphones.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Desktop Card -->
+                    <div class="use-case-card h-80 perspective-1000">
+                        <div class="use-case-card-inner relative w-full h-full">
+                            <div class="front absolute w-full h-full card flex flex-col justify-center items-center text-center cursor-pointer bg-cover bg-center" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(https://placehold.co/600x400/ef4444/ffffff?text=+)">
+                                <h3 class="text-3xl font-bold text-white">Desktops & Laptops</h3>
+                                <p class="text-white/80 mt-2">Personal Computing</p>
+                            </div>
+                             <div class="back absolute w-full h-full card flex flex-col justify-center text-gray-700">
+                                <h4 class="font-bold text-xl cisc-color mb-2">Winner: CISC (x86) - But Challenged</h4>
+                                <p class="text-sm">Historically dominated by x86 for its raw performance and vast legacy software library (Windows). Now, Apple's M-series (ARM) proves RISC can compete on performance while winning on efficiency.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Server Card -->
+                    <div class="use-case-card h-80 perspective-1000">
+                        <div class="use-case-card-inner relative w-full h-full">
+                            <div class="front absolute w-full h-full card flex flex-col justify-center items-center text-center cursor-pointer bg-cover bg-center" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(https://placehold.co/600x400/6b7280/ffffff?text=+)">
+                                <h3 class="text-3xl font-bold text-white">Servers & Cloud</h3>
+                                <p class="text-white/80 mt-2">Data Centers</p>
+                            </div>
+                             <div class="back absolute w-full h-full card flex flex-col justify-center text-gray-700">
+                                <h4 class="font-bold text-xl mb-2">Mixed Battleground</h4>
+                                <p class="text-sm"><strong class="cisc-color">x86</strong> remains the incumbent for general enterprise workloads. <strong class="risc-color">ARM</strong> is gaining ground rapidly in cloud-native, scale-out workloads where core density and power/TCO are key (e.g., AWS Graviton).</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Data for charts
+            const instructionCountData = {
+                labels: ['RISC', 'CISC'],
+                datasets: [{
+                    label: 'Typical Number of Instructions',
+                    data: [150, 1500],
+                    backgroundColor: ['#3b82f6', '#ef4444'],
+                    borderColor: ['#2563eb', '#dc2626'],
+                    borderWidth: 1
+                }]
+            };
+
+            const archComparisonData = {
+                labels: [
+                    'Single-Core Perf.', 
+                    'Power Efficiency', 
+                    'Legacy Ecosystem', 
+                    'Customizability', 
+                    'Multi-Core Scaling'
+                ],
+                datasets: [{
+                    label: 'x86-64 (CISC)',
+                    data: [9, 4, 10, 5, 8],
+                    fill: true,
+                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                    borderColor: '#ef4444',
+                    pointBackgroundColor: '#ef4444',
+                }, {
+                    label: 'ARM64 (RISC)',
+                    data: [8, 9, 6, 8, 9],
+                    fill: true,
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: '#3b82f6',
+                    pointBackgroundColor: '#3b82f6',
+                }]
+            };
+
+            // Chart rendering
+            const instructionCountCtx = document.getElementById('instructionCountChart').getContext('2d');
+            new Chart(instructionCountCtx, {
+                type: 'bar',
+                data: instructionCountData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Number of Instructions' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) {
+                                        let val = context.label === 'RISC' ? 'Dozens to ~200' : 'Hundreds to Thousands';
+                                        label += val;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const archComparisonCtx = document.getElementById('archComparisonChart').getContext('2d');
+            new Chart(archComparisonCtx, {
+                type: 'radar',
+                data: archComparisonData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                            pointLabels: {
+                                font: { size: 11 },
+                                color: '#4b5563'
+                            },
+                            ticks: {
+                                backdropColor: 'transparent',
+                                stepSize: 2,
+                                max: 10,
+                                min: 0,
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                             position: 'bottom',
+                        },
+                        tooltip: {
+                            enabled: true
+                        }
+                    }
+                }
+            });
+
+            // Pipeline Simulation Logic
+            const pipelineLanes = document.getElementById('pipeline-lanes');
+            const runRiscBtn = document.getElementById('runRisc');
+            const runCiscBtn = document.getElementById('runCisc');
+            const resetBtn = document.getElementById('resetPipeline');
+            const statusEl = document.getElementById('pipeline-status');
+            let pipelineInterval;
+            let animationRunning = false;
+
+            function resetPipeline() {
+                clearInterval(pipelineInterval);
+                pipelineLanes.innerHTML = '';
+                statusEl.textContent = '';
+                animationRunning = false;
+                runRiscBtn.disabled = false;
+                runCiscBtn.disabled = false;
+            }
+            
+            resetBtn.addEventListener('click', resetPipeline);
+
+            function createInstruction(id, type) {
+                const instr = document.createElement('div');
+                instr.id = `instr-${id}`;
+                instr.className = 'pipeline-instruction';
+                
+                if (type === 'risc') {
+                    instr.classList.add('risc-bg');
+                    instr.style.width = '18%'; // Uniform width
+                    instr.textContent = `I${id}`;
+                } else { // cisc
+                    instr.classList.add('cisc-bg');
+                    if (id === 2) { // The "complex" instruction
+                        instr.style.width = '38%'; // Wider
+                        instr.textContent = `C${id} (complex)`;
+                    } else {
+                        instr.style.width = id === 3 ? '25%' : '14%'; // Variable width
+                        instr.textContent = `C${id}`;
+                    }
+                }
+                instr.style.left = '-25%';
+                instr.style.top = `${(id-1) * 2.5}rem`;
+                pipelineLanes.appendChild(instr);
+                return instr;
+            }
+
+            function simulatePipeline(type) {
+                if (animationRunning) return;
+                animationRunning = true;
+                runRiscBtn.disabled = true;
+                runCiscBtn.disabled = true;
+
+                resetPipeline();
+                animationRunning = true;
+                
+                const instructions = [1, 2, 3, 4].map(i => createInstruction(i, type));
+                let cycle = 0;
+                let instructionsInPipeline = [];
+
+                pipelineInterval = setInterval(() => {
+                    cycle++;
+                    statusEl.textContent = `Clock Cycle: ${cycle}`;
+                    
+                    // Move existing instructions
+                    instructionsInPipeline.forEach(item => {
+                        // CISC complex instruction stalls in EX stage
+                        if (type === 'cisc' && item.id === 2 && item.stage === 2 && cycle < 7) {
+                           // do nothing, stall it
+                        } else {
+                            item.stage++;
+                        }
+                        const element = document.getElementById(`instr-${item.id}`);
+                        if(element) element.style.left = `${item.stage * 20}%`;
+                    });
+
+                    // Add new instructions if pipeline is not stalled
+                    const canAddNew = !(type === 'cisc' && cycle > 2 && cycle < 7);
+                    if (instructions.length > 0 && canAddNew) {
+                         const nextInstrId = instructions[0].id.split('-')[1];
+                         instructionsInPipeline.push({ id: nextInstrId, stage: 0 });
+                         instructions.shift();
+                    }
+                    
+                    instructionsInPipeline = instructionsInPipeline.filter(item => item.stage < 5);
+
+                    if (instructions.length === 0 && instructionsInPipeline.length === 0) {
+                        clearInterval(pipelineInterval);
+                        statusEl.textContent = `Simulation Complete in ${cycle} cycles.`;
+                        animationRunning = false;
+                        runRiscBtn.disabled = false;
+                        runCiscBtn.disabled = false;
+                    }
+
+                }, 800);
+            }
+
+            runRiscBtn.addEventListener('click', () => simulatePipeline('risc'));
+            runCiscBtn.addEventListener('click', () => simulatePipeline('cisc'));
+            
+            // Use Case Card Flip
+            const useCaseCards = document.querySelectorAll('.use-case-card');
+            useCaseCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    card.classList.toggle('flipped');
+                });
+            });
+
+            // Navigation scroll spy
+            const navLinks = document.querySelectorAll('#nav-links a');
+            const mobileNav = document.getElementById('mobile-nav');
+            const sections = document.querySelectorAll('section');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.getAttribute('id');
+                        navLinks.forEach(link => {
+                            link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+                        });
+                        mobileNav.value = `#${id}`;
+                    }
+                });
+            }, { rootMargin: "-50% 0px -50% 0px" });
+
+            sections.forEach(section => observer.observe(section));
+            
+            mobileNav.addEventListener('change', (e) => {
+                window.location.href = e.target.value;
+            });
+        });
+    </script>
+</body>
+</html>

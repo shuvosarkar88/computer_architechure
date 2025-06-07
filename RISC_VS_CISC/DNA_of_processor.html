@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: The DNA of Processors - RISC vs. CISC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: A linear, scrolling narrative infographic. The structure guides the user from a high-level conceptual introduction to increasingly specific details: 1. Hero/Hook, 2. Core Philosophy Comparison, 3. Instruction Set Differences (visualized), 4. Performance & Pipelining (visualized process), 5. Modern Hybrid Approach (visualized process), 6. Market Landscape & Use Cases (visualized data), 7. Future Outlook (RISC-V). This single-page scroll format is ideal for a narrative infographic, telling a coherent story from start to finish. -->
+    <!-- Visualization & Content Choices: Data Point: Core Philosophies -> Goal: Compare -> Viz: Styled HTML cards. Justification: Clear textual comparison. (NO SVG). Data Point: Instruction Count -> Goal: Compare -> Viz: Bar Chart (Chart.js). Justification: Shows dramatic quantitative difference. Data Point: Pipelining Process -> Goal: Organize/Show Process -> Viz: HTML/CSS Flowchart. Justification: Clearly illustrates a sequential process without SVG/Mermaid. Data Point: Micro-Op Translation -> Goal: Organize/Show Process -> Viz: HTML/CSS Flowchart. Justification: Best method to show the internal CISC-to-RISC flow. Data Point: Market Positioning -> Goal: Compare -> Viz: Radar Chart (Chart.js). Justification: Compares multiple facets of modern architectures effectively. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f0f4f8; /* A very light blue-gray */
+        }
+        .section-title {
+            @apply text-4xl font-extrabold text-[#0A2647] text-center;
+        }
+        .section-subtitle {
+            @apply text-lg text-[#144272] text-center max-w-3xl mx-auto mt-4;
+        }
+        .card {
+            @apply bg-white p-6 rounded-2xl shadow-lg border border-gray-200;
+        }
+        .risc-text { color: #205295; }
+        .cisc-text { color: #2C74B3; }
+        .risc-bg { background-color: #205295; }
+        .cisc-bg { background-color: #2C74B3; }
+        .accent-bg { background-color: #0A2647; }
+        .accent-text { color: #0A2647; }
+        
+        .flowchart-item {
+            @apply bg-white p-3 text-center rounded-lg shadow-md border-2 border-gray-200 font-semibold;
+        }
+        .flowchart-arrow {
+            @apply text-4xl font-light text-gray-400;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #144272;
+            border-radius: 2px;
+        }
+        .timeline-item {
+            width: calc(50% - 2rem);
+        }
+        .timeline-item-right {
+            margin-left: calc(50% + 2rem);
+        }
+        .timeline-dot {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            border: 4px solid #144272;
+            border-radius: 50%;
+            z-index: 10;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Hero Section -->
+    <header class="bg-gradient-to-b from-[#0A2647] to-[#144272] text-white py-20 px-4">
+        <div class="max-w-4xl mx-auto text-center">
+            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight">The DNA of Processors</h1>
+            <h2 class="text-2xl md:text-4xl font-semibold text-blue-200 mt-4">RISC vs. CISC</h2>
+            <p class="mt-8 text-xl text-blue-300 max-w-3xl mx-auto">A visual deep dive into the two fundamental philosophies that power every device you use, from your phone to the cloud.</p>
+        </div>
+    </header>
+
+    <main class="py-16">
+        <!-- Core Philosophies -->
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-24">
+            <h2 class="section-title">Two Competing Philosophies</h2>
+            <p class="section-subtitle">At their core, RISC and CISC represent a fundamental trade-off: should complexity live in the hardware or the software?</p>
+            <div class="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+                <div class="card border-t-8 border-[#205295]">
+                    <h3 class="text-3xl font-bold risc-text mb-4">RISC: The Sprinter</h3>
+                    <p class="mb-6">Reduced Instruction Set Computing prioritizes simplicity. Its goal is to execute a small set of simple instructions, each one blazing fast.</p>
+                    <ul class="space-y-4">
+                        <li class="flex items-start"><span class="text-2xl mr-3 risc-text">➜</span><div><strong class="block">Simple Instructions:</strong> Each instruction does one small thing.</div></li>
+                        <li class="flex items-start"><span class="text-2xl mr-3 risc-text">➜</span><div><strong class="block">Fixed Length:</strong> Instructions are uniform in size, making them easy to decode.</div></li>
+                        <li class="flex items-start"><span class="text-2xl mr-3 risc-text">➜</span><div><strong class="block">Software is Key:</strong> Relies on smart compilers to combine simple instructions into complex operations.</div></li>
+                    </ul>
+                </div>
+                <div class="card border-t-8 border-[#2C74B3]">
+                    <h3 class="text-3xl font-bold cisc-text mb-4">CISC: The Powerlifter</h3>
+                    <p class="mb-6">Complex Instruction Set Computing aims to accomplish tasks in as few instructions as possible, packing immense power into each one.</p>
+                     <ul class="space-y-4">
+                        <li class="flex items-start"><span class="text-2xl mr-3 cisc-text">➜</span><div><strong class="block">Complex Instructions:</strong> A single instruction can perform multiple steps (load, calculate, store).</div></li>
+                        <li class="flex items-start"><span class="text-2xl mr-3 cisc-text">➜</span><div><strong class="block">Variable Length:</strong> Instructions vary in size, improving code density.</div></li>
+                        <li class="flex items-start"><span class="text-2xl mr-3 cisc-text">➜</span><div><strong class="block">Hardware is Key:</strong> Puts complexity into the silicon to simplify the compiler's job.</div></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Instruction Set Deep Dive -->
+        <section class="py-16 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="section-title">Anatomy of an Instruction Set</h2>
+                <p class="section-subtitle">The design philosophy directly dictates the size and shape of the instructions themselves, impacting everything from hardware design to performance.</p>
+                <div class="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div class="card">
+                        <h3 class="text-xl font-bold accent-text mb-4 text-center">Instruction Count: Quality vs. Quantity</h3>
+                        <p class="text-center text-sm text-gray-600 mb-4">CISC architectures have a vast library of specialized instructions, while RISC focuses on a minimal, versatile set.</p>
+                        <div class="chart-container h-64 md:h-80">
+                            <canvas id="instructionCountChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-xl font-bold accent-text mb-4 text-center">Modern Code Density: A Tighter Race</h3>
+                        <p class="text-center text-sm text-gray-600 mb-4">While CISC was historically denser, RISC extensions like ARM's Thumb and RISC-V's 'C' have closed the gap significantly.</p>
+                        <div class="chart-container h-64 md:h-80">
+                            <canvas id="codeDensityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Performance & Pipelining -->
+        <section class="py-20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="section-title">The Performance Engine: Pipelining</h2>
+                <p class="section-subtitle">Pipelining is like an assembly line for instructions. RISC's uniformity makes for a smooth, fast-moving line. CISC's complexity can cause jams and stalls.</p>
+                <div class="mt-12 card md:col-span-2 p-8">
+                    <h3 class="text-2xl font-bold accent-text mb-6 text-center">Visualizing the Flow</h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                        <!-- RISC Pipeline -->
+                        <div>
+                            <h4 class="text-xl font-bold risc-text text-center mb-4">RISC: Smooth Sailing</h4>
+                            <div class="space-y-0">
+                                <div class="flex items-center">
+                                    <div class="w-1/5 flowchart-item bg-blue-50">IF</div>
+                                    <div class="w-1/5 flowchart-item bg-blue-100">ID</div>
+                                    <div class="w-1/5 flowchart-item bg-blue-200">EX</div>
+                                    <div class="w-1/5 flowchart-item bg-blue-300">MEM</div>
+                                    <div class="w-1/5 flowchart-item bg-blue-400 text-white">WB</div>
+                                </div>
+                                <div class="flex items-center ml-[10%]">
+                                    <div class="w-1/5 flowchart-item bg-blue-50">IF</div>
+                                    <div class="w-1/5 flowchart-item bg-blue-100">ID</div>
+                                    <div class="w-1/5 flowchart-item bg-blue-200">EX</div>
+                                    <div class="w-1/5 flowchart-item bg-blue-300">MEM</div>
+                                    <div class="w-1/5 flowchart-item bg-blue-400 text-white">WB</div>
+                                </div>
+                                <div class="flex items-center ml-[20%]">
+                                    <div class="w-1/5 flowchart-item bg-blue-50">IF</div>
+                                    <div class="w-1/5 flowchart-item bg-blue-100">ID</div>
+                                    <div class="w-1/5 flowchart-item bg-blue-200">EX</div>
+                                    <div class="w-1/5 flowchart-item bg-blue-300">MEM</div>
+                                    <div class="w-1/5 flowchart-item bg-blue-400 text-white">WB</div>
+                                </div>
+                            </div>
+                             <p class="text-center mt-4 text-sm text-gray-600">Uniform instructions move predictably through each stage.</p>
+                        </div>
+                        <!-- CISC Pipeline -->
+                        <div>
+                            <h4 class="text-xl font-bold cisc-text text-center mb-4">CISC: Potential Bottlenecks</h4>
+                            <div class="space-y-0">
+                               <div class="flex items-center">
+                                    <div class="w-1/5 flowchart-item bg-sky-50">IF</div>
+                                    <div class="w-1/5 flowchart-item bg-sky-100">ID</div>
+                                    <div class="w-3/5 flowchart-item bg-sky-200 font-bold">Complex Execute (Multiple Cycles)</div>
+                               </div>
+                                <div class="flex items-center mt-2">
+                                    <div class="w-1/5 flowchart-item bg-red-200 border-red-400 text-red-700">STALLED</div>
+                                    <div class="w-1/5 flowchart-item bg-red-200 border-red-400 text-red-700">STALLED</div>
+                                    <div class="flex-1"></div>
+                                </div>
+                                 <div class="flex items-center mt-2">
+                                    <div class="w-1/5 flowchart-item bg-red-200 border-red-400 text-red-700">STALLED</div>
+                                     <div class="flex-1"></div>
+                                </div>
+                            </div>
+                            <p class="text-center mt-4 text-sm text-gray-600">A single complex instruction can monopolize a stage, stalling the entire line.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Modern Hybrid -->
+        <section class="py-16 bg-white">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="section-title">The Hybrid Reality: A RISC Core in Disguise</h2>
+                <p class="section-subtitle">To stay competitive, modern CISC (x86) processors adopted a revolutionary strategy: they translate complex instructions into simple, RISC-like "micro-ops" to be executed by an internal high-performance engine.</p>
+                <div class="mt-12 card p-8">
+                    <div class="flex flex-col md:flex-row items-center justify-center space-y-6 md:space-y-0 md:space-x-8">
+                        <div class="flowchart-item text-white cisc-bg p-4 w-48"><strong>CISC Instruction</strong><br>(e.g., ADD [mem], EAX)</div>
+                        <div class="flowchart-arrow transform md:-rotate-0">➜</div>
+                        <div class="flowchart-item accent-bg text-white p-4 w-48"><strong>Hardware Decoder</strong><br>& Microcode ROM</div>
+                        <div class="flowchart-arrow transform md:-rotate-0">➜</div>
+                        <div class="flowchart-item risc-bg text-white p-4 w-48"><strong>RISC-like Micro-ops</strong><br>1. Load<br>2. Add<br>3. Store</div>
+                    </div>
+                     <p class="text-center mt-8 text-gray-700 font-semibold">This approach gets the best of both worlds: legacy CISC compatibility on the outside, and efficient RISC performance on the inside.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Market Landscape -->
+        <section class="py-20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="section-title">The Modern Market Landscape</h2>
+                <p class="section-subtitle">Today, the RISC vs. CISC debate plays out in the marketplace, where power efficiency, performance, and legacy support determine which architecture wins in a given domain.</p>
+                <div class="mt-12 grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    <div class="lg:col-span-3 card">
+                         <h3 class="text-xl font-bold accent-text mb-4 text-center">Dominance by Domain (Market Share)</h3>
+                         <p class="text-center text-sm text-gray-600 mb-4">RISC (primarily ARM) reigns supreme in power-sensitive mobile devices, while CISC (x86) maintains its stronghold in traditional PC and Server markets.</p>
+                        <div class="chart-container h-80 md:h-96">
+                            <canvas id="marketShareChart"></canvas>
+                        </div>
+                    </div>
+                     <div class="lg:col-span-2 card">
+                        <h3 class="text-xl font-bold accent-text mb-4 text-center">ARM64 vs. x86-64</h3>
+                        <p class="text-center text-sm text-gray-600 mb-4">A comparison of modern strengths shows RISC-based ARM64 excels in efficiency, while CISC-based x86-64 holds an edge in legacy support and raw single-core speed.</p>
+                        <div class="chart-container h-80 md:h-96">
+                            <canvas id="archComparisonChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Future: RISC-V -->
+        <section class="py-16 bg-white">
+             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <h2 class="section-title">The Future is Open: RISC-V</h2>
+                <p class="section-subtitle">A new player has entered the game. RISC-V is an open-source ISA, offering a royalty-free, modular, and customizable alternative to proprietary designs.</p>
+                <div class="mt-8 card accent-bg text-white p-10">
+                    <h3 class="text-4xl font-bold mb-4">"Permissionless Innovation"</h3>
+                    <p class="text-lg text-blue-200">RISC-V allows anyone, from startups to academic researchers, to design custom processors without licensing fees. This is democratizing chip design and fueling a new wave of specialized, highly-efficient hardware for AI, IoT, and beyond, challenging the established order.</p>
+                </div>
+             </div>
+        </section>
+    </main>
+    
+    <footer class="bg-[#0A2647] text-white py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-blue-300">
+            <p>Infographic based on the Comparative Analysis of RISC and CISC Microprocessor Architectures.</p>
+        </div>
+    </footer>
+
+
+    <script>
+        const brilliantBlues = {
+            risc: '#205295', // A strong, primary blue
+            cisc: '#2C74B3', // A slightly lighter, secondary blue
+            accent: '#0A2647', // A very dark, deep blue for titles/backgrounds
+            highlight: '#EAFDFC', // A very light, almost white-blue for backgrounds
+        };
+
+        const chartTooltipTitleCallback = (tooltipItems) => {
+            const item = tooltipItems[0];
+            let label = item.chart.data.labels[item.dataIndex];
+            if (Array.isArray(label)) {
+                return label.join(' ');
+            } else {
+                return label;
+            }
+        };
+
+        const wrapLabel = (label) => {
+            const maxLen = 16;
+            if (label.length <= maxLen) return label;
+            const words = label.split(' ');
+            let lines = [];
+            let currentLine = '';
+            for (const word of words) {
+                if ((currentLine + ' ' + word).trim().length > maxLen) {
+                    lines.push(currentLine.trim());
+                    currentLine = word;
+                } else {
+                    currentLine = (currentLine + ' ' + word).trim();
+                }
+            }
+            if (currentLine) lines.push(currentLine);
+            return lines;
+        }
+
+        // Instruction Count Chart
+        const instructionCountCtx = document.getElementById('instructionCountChart').getContext('2d');
+        new Chart(instructionCountCtx, {
+            type: 'bar',
+            data: {
+                labels: ['RISC (e.g., ARM, MIPS)', 'CISC (e.g., x86)'],
+                datasets: [{
+                    label: 'Typical Number of Instructions',
+                    data: [150, 1500],
+                    backgroundColor: [brilliantBlues.risc, brilliantBlues.cisc],
+                    barThickness: 50,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Number of Instructions (Logarithmic Scale)', font: { weight: 'bold' } },
+                        type: 'logarithmic',
+                    },
+                    y: {
+                        ticks: {
+                            font: { size: 14, weight: '600' }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { title: chartTooltipTitleCallback } }
+                }
+            }
+        });
+
+        // Code Density Chart
+        const codeDensityCtx = document.getElementById('codeDensityChart').getContext('2d');
+        new Chart(codeDensityCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['CISC (e.g., x86-64)', 'RISC with Extensions (e.g., RISC-V `C`)', 'Classic RISC'],
+                datasets: [{
+                    data: [40, 35, 25],
+                    backgroundColor: [brilliantBlues.cisc, brilliantBlues.risc, '#A0BFE0'],
+                    borderColor: '#ffffff',
+                    borderWidth: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                         callbacks: { 
+                            title: chartTooltipTitleCallback,
+                            label: (context) => `${context.label}: Represents ~${context.parsed}% of relative code efficiency`
+                        } 
+                    }
+                }
+            }
+        });
+        
+        // Market Share Chart
+        const marketShareCtx = document.getElementById('marketShareChart').getContext('2d');
+        new Chart(marketShareCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Mobile Devices (Smartphones)', ['Desktop &', 'Laptop PCs'], 'Servers & Cloud'],
+                datasets: [
+                    {
+                        label: 'RISC (ARM, etc.)',
+                        data: [99, 20, 15],
+                        backgroundColor: brilliantBlues.risc,
+                    },
+                    {
+                        label: 'CISC (x86)',
+                        data: [1, 80, 85],
+                        backgroundColor: brilliantBlues.cisc,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: { display: true, text: 'Market Share %' }
+                    },
+                    y: {
+                        stacked: true,
+                         ticks: {
+                            font: { size: 14, weight: '600' }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { 
+                        callbacks: { title: chartTooltipTitleCallback },
+                        mode: 'index', 
+                        intersect: false 
+                    }
+                }
+            }
+        });
+
+        // Arch Comparison Radar Chart
+        const archComparisonCtx = document.getElementById('archComparisonChart').getContext('2d');
+        new Chart(archComparisonCtx, {
+            type: 'radar',
+            data: {
+                labels: [
+                    wrapLabel('Power Efficiency'),
+                    wrapLabel('Single-Core Performance'),
+                    wrapLabel('Legacy Ecosystem'),
+                    wrapLabel('Hardware Customizability'),
+                    wrapLabel('Core Density / Scaling')
+                ],
+                datasets: [{
+                    label: 'x86-64 (CISC)',
+                    data: [4, 9, 10, 5, 8],
+                    fill: true,
+                    backgroundColor: 'rgba(44, 116, 179, 0.2)',
+                    borderColor: brilliantBlues.cisc,
+                    pointBackgroundColor: brilliantBlues.cisc,
+                }, {
+                    label: 'ARM64 (RISC)',
+                    data: [9, 8, 7, 8, 9],
+                    fill: true,
+                    backgroundColor: 'rgba(32, 82, 149, 0.2)',
+                    borderColor: brilliantBlues.risc,
+                    pointBackgroundColor: brilliantBlues.risc,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                        grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                        pointLabels: { font: { size: 12, weight: '600' } },
+                        ticks: { display: false, stepSize: 2 }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { callbacks: { title: chartTooltipTitleCallback } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
