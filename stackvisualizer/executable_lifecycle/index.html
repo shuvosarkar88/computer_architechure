@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Lifecycle of an Executable</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Tech Neutral (Light Grey, Slate, Blue, Green Accents) -->
+    <!-- Application Structure Plan: A single-page, vertical scrollytelling design with a sticky navigation bar. The structure follows the six phases of the executable lifecycle, but groups them into four main interactive sections: 1) Invocation, 2) Loading/Memory, 3) Linking, 4) Execution/Termination. This thematic grouping is better for creating focused interactive visualizations (like the memory map and linking diagram) than a rigid six-part layout. It guides the user logically through the process while allowing non-linear exploration via the nav bar. -->
+    <!-- Visualization & Content Choices: Report Info: Process Memory Layout -> Goal: Explore/Inform -> Viz: Interactive Bar Chart (Chart.js) -> Interaction: Buttons to toggle segments and simulate ASLR by re-rendering with new randomized data -> Justification: Visually demonstrates the abstract concept of a process address space and the effect of ASLR, making it tangible. Report Info: Static vs Dynamic Linking -> Goal: Compare -> Viz: HTML Table -> Interaction: Hover to highlight rows -> Justification: A table is the most effective way to compare pros and cons directly. Report Info: Lazy Binding (PLT/GOT) -> Goal: Explain Process -> Viz: HTML/CSS/JS animated diagram -> Interaction: User clicks 'next' to walk through the steps -> Justification: Breaks down a complex, multi-step process into digestible, animated chunks. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #334155; /* slate-700 */
+        }
+        .font-mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .nav-link {
+            transition: color 0.3s, border-color 0.3s;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #2563eb; /* blue-600 */
+            border-color: #2563eb; /* blue-600 */
+        }
+        .phase-card {
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .phase-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .diagram-box {
+            border: 2px solid #e2e8f0; /* slate-200 */
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            transition: all 0.3s ease-in-out;
+        }
+        .diagram-highlight {
+            border-color: #2563eb; /* blue-600 */
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.3);
+        }
+        .tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #1e293b; /* slate-800 */
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+            margin-bottom: 0.5rem;
+            z-index: 10;
+        }
+        .has-tooltip:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+        .chart-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 800px; 
+            margin-left: auto; 
+            margin-right: auto; 
+            height: 450px;
+            max-height: 50vh;
+        }
+        .trace-line {
+            opacity: 0;
+            animation: fadeIn 0.5s ease-in-out forwards;
+        }
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-xl font-bold text-slate-800">Executable Lifecycle</h1>
+                <div class="hidden md:flex items-center space-x-4">
+                    <a href="#overview" class="nav-link text-slate-600 border-b-2 border-transparent pb-1">Overview</a>
+                    <a href="#invocation" class="nav-link text-slate-600 border-b-2 border-transparent pb-1">Invocation</a>
+                    <a href="#loading" class="nav-link text-slate-600 border-b-2 border-transparent pb-1">Loading & Memory</a>
+                    <a href="#linking" class="nav-link text-slate-600 border-b-2 border-transparent pb-1">Linking</a>
+                    <a href="#execution" class="nav-link text-slate-600 border-b-2 border-transparent pb-1">Execution</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 md:py-12">
+
+        <section id="overview" class="text-center mb-24 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-slate-900 mb-4">From Click to Process: An Orchestrated Journey</h2>
+            <p class="max-w-3xl mx-auto text-lg text-slate-600 mb-12">
+                Running an executable file seems simple, but it triggers a sophisticated sequence of events orchestrated by the operating system. This guide breaks down the complex journey from a static file on your disk to a dynamic, running process in memory. Explore the key phases below to understand how your computer brings code to life.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                <a href="#invocation" class="phase-card bg-white p-6 rounded-lg shadow-md block text-left">
+                    <div class="flex items-center mb-3">
+                        <span class="text-3xl mr-4">🚀</span>
+                        <h3 class="text-xl font-semibold text-slate-800">1. Invocation</h3>
+                    </div>
+                    <p class="text-slate-600">A user command or GUI click initiates the process. The shell uses `fork()` to create a child and `execve()` to load the new program.</p>
+                </a>
+                <a href="#loading" class="phase-card bg-white p-6 rounded-lg shadow-md block text-left">
+                     <div class="flex items-center mb-3">
+                        <span class="text-3xl mr-4">📦</span>
+                        <h3 class="text-xl font-semibold text-slate-800">2. Loading</h3>
+                    </div>
+                    <p class="text-slate-600">The OS loader reads the executable's ELF file, parsing its headers to understand how to map code and data into memory.</p>
+                </a>
+                <a href="#loading" class="phase-card bg-white p-6 rounded-lg shadow-md block text-left">
+                     <div class="flex items-center mb-3">
+                        <span class="text-3xl mr-4">🧱</span>
+                        <h3 class="text-xl font-semibold text-slate-800">3. Memory Layout</h3>
+                    </div>
+                    <p class="text-slate-600">A virtual address space is created, organizing memory into segments like the Stack, Heap, Text, and Data sections.</p>
+                </a>
+                <a href="#linking" class="phase-card bg-white p-6 rounded-lg shadow-md block text-left">
+                    <div class="flex items-center mb-3">
+                        <span class="text-3xl mr-4">🧩</span>
+                        <h3 class="text-xl font-semibold text-slate-800">4. Dynamic Linking</h3>
+                    </div>
+                    <p class="text-slate-600">The dynamic linker (`ld-linux.so`) resolves dependencies on shared libraries, connecting the program to external code.</p>
+                </a>
+                <a href="#execution" class="phase-card bg-white p-6 rounded-lg shadow-md block text-left">
+                    <div class="flex items-center mb-3">
+                        <span class="text-3xl mr-4">⏲️</span>
+                        <h3 class="text-xl font-semibold text-slate-800">5. Execution</h3>
+                    </div>
+                    <p class="text-slate-600">Control is passed to the program's entry point. The CPU executes instructions, making system calls for OS services.</p>
+                </a>
+                <a href="#execution" class="phase-card bg-white p-6 rounded-lg shadow-md block text-left">
+                    <div class="flex items-center mb-3">
+                        <span class="text-3xl mr-4">🛑</span>
+                        <h3 class="text-xl font-semibold text-slate-800">6. Termination</h3>
+                    </div>
+                    <p class="text-slate-600">The program exits, and the OS cleans up, reclaiming memory, closing files, and notifying the parent process.</p>
+                </a>
+            </div>
+        </section>
+
+        <section id="invocation" class="mb-24 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-slate-900 mb-4">Phase 1: Invocation with `fork()` and `execve()`</h2>
+            <p class="max-w-3xl text-lg text-slate-600 mb-8">
+                The journey begins with the `fork()` and `execve()` system calls, a foundational pattern in Unix-like systems. `fork()` creates a nearly identical child process, a clone of its parent (e.g., the shell). This child process then uses `execve()` to completely replace its own memory space with the new program, effectively transforming itself. This two-step process provides a powerful window for the child to perform setup, like redirecting I/O, before the new program takes over.
+            </p>
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <div class="flex flex-col md:flex-row items-center justify-around space-y-8 md:space-y-0 md:space-x-8">
+                    <div class="text-center">
+                        <div class="diagram-box w-48 h-32 flex items-center justify-center">
+                            <span class="text-lg font-semibold">Shell (Parent)</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-center">
+                       <span class="font-mono text-blue-600 mb-2">fork()</span>
+                       <span class="text-4xl text-slate-400">→</span>
+                    </div>
+                     <div class="text-center">
+                        <div class="diagram-box w-48 h-32 flex items-center justify-center">
+                            <span class="text-lg font-semibold">Child (Copy of Shell)</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-center">
+                       <span class="font-mono text-green-600 mb-2">execve("./program")</span>
+                       <span class="text-4xl text-slate-400">→</span>
+                    </div>
+                    <div class="text-center">
+                        <div class="diagram-box w-48 h-32 flex items-center justify-center bg-green-50 border-green-400">
+                             <span class="text-lg font-semibold text-green-800">New Program</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-center mt-6 text-slate-600">This `fork-then-exec` model separates process creation from program loading, enabling powerful shell features like pipelines and I/O redirection.</p>
+            </div>
+        </section>
+
+        <section id="loading" class="mb-24 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-slate-900 mb-4">Phases 2 & 3: Loading the ELF and Building Memory</h2>
+             <p class="max-w-3xl text-lg text-slate-600 mb-12">
+                Upon `execve()`, the OS loader must understand the executable file to set up the process's virtual address space. In Linux, this means parsing the Executable and Linkable Format (ELF). The loader uses the file's Program Headers to map segments into memory, creating a structured, isolated environment for the process to run. This memory layout is a cornerstone of modern operating systems, providing protection and efficiency.
+            </p>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                <div>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-4">Exploring an ELF File</h3>
+                    <p class="text-slate-600 mb-6">Hover over the components of this simplified ELF file to see their purpose. The OS uses this "roadmap" to load the program correctly.</p>
+                    <div class="bg-white p-6 rounded-lg shadow-lg space-y-2">
+                        <div class="relative has-tooltip diagram-box bg-blue-50 border-blue-200">
+                            ELF Header
+                            <div class="tooltip">Identifies the file as ELF, its architecture (32/64-bit), and the location of other headers.</div>
+                        </div>
+                         <div class="relative has-tooltip diagram-box bg-blue-50 border-blue-200">
+                            Program Header Table
+                            <div class="tooltip">Describes segments (e.g., code, data) and tells the OS how to map them into memory.</div>
+                        </div>
+                        <div class="relative has-tooltip diagram-box bg-green-50 border-green-200">
+                            .text section
+                             <div class="tooltip">The actual machine code instructions. Mapped as Read-Only and Executable.</div>
+                        </div>
+                        <div class="relative has-tooltip diagram-box bg-yellow-50 border-yellow-200">
+                            .data section
+                            <div class="tooltip">Initialized global and static variables. Mapped as Read/Write.</div>
+                        </div>
+                        <div class="relative has-tooltip diagram-box bg-yellow-50 border-yellow-200">
+                            .bss section
+                            <div class="tooltip">Uninitialized global/static variables. Occupies no file space but is allocated and zero-filled in memory.</div>
+                        </div>
+                        <div class="relative has-tooltip diagram-box bg-purple-50 border-purple-200">
+                            .symtab section
+                            <div class="tooltip">Symbol Table. Used for linking and debugging to find functions and variables.</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-4">Process Virtual Memory Layout</h3>
+                    <p class="text-slate-600 mb-6">The loader creates this virtual address space. Use the buttons to explore the different segments and see how Address Space Layout Randomization (ASLR) makes their locations unpredictable for security.</p>
+                    <div class="bg-white p-4 rounded-lg shadow-lg">
+                        <div class="chart-container">
+                            <canvas id="memoryLayoutChart"></canvas>
+                        </div>
+                        <div class="flex flex-wrap justify-center gap-2 mt-4">
+                            <button id="toggleAslrBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">Toggle ASLR</button>
+                            <button id="resetViewBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">Reset View</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="linking" class="mb-24 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-slate-900 mb-4">Phase 4: Dynamic Linking and Lazy Binding</h2>
+            <p class="max-w-3xl text-lg text-slate-600 mb-12">
+                Most modern programs are dynamically linked, meaning they don't include code from common libraries (like `libc`). Instead, the dynamic linker (`ld-linux.so`) loads these shared libraries at runtime and resolves function calls. For efficiency, this is often done "lazily"—a function's address is only looked up the very first time it's called. This is orchestrated by the Procedure Linkage Table (PLT) and Global Offset Table (GOT).
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                 <div>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-4">Static vs. Dynamic Linking</h3>
+                    <p class="text-slate-600 mb-6">Linking strategy has major implications for file size, memory usage, and updates. Hover over the rows to compare.</p>
+                    <div class="overflow-x-auto bg-white rounded-lg shadow-lg p-2">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b-2 border-slate-200">
+                                    <th class="p-3">Feature</th>
+                                    <th class="p-3">Static Linking</th>
+                                    <th class="p-3">Dynamic Linking</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <td class="p-3 font-semibold">Executable Size</td>
+                                    <td class="p-3">Larger</td>
+                                    <td class="p-3">Smaller</td>
+                                </tr>
+                                <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <td class="p-3 font-semibold">Memory Usage</td>
+                                    <td class="p-3">Higher (code duplicated)</td>
+                                    <td class="p-3">Lower (code shared)</td>
+                                </tr>
+                                <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <td class="p-3 font-semibold">Updating</td>
+                                    <td class="p-3">Requires re-linking app</td>
+                                    <td class="p-3">Update shared library once</td>
+                                </tr>
+                                 <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="p-3 font-semibold">Dependencies</td>
+                                    <td class="p-3">None (self-contained)</td>
+                                    <td class="p-3">Relies on system libs</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-4">Lazy Binding in Action</h3>
+                    <p class="text-slate-600 mb-6">Follow the steps to see how a call to a library function like `printf` is resolved for the first time, and how subsequent calls become much faster.</p>
+                    <div id="lazyBindingDiagram" class="bg-white p-6 rounded-lg shadow-lg space-y-4">
+                        <div id="lazy-step-1" class="diagram-box">1. Program calls `printf@plt` (in its own code).</div>
+                        <div class="flex justify-center text-2xl text-slate-400">↓</div>
+                        <div id="lazy-step-2" class="diagram-box">2. PLT jumps to address in `printf`'s GOT entry.</div>
+                        <div class="flex justify-center text-2xl text-slate-400">↓</div>
+                        <div id="lazy-step-3" class="diagram-box">3. <b>First Call:</b> GOT points back to PLT, which calls the dynamic linker's resolver.</div>
+                        <div class="flex justify-center text-2xl text-slate-400">↓</div>
+                        <div id="lazy-step-4" class="diagram-box">4. Resolver finds `printf`'s real address and <b>patches the GOT entry.</b></div>
+                        <div class="flex justify-center text-2xl text-slate-400">↓</div>
+                        <div id="lazy-step-5" class="diagram-box">5. <b>Subsequent Calls:</b> GOT now contains the real address, so the jump from step 2 goes directly to `printf`.</div>
+                         <div class="text-center mt-4">
+                            <button id="lazyBindingBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">Next Step</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="execution" class="mb-24 scroll-mt-20">
+             <h2 class="text-3xl font-bold text-slate-900 mb-4">Phases 5 & 6: Execution and Termination</h2>
+             <p class="max-w-3xl text-lg text-slate-600 mb-12">
+                With everything set up, the OS scheduler assigns the process to a CPU, and execution begins at its entry point (`_start`), which then calls `main()`. The running program interacts with the kernel via system calls to perform I/O or allocate memory. When the program finishes, it calls `exit()`, and the OS performs a final cleanup, releasing all resources and notifying the parent process.
+            </p>
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h3 class="text-2xl font-semibold text-slate-800 mb-4">Simulated System Call Trace</h3>
+                <p class="text-slate-600 mb-6">This animation simulates the output of `strace`, a tool that shows the system calls a program makes. It reveals the low-level conversation between the application and the OS kernel.</p>
+                <div id="strace-output" class="bg-slate-900 text-white font-mono p-4 rounded-md text-sm overflow-x-auto">
+                    <p>Click "Run Trace" to begin...</p>
+                </div>
+                <div class="text-center mt-4">
+                    <button id="straceBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">Run Trace</button>
+                </div>
+            </div>
+             <div class="mt-12 bg-white p-6 rounded-lg shadow-lg">
+                <h3 class="text-2xl font-semibold text-slate-800 mb-4">The Final Steps: Exit and the Zombie State</h3>
+                <p class="text-slate-600 mb-6">Upon termination, a process briefly becomes a "zombie". It has released its memory, but its entry in the process table remains until the parent process acknowledges its death by calling `wait()`. This allows the parent to retrieve the child's exit status.</p>
+                <div class="flex flex-col md:flex-row items-center justify-around space-y-8 md:space-y-0 md:space-x-8">
+                     <div class="text-center">
+                        <div class="diagram-box w-48 h-32 flex items-center justify-center bg-green-50 border-green-400">
+                             <span class="text-lg font-semibold text-green-800">Running Program</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-center">
+                       <span class="font-mono text-red-600 mb-2">exit_group(0)</span>
+                       <span class="text-4xl text-slate-400">→</span>
+                    </div>
+                    <div class="text-center">
+                        <div class="diagram-box w-48 h-32 flex items-center justify-center bg-red-50 border-red-400">
+                            <span class="text-lg font-semibold text-red-800">Zombie Process</span>
+                             <p class="text-xs text-slate-500">(Waiting for parent)</p>
+                        </div>
+                    </div>
+                     <div class="flex flex-col items-center">
+                       <span class="font-mono text-blue-600 mb-2">Parent calls wait()</span>
+                       <span class="text-4xl text-slate-400">→</span>
+                    </div>
+                     <div class="text-center">
+                        <div class="diagram-box w-48 h-32 flex items-center justify-center bg-slate-100 border-slate-300">
+                            <span class="text-lg font-semibold text-slate-500">Reaped (Gone)</span>
+                        </div>
+                    </div>
+                </div>
+             </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-800 text-slate-300 py-8">
+        <div class="container mx-auto px-4 text-center">
+            <p>&copy; 2025 Executable Lifecycle Explorer. All concepts illustrated are based on standard Linux OS behavior.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Navigation Highlighting ---
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.3
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.getAttribute('id');
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href') === `#${id}`) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+
+            // --- Memory Layout Chart ---
+            const memoryCtx = document.getElementById('memoryLayoutChart').getContext('2d');
+            let memoryChart;
+            let aslrEnabled = false;
+
+            const baseData = {
+                labels: ['Process Virtual Address Space'],
+                datasets: [
+                    { label: 'Text', data: [{ x: [0, 10], y: [''] }], backgroundColor: 'rgba(34, 197, 94, 0.7)', borderWidth: 1, borderColor: 'rgba(22, 163, 74, 1)', barPercentage: 1.0, categoryPercentage: 1.0 },
+                    { label: 'Data', data: [{ x: [10, 15], y: [''] }], backgroundColor: 'rgba(234, 179, 8, 0.7)', borderWidth: 1, borderColor: 'rgba(202, 138, 4, 1)', barPercentage: 1.0, categoryPercentage: 1.0 },
+                    { label: 'BSS', data: [{ x: [15, 20], y: [''] }], backgroundColor: 'rgba(245, 158, 11, 0.7)', borderWidth: 1, borderColor: 'rgba(217, 119, 6, 1)', barPercentage: 1.0, categoryPercentage: 1.0 },
+                    { label: 'Heap', data: [{ x: [20, 35], y: [''] }], backgroundColor: 'rgba(239, 68, 68, 0.7)', borderWidth: 1, borderColor: 'rgba(220, 38, 38, 1)', barPercentage: 1.0, categoryPercentage: 1.0 },
+                    { label: 'Libs', data: [{ x: [50, 65], y: [''] }], backgroundColor: 'rgba(139, 92, 246, 0.7)', borderWidth: 1, borderColor: 'rgba(124, 58, 237, 1)', barPercentage: 1.0, categoryPercentage: 1.0 },
+                    { label: 'Stack', data: [{ x: [85, 100], y: [''] }], backgroundColor: 'rgba(59, 130, 246, 0.7)', borderWidth: 1, borderColor: 'rgba(37, 99, 235, 1)', barPercentage: 1.0, categoryPercentage: 1.0 },
+                ]
+            };
+            
+            function createMemoryChart() {
+                if (memoryChart) {
+                    memoryChart.destroy();
+                }
+                memoryChart = new Chart(memoryCtx, {
+                    type: 'bar',
+                    data: JSON.parse(JSON.stringify(baseData)),
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'right', labels: { color: '#475569' } },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const dataset = context.dataset;
+                                        const value = dataset.data[0].x;
+                                        return `${dataset.label}: Size ${value[1] - value[0]}`;
+                                    }
+                                }
+                            },
+                             title: {
+                                display: true,
+                                text: 'High Addresses ↑',
+                                align: 'start',
+                                color: '#475569'
+                            },
+                        },
+                        scales: {
+                            x: {
+                                min: 0,
+                                max: 100,
+                                stacked: true,
+                                title: { display: true, text: 'Low Addresses →', color: '#475569' },
+                                grid: { display: false },
+                                ticks: { color: '#475569' }
+                            },
+                            y: {
+                                stacked: true,
+                                grid: { display: false },
+                                ticks: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function randomizeLayout() {
+                const heapStart = 20 + Math.floor(Math.random() * 10);
+                const heapEnd = heapStart + 15 + Math.floor(Math.random() * 10);
+                const libStart = heapEnd + 5 + Math.floor(Math.random() * 15);
+                const libEnd = libStart + 15 + Math.floor(Math.random() * 5);
+                const stackEnd = 100;
+                const stackStart = stackEnd - (15 + Math.floor(Math.random() * 10));
+                
+                memoryChart.data.datasets[3].data[0].x = [heapStart, heapEnd]; // Heap
+                memoryChart.data.datasets[4].data[0].x = [libStart, libEnd];   // Libs
+                memoryChart.data.datasets[5].data[0].x = [stackStart, stackEnd];   // Stack
+                memoryChart.update();
+            }
+
+            document.getElementById('toggleAslrBtn').addEventListener('click', () => {
+                 aslrEnabled = !aslrEnabled;
+                 if(aslrEnabled){
+                    randomizeLayout();
+                    document.getElementById('toggleAslrBtn').classList.add('bg-red-500', 'hover:bg-red-600');
+                    document.getElementById('toggleAslrBtn').classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                    document.getElementById('toggleAslrBtn').textContent = "ASLR On";
+                 } else {
+                    createMemoryChart();
+                    document.getElementById('toggleAslrBtn').classList.remove('bg-red-500', 'hover:bg-red-600');
+                    document.getElementById('toggleAslrBtn').classList.add('bg-blue-500', 'hover:bg-blue-600');
+                    document.getElementById('toggleAslrBtn').textContent = "ASLR Off";
+                 }
+            });
+
+            document.getElementById('resetViewBtn').addEventListener('click', () => {
+                aslrEnabled = false;
+                createMemoryChart();
+                document.getElementById('toggleAslrBtn').classList.remove('bg-red-500', 'hover:bg-red-600');
+                document.getElementById('toggleAslrBtn').classList.add('bg-blue-500', 'hover:bg-blue-600');
+                document.getElementById('toggleAslrBtn').textContent = "Toggle ASLR";
+            });
+
+            createMemoryChart();
+
+
+            // --- Lazy Binding Diagram ---
+            const lazyBindingBtn = document.getElementById('lazyBindingBtn');
+            const lazySteps = document.querySelectorAll('#lazyBindingDiagram .diagram-box');
+            let currentLazyStep = 0;
+
+            lazyBindingBtn.addEventListener('click', () => {
+                lazySteps.forEach(step => step.classList.remove('diagram-highlight'));
+                currentLazyStep = (currentLazyStep + 1) % lazySteps.length;
+                lazySteps[currentLazyStep].classList.add('diagram-highlight');
+                if (currentLazyStep === 0) {
+                     lazySteps.forEach(step => step.classList.remove('diagram-highlight'));
+                }
+            });
+
+            // --- Strace Simulation ---
+            const straceBtn = document.getElementById('straceBtn');
+            const straceOutput = document.getElementById('strace-output');
+            const traceLines = [
+                `execve("./my_program", ["./my_program"], 0x7ffc1234abcd /* 55 vars */) = 0`,
+                `brk(NULL)                               = 0x555555559000`,
+                `mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f8b1e1b3000`,
+                `access("/etc/ld.so.preload", R_OK)      = -1 ENOENT (No such file or directory)`,
+                `openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3`,
+                `openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3`,
+                `mmap(NULL, 1968896, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f8b1dfd1000`,
+                `write(1, "Hello, World!\\n", 14)          = 14`,
+                `exit_group(0)                           = ?`,
+                `+++ exited with 0 +++`
+            ];
+
+            let traceRunning = false;
+            straceBtn.addEventListener('click', () => {
+                if(traceRunning) return;
+                traceRunning = true;
+                straceOutput.innerHTML = '';
+                let delay = 0;
+                traceLines.forEach((line, index) => {
+                    setTimeout(() => {
+                        const p = document.createElement('p');
+                        p.textContent = line;
+                        p.className = 'trace-line';
+                        p.style.animationDelay = `${index * 100}ms`;
+                        straceOutput.appendChild(p);
+                        if(index === traceLines.length - 1) {
+                            traceRunning = false;
+                        }
+                    }, delay);
+                    delay += 300;
+                });
+            });
+        });
+    </script>
+</body>
+</html>

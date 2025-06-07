@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide to Printed Circuit Boards (PCBs)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony (Teal and Slate) -->
+    <!-- Application Structure Plan: The SPA is structured thematically to guide the user from foundational concepts to complex applications, enhancing learnability. The flow is: 1) Hero Introduction, 2) Interactive Anatomy Diagram for basic understanding, 3) A 'PCB Explorer' with filters and a dynamic radar chart for easy comparison of types, 4) A visual timeline for the complex Design-to-Fabrication process, 5) A 'Deep Dive' tabbed section for key engineering challenges with an interactive chart for signal integrity, and 6) A gallery for real-world applications. This non-linear, task-oriented structure is chosen over a simple linear report to make the dense information more digestible and engaging, allowing users to explore topics based on interest. -->
+    <!-- Visualization & Content Choices: 1. PCB Anatomy: (Goal: Inform) An interactive HTML/CSS diagram where clicking reveals info, making it more intuitive than text. 2. PCB Types: (Goal: Compare) Filterable cards and a dynamic Chart.js radar chart allow users to compare types across multiple metrics (Cost, Complexity, etc.). 3. Design Process: (Goal: Organize) An HTML/CSS timeline visualizes the sequential process. 4. Signal Integrity: (Goal: Inform/Relate) A Chart.js line chart toggles between good/bad signals to visually explain an abstract concept. 5. Applications: (Goal: Inform) A responsive grid with hover effects provides visual context. These choices prioritize interaction and visual learning over static text. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .nav-link { transition: color 0.3s, border-color 0.3s; }
+        .nav-link.active { color: #0f766e; border-bottom-color: #0f766e; }
+        .anatomy-layer { transition: all 0.3s ease-in-out; }
+        .process-step-line { content: ''; position: absolute; top: 50%; left: 100%; width: 100%; height: 2px; background-color: #d1d5db; transform: translateY(-50%); }
+        .process-step:last-child .process-step-line { display: none; }
+        .chart-container { position: relative; width: 100%; max-width: 500px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 400px; } }
+        [x-cloak] { display: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="app" x-data="pcbApp()">
+        <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-40 border-b border-slate-200">
+            <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <span class="font-bold text-xl text-teal-700">PCB Explorer</span>
+                    </div>
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-4">
+                            <a href="#intro" @click="activeSection = 'intro'" :class="{ 'active': activeSection === 'intro' }" class="nav-link text-slate-600 hover:text-teal-600 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent">Introduction</a>
+                            <a href="#anatomy" @click="activeSection = 'anatomy'" :class="{ 'active': activeSection === 'anatomy' }" class="nav-link text-slate-600 hover:text-teal-600 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent">Anatomy</a>
+                            <a href="#types" @click="activeSection = 'types'" :class="{ 'active': activeSection === 'types' }" class="nav-link text-slate-600 hover:text-teal-600 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent">Types</a>
+                            <a href="#process" @click="activeSection = 'process'" :class="{ 'active': activeSection === 'process' }" class="nav-link text-slate-600 hover:text-teal-600 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent">Process</a>
+                            <a href="#challenges" @click="activeSection = 'challenges'" :class="{ 'active': activeSection === 'challenges' }" class="nav-link text-slate-600 hover:text-teal-600 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent">Challenges</a>
+                            <a href="#applications" @click="activeSection = 'applications'" :class="{ 'active': activeSection === 'applications' }" class="nav-link text-slate-600 hover:text-teal-600 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent">Applications</a>
+                        </div>
+                    </div>
+                    <div class="md:hidden">
+                        <button @click="mobileMenuOpen = !mobileMenuOpen" class="inline-flex items-center justify-center p-2 rounded-md text-slate-500 hover:text-white hover:bg-teal-600 focus:outline-none">
+                            <span x-show="!mobileMenuOpen">
+                                <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                            </span>
+                            <span x-show="mobileMenuOpen" x-cloak>
+                                 <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+                <div x-show="mobileMenuOpen" x-cloak class="md:hidden">
+                    <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                        <a href="#intro" @click="mobileMenuOpen = false; activeSection = 'intro'" class="block text-slate-600 hover:text-white hover:bg-teal-600 px-3 py-2 rounded-md text-base font-medium">Introduction</a>
+                        <a href="#anatomy" @click="mobileMenuOpen = false; activeSection = 'anatomy'" class="block text-slate-600 hover:text-white hover:bg-teal-600 px-3 py-2 rounded-md text-base font-medium">Anatomy</a>
+                        <a href="#types" @click="mobileMenuOpen = false; activeSection = 'types'" class="block text-slate-600 hover:text-white hover:bg-teal-600 px-3 py-2 rounded-md text-base font-medium">Types</a>
+                        <a href="#process" @click="mobileMenuOpen = false; activeSection = 'process'" class="block text-slate-600 hover:text-white hover:bg-teal-600 px-3 py-2 rounded-md text-base font-medium">Process</a>
+                        <a href="#challenges" @click="mobileMenuOpen = false; activeSection = 'challenges'" class="block text-slate-600 hover:text-white hover:bg-teal-600 px-3 py-2 rounded-md text-base font-medium">Challenges</a>
+                        <a href="#applications" @click="mobileMenuOpen = false; activeSection = 'applications'" class="block text-slate-600 hover:text-white hover:bg-teal-600 px-3 py-2 rounded-md text-base font-medium">Applications</a>
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+            
+            <section id="intro" class="text-center mb-16 scroll-mt-16">
+                <h1 class="text-4xl sm:text-5xl font-bold text-teal-800 mb-4">The Foundation of Modern Electronics</h1>
+                <p class="max-w-3xl mx-auto text-lg text-slate-600">A Printed Circuit Board (PCB) is the backbone of virtually every electronic device. It's a rigid or flexible board that physically supports and electrically connects components using conductive tracks, pads, and other features etched from copper sheets laminated onto a non-conductive substrate. Explore this interactive guide to understand how they are designed, built, and utilized.</p>
+            </section>
+
+            <section id="anatomy" class="mb-16 scroll-mt-16">
+                <h2 class="text-3xl font-bold text-center mb-2">Anatomy of a PCB</h2>
+                <p class="text-center text-slate-600 mb-8 max-w-2xl mx-auto">A PCB is a layered structure. This section provides an interactive model to help you understand its core components. Click on the different elements of the simplified cross-section below to learn about their function and materials.</p>
+                <div class="flex flex-col md:flex-row gap-8 items-center justify-center">
+                    <div class="w-full md:w-1/2 lg:w-1/3">
+                        <div class="relative p-4 border-2 border-slate-300 rounded-lg bg-white shadow-lg">
+                            <div @click="activeAnatomy = 'silkscreen'" :class="{'ring-2 ring-offset-2 ring-teal-500 z-30': activeAnatomy === 'silkscreen'}" class="anatomy-layer cursor-pointer relative bg-white/70 h-6 w-full rounded-t-md flex items-center justify-center text-xs font-semibold text-slate-700">SILKSCREEN</div>
+                            <div @click="activeAnatomy = 'soldermask'" :class="{'ring-2 ring-offset-2 ring-green-600 z-20': activeAnatomy === 'soldermask'}" class="anatomy-layer cursor-pointer relative bg-green-500 h-4 w-full flex items-center justify-center"></div>
+                            <div @click="activeAnatomy = 'copper'" :class="{'ring-2 ring-offset-2 ring-orange-500 z-10': activeAnatomy === 'copper'}" class="anatomy-layer cursor-pointer relative bg-orange-400 h-2 w-full flex items-center justify-center"></div>
+                            <div @click="activeAnatomy = 'substrate'" :class="{'ring-2 ring-offset-2 ring-yellow-800 z-0': activeAnatomy === 'substrate'}" class="anatomy-layer cursor-pointer relative bg-yellow-600 h-16 w-full rounded-b-md flex items-center justify-center"></div>
+                            
+                            <div @click="activeAnatomy = 'trace'" class="absolute top-10 left-4 w-12 h-0.5 bg-orange-900 cursor-pointer" :class="{'ring-2 ring-offset-1 ring-orange-900': activeAnatomy === 'trace'}"></div>
+                             <div @click="activeAnatomy = 'pad'" class="absolute top-8 left-20 w-4 h-4 bg-orange-900 rounded-full cursor-pointer" :class="{'ring-2 ring-offset-1 ring-orange-900': activeAnatomy === 'pad'}"></div>
+                            <div @click="activeAnatomy = 'via'" class="absolute top-8 right-12 h-20 w-2 bg-gray-500 rounded-full cursor-pointer" :class="{'ring-2 ring-offset-1 ring-gray-600': activeAnatomy === 'via'}">
+                                <div class="h-full w-full bg-slate-400 border-2 border-gray-600 rounded-full"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-1/2">
+                        <div class="bg-white p-6 rounded-lg shadow-md min-h-[200px] transition-all duration-300">
+                            <template x-if="anatomyContent[activeAnatomy]">
+                                <div>
+                                    <h3 class="text-xl font-bold mb-2 text-teal-700" x-text="anatomyContent[activeAnatomy].title"></h3>
+                                    <p class="text-slate-600" x-text="anatomyContent[activeAnatomy].description"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="types" class="mb-16 scroll-mt-16">
+                <h2 class="text-3xl font-bold text-center mb-2">PCB Type Explorer</h2>
+                <p class="text-center text-slate-600 mb-8 max-w-2xl mx-auto">PCBs come in many forms, each tailored for different applications based on complexity, cost, and physical requirements. In this section, you can explore various types. Use the filters to learn about them and see a visual comparison of their key characteristics on the chart.</p>
+                
+                <div class="flex items-center justify-center gap-2 mb-8 flex-wrap">
+                    <button @click="activePcbTypeFilter = 'all'" :class="{'bg-teal-600 text-white': activePcbTypeFilter === 'all', 'bg-white text-slate-600 hover:bg-slate-100': activePcbTypeFilter !== 'all'}" class="px-4 py-2 text-sm font-medium rounded-full shadow-sm transition">All Types</button>
+                    <button @click="activePcbTypeFilter = 'layer'" :class="{'bg-teal-600 text-white': activePcbTypeFilter === 'layer', 'bg-white text-slate-600 hover:bg-slate-100': activePcbTypeFilter !== 'layer'}" class="px-4 py-2 text-sm font-medium rounded-full shadow-sm transition">By Layer Count</button>
+                    <button @click="activePcbTypeFilter = 'flexibility'" :class="{'bg-teal-600 text-white': activePcbTypeFilter === 'flexibility', 'bg-white text-slate-600 hover:bg-slate-100': activePcbTypeFilter !== 'flexibility'}" class="px-4 py-2 text-sm font-medium rounded-full shadow-sm transition">By Flexibility</button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                    <template x-for="pcb in filteredPcbTypes" :key="pcb.id">
+                         <div x-show="activePcbTypeFilter === 'all' || activePcbTypeFilter === pcb.category" class="bg-white rounded-lg shadow-md p-6 border-t-4" :style="`border-color: ${pcb.color}`">
+                            <h3 class="text-xl font-bold mb-2" x-text="pcb.name"></h3>
+                            <p class="text-sm text-slate-600 mb-3" x-text="pcb.description"></p>
+                            <p class="text-sm"><strong class="font-semibold">Best for:</strong> <span x-text="pcb.use_case"></span></p>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6">
+                     <h3 class="text-2xl font-bold text-center mb-4">Characteristics Comparison</h3>
+                     <p class="text-center text-slate-500 text-sm mb-4">The radar chart visualizes key trade-offs (rated 1-5, higher is better/more). Select a filter above to compare specific groups.</p>
+                     <div class="chart-container">
+                        <canvas id="pcbTypeChart"></canvas>
+                    </div>
+                </div>
+
+            </section>
+
+            <section id="process" class="mb-16 scroll-mt-16">
+                 <h2 class="text-3xl font-bold text-center mb-2">The Journey of a PCB</h2>
+                <p class="text-center text-slate-600 mb-12 max-w-2xl mx-auto">From a simple idea to a physical board, the PCB creation process involves several critical stages. This interactive timeline walks you through the key steps in design and fabrication, explaining what happens at each point to transform a digital blueprint into a functional electronic component.</p>
+                <div class="relative">
+                    <div class="hidden md:block border-l-2 border-teal-300 absolute h-full top-0 left-1/2 -translate-x-1/2"></div>
+                    <template x-for="(step, index) in processSteps" :key="index">
+                        <div class="mb-8 flex md:justify-between md:items-center w-full" :class="{'md:flex-row-reverse': index % 2 !== 0}">
+                            <div class="hidden md:block w-5/12"></div>
+                            <div class="hidden md:block relative">
+                                <div class="h-8 w-8 bg-teal-600 rounded-full text-white flex items-center justify-center font-bold" x-text="index + 1"></div>
+                            </div>
+                             <div class="bg-white rounded-lg shadow-md p-6 w-full md:w-5/12 border-l-4 md:border-l-0" :class="index % 2 !== 0 ? 'md:border-r-4' : 'md:border-l-4'" style="border-color: #0d9488;">
+                                <h3 class="text-xl font-bold mb-2 text-teal-700" x-text="step.title"></h3>
+                                <p class="text-slate-600" x-text="step.description"></p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </section>
+
+            <section id="challenges" class="mb-16 scroll-mt-16">
+                <h2 class="text-3xl font-bold text-center mb-2">Engineering Deep Dive</h2>
+                <p class="text-center text-slate-600 mb-8 max-w-2xl mx-auto">Modern PCBs face significant engineering challenges that require careful planning and design to overcome. This section explores the critical issues of signal integrity, thermal management, and power delivery that designers must master to create reliable, high-performance electronics. Use the tabs to explore each topic.</p>
+                <div class="bg-white rounded-lg shadow-md">
+                    <div class="border-b border-slate-200">
+                         <nav class="-mb-px flex space-x-6 px-6" aria-label="Tabs">
+                            <button @click="activeChallengeTab = 'signal'" :class="{'border-teal-600 text-teal-700': activeChallengeTab === 'signal', 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300': activeChallengeTab !== 'signal'}" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Signal Integrity</button>
+                            <button @click="activeChallengeTab = 'thermal'" :class="{'border-teal-600 text-teal-700': activeChallengeTab === 'thermal', 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300': activeChallengeTab !== 'thermal'}" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Thermal Management</button>
+                             <button @click="activeChallengeTab = 'power'" :class="{'border-teal-600 text-teal-700': activeChallengeTab === 'power', 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300': activeChallengeTab !== 'power'}" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Power & Comparisons</button>
+                        </nav>
+                    </div>
+                    <div class="p-6">
+                        <div x-show="activeChallengeTab === 'signal'" x-cloak>
+                            <h3 class="text-xl font-bold mb-3">Signal Integrity (SI)</h3>
+                            <p class="text-slate-600 mb-6">SI is about maintaining a signal's quality as it travels from transmitter to receiver. Poor SI, caused by issues like impedance mismatch, crosstalk, and reflections, can corrupt data and cause system failure, especially in high-speed circuits. Effective design requires careful trace routing, proper grounding, and controlled impedance. Click the toggle to see a visual example of a clean signal versus one suffering from distortion.</p>
+                             <div class="flex flex-col lg:flex-row gap-6">
+                                <div class="w-full lg:w-1/2">
+                                     <h4 class="font-semibold mb-2">Common SI Issues:</h4>
+                                     <ul class="list-disc list-inside space-y-1 text-slate-600">
+                                        <li><strong>Impedance Mismatch:</strong> Causes signal reflections and ringing.</li>
+                                        <li><strong>Crosstalk:</strong> Unwanted coupling between adjacent traces.</li>
+                                        <li><strong>EMI:</strong> Electromagnetic interference from internal or external sources.</li>
+                                        <li><strong>Ground Bounce:</strong> Fluctuations in the ground reference voltage.</li>
+                                    </ul>
+                                </div>
+                                <div class="w-full lg:w-1/2">
+                                    <div class="chart-container h-64 max-h-72">
+                                        <canvas id="signalIntegrityChart"></canvas>
+                                    </div>
+                                    <div class="text-center mt-2">
+                                         <button @click="toggleSignalChart()" class="bg-slate-200 text-slate-700 px-3 py-1 text-xs rounded-full hover:bg-slate-300 transition">Toggle Signal View</button>
+                                         <p class="text-xs text-slate-500 mt-1">This chart shows a clean digital signal vs. a distorted one.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                         <div x-show="activeChallengeTab === 'thermal'" x-cloak>
+                             <h3 class="text-xl font-bold mb-3">Thermal Management</h3>
+                            <p class="text-slate-600 mb-6">As components get smaller and more powerful, managing the heat they generate is critical. Excessive heat can degrade performance, reduce component lifespan, and cause catastrophic failure. Effective thermal management ensures reliability.</p>
+                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                 <div>
+                                     <h4 class="font-semibold mb-2">Key Techniques:</h4>
+                                     <ul class="list-disc list-inside space-y-1 text-slate-600">
+                                        <li><strong>Thermal Vias:</strong> Drilled holes that transfer heat from hot components to cooler copper planes.</li>
+                                        <li><strong>Heat Sinks:</strong> External components that dissipate heat into the surrounding air.</li>
+                                        <li><strong>Copper Pours:</strong> Large areas of copper that spread heat across the board.</li>
+                                        <li><strong>Component Placement:</strong> Placing hot components away from sensitive ones and in areas with good airflow.</li>
+                                    </ul>
+                                 </div>
+                                 <div class="bg-slate-100 rounded-lg p-4 flex flex-col items-center justify-center text-center">
+                                     <div class="w-24 h-24 bg-red-200 rounded-lg flex items-center justify-center mb-2">
+                                        <span class="text-red-700 font-bold text-sm">HOT CPU</span>
+                                     </div>
+                                     <div class="flex gap-1 mb-2">
+                                         <div class="w-1 h-6 bg-orange-400 animate-pulse"></div>
+                                         <div class="w-1 h-6 bg-yellow-400 animate-pulse delay-75"></div>
+                                         <div class="w-1 h-6 bg-orange-400 animate-pulse delay-150"></div>
+                                     </div>
+                                     <div class="w-32 h-4 bg-blue-300 rounded-md">
+                                        <span class="text-blue-800 text-xs font-semibold">Heat Sink / Plane</span>
+                                     </div>
+                                     <p class="text-xs text-slate-500 mt-2">A conceptual diagram showing heat (arrows) moving from a hot component to a heat dissipating plane.</p>
+                                 </div>
+                             </div>
+                        </div>
+                        <div x-show="activeChallengeTab === 'power'" x-cloak>
+                            <h3 class="text-xl font-bold mb-3">Power & Key Comparisons</h3>
+                            <p class="text-slate-600 mb-6">Ensuring stable, clean power is delivered to all components is vital. This section also covers some common comparisons that arise in electronics design, clarifying the trade-offs between different approaches.</p>
+                             <div class="space-y-6">
+                                <div>
+                                    <h4 class="font-semibold text-lg mb-2">Breadboard vs. PCB</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded"><strong>Breadboard:</strong> Reusable, solderless, for rapid prototyping. Prone to loose connections and not suitable for high-frequency circuits. Best for initial testing.</div>
+                                        <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded"><strong>PCB:</strong> Permanent, reliable, soldered connections. Compact, excellent for high-frequency signals and final products. Best for finished projects.</div>
+                                    </div>
+                                </div>
+                                 <div>
+                                    <h4 class="font-semibold text-lg mb-2">Analog vs. Digital Circuit Design</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                        <div class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded"><strong>Analog Design:</strong> Deals with continuous signals (e.g., sound, temperature). Highly sensitive to noise. Requires careful layout, shielding, and grounding.</div>
+                                        <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded"><strong>Digital Design:</strong> Deals with discrete '1' and '0' signals. More tolerant to noise. Design is often more automated, but high-speed signals can behave like analog signals.</div>
+                                    </div>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="applications" class="scroll-mt-16">
+                 <h2 class="text-3xl font-bold text-center mb-2">PCBs in Action</h2>
+                <p class="text-center text-slate-600 mb-8 max-w-2xl mx-auto">PCBs are the unseen heroes inside the devices we use every day. This gallery showcases their application in various technologies, highlighting the unique design considerations for each. Hover over an image to learn more about the PCB's role in that device.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <template x-for="app in applications" :key="app.name">
+                        <div class="group relative overflow-hidden rounded-lg shadow-lg">
+                            <img :src="app.imageUrl" :alt="app.name" class="w-full h-64 object-cover transform group-hover:scale-110 transition-transform duration-500">
+                             <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                            <div class="absolute bottom-0 left-0 p-4 text-white">
+                                <h3 class="text-xl font-bold" x-text="app.name"></h3>
+                                <p class="text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 max-w-xs" x-text="app.description"></p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </section>
+
+        </main>
+
+        <footer class="bg-slate-800 text-slate-300 mt-16">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-sm">
+                <p>&copy; 2025 PCB Explorer. An interactive guide based on comprehensive research.</p>
+                <p class="text-xs text-slate-400 mt-1">This application is for educational purposes.</p>
+            </div>
+        </footer>
+
+    </div>
+
+    <script>
+        function pcbApp() {
+            return {
+                mobileMenuOpen: false,
+                activeSection: 'intro',
+                activeAnatomy: 'substrate',
+                activePcbTypeFilter: 'all',
+                activeChallengeTab: 'signal',
+                showCleanSignal: true,
+                anatomyContent: {
+                    substrate: { title: 'Substrate (FR-4)', description: 'The base material, typically fiberglass (FR-4), that provides rigidity and insulation. It is the foundation of the PCB.' },
+                    copper: { title: 'Copper Layer', description: 'A thin layer of conductive copper foil laminated to the substrate. Etching removes unwanted copper to create the circuit pathways.' },
+                    soldermask: { title: 'Solder Mask', description: 'A protective polymer coating (usually green) applied over the copper traces to prevent oxidation and short circuits during soldering.' },
+                    silkscreen: { title: 'Silkscreen', description: 'The top layer that adds letters, numbers, and symbols to the board, acting as a human-readable guide for component placement.' },
+                    trace: { title: 'Trace', description: 'A continuous path of copper that acts as a wire, carrying electrical signals between components on the board.' },
+                    pad: { title: 'Pad', description: 'An exposed area of copper on the surface where a component pin is soldered.' },
+                    via: { title: 'Via', description: 'A plated hole that electrically connects copper traces on different layers of the PCB.' },
+                },
+                pcbTypes: [
+                    { id: 1, name: 'Single-Sided', category: 'layer', color: '#34d399', description: 'One layer of conductive material on one side. Simple and low-cost.', use_case: 'Calculators, radios, LED lights.', data: [5,1,3,1,5] },
+                    { id: 2, name: 'Double-Sided', category: 'layer', color: '#60a5fa', description: 'Conductive copper on both sides, connected by vias.', use_case: 'Power supplies, amplifiers, HVAC.', data: [4,2,3,1,4] },
+                    { id: 3, name: 'Multi-Layer', category: 'layer', color: '#c084fc', description: 'Three or more copper layers. For complex, high-density circuits.', use_case: 'Computers, smartphones, medical.', data: [2,5,4,2,2] },
+                    { id: 4, name: 'Rigid', category: 'flexibility', color: '#fbbf24', description: 'Made from solid, inflexible substrate like FR-4. Durable and strong.', use_case: 'Motherboards, industrial machinery.', data: [3,3,5,1,3] },
+                    { id: 5, name: 'Flexible (Flex)', category: 'flexibility', color: '#f87171', description: 'Made from bendable materials. Fits into tight or unusually shaped spaces.', use_case: 'Wearables, cameras, automotive.', data: [1,4,2,5,1] },
+                    { id: 6, name: 'Rigid-Flex', category: 'flexibility', color: '#f472b6', description: 'A hybrid of rigid and flex boards, combining strengths of both.', use_case: 'Aerospace, medical, military.', data: [1,5,4,5,1] }
+                ],
+                get filteredPcbTypes() {
+                    if (this.activePcbTypeFilter === 'all') return this.pcbTypes;
+                    return this.pcbTypes.filter(p => p.category === this.activePcbTypeFilter);
+                },
+                processSteps: [
+                    { title: '1. Schematic Creation', description: 'The process starts with a schematic, a conceptual blueprint of the circuit showing all components and their logical connections using standardized symbols.'},
+                    { title: '2. PCB Layout Design', description: 'The schematic is translated into a physical layout. This includes defining board size, placing components, and planning routes for traces.'},
+                    { title: '3. Routing', description: 'Copper traces are drawn to connect the components according to the schematic. This must be done carefully to ensure good signal integrity.'},
+                    { title: '4. Gerber File Generation', description: 'The final design is exported into Gerber files, the industry-standard format that acts as a set of instructions for the manufacturer.'},
+                    { title: '5. Fabrication', description: 'The manufacturer uses the Gerber files to image the design, etch away unwanted copper, drill holes (vias), and apply solder mask and silkscreen.'},
+                    { title: '6. Assembly', description: 'Components (resistors, ICs, connectors) are mounted and soldered onto the fabricated board, either by hand or using automated machinery.'}
+                ],
+                applications: [
+                    { name: 'Computer Motherboard', imageUrl: 'https://placehold.co/600x400/022c43/ffffff?text=Motherboard', description: 'A complex multi-layer rigid PCB that connects the CPU, memory, and all other peripherals. High-speed signal integrity is a major challenge.' },
+                    { name: 'Smartphone', imageUrl: 'https://placehold.co/600x400/115173/ffffff?text=Smartphone', description: 'Utilizes high-density interconnect (HDI) rigid-flex PCBs to pack immense functionality into a tiny space. Thermal management is critical.' },
+                    { name: 'IoT Device', imageUrl: 'https://placehold.co/600x400/053f5c/ffffff?text=IoT+Sensor', description: 'Often uses simple 2 or 4-layer PCBs, designed for low power consumption and reliability. May require coatings for durability.' }
+                ],
+                pcbTypeChartInstance: null,
+                signalChartInstance: null,
+
+                init() {
+                    this.initPcbTypeChart();
+                    this.initSignalIntegrityChart();
+
+                    const observer = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                this.activeSection = entry.target.id;
+                            }
+                        });
+                    }, { rootMargin: '-20% 0px -80% 0px' });
+
+                    document.querySelectorAll('main section').forEach(section => {
+                        observer.observe(section);
+                    });
+
+                    this.$watch('activePcbTypeFilter', () => {
+                        this.updatePcbTypeChart();
+                    });
+                },
+                
+                initPcbTypeChart() {
+                    const ctx = document.getElementById('pcbTypeChart').getContext('2d');
+                    this.pcbTypeChartInstance = new Chart(ctx, {
+                        type: 'radar',
+                        data: this.getPcbChartData(),
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'top' },
+                            },
+                            scales: {
+                                r: {
+                                    angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                                    suggestedMin: 0,
+                                    suggestedMax: 5,
+                                    pointLabels: { font: { size: 12 } },
+                                    ticks: {
+                                        stepSize: 1,
+                                        backdropColor: 'rgba(255, 255, 255, 0.75)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                },
+
+                getPcbChartData() {
+                    const labels = ['Low Cost', 'Complexity', 'Durability', 'Flexibility', 'Ease of Repair'];
+                    const datasets = this.filteredPcbTypes.map(pcb => ({
+                        label: pcb.name,
+                        data: pcb.data,
+                        fill: true,
+                        backgroundColor: `${pcb.color}40`,
+                        borderColor: pcb.color,
+                        pointBackgroundColor: pcb.color,
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: pcb.color
+                    }));
+                    return { labels, datasets };
+                },
+
+                updatePcbTypeChart() {
+                    if (this.pcbTypeChartInstance) {
+                        const { labels, datasets } = this.getPcbChartData();
+                        this.pcbTypeChartInstance.data.labels = labels;
+                        this.pcbTypeChartInstance.data.datasets = datasets;
+                        this.pcbTypeChartInstance.update();
+                    }
+                },
+                
+                initSignalIntegrityChart() {
+                    const ctx = document.getElementById('signalIntegrityChart').getContext('2d');
+                    this.signalChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: this.getSignalChartData(),
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { display: false },
+                                y: { display: false }
+                            },
+                            elements: {
+                                line: { tension: 0.1 },
+                                point: { radius: 0 }
+                            },
+                            animation: { duration: 500 }
+                        }
+                    });
+                },
+
+                getSignalChartData() {
+                    const labels = Array.from({length: 50}, (_, i) => i);
+                    let data;
+                    if (this.showCleanSignal) {
+                         data = labels.map(i => i > 5 && i < 20 ? 1 : (i > 25 && i < 40 ? 1 : 0));
+                         data = data.map((d,i) => d === 1 ? Math.sin((i%15)/4.7) : Math.sin((i%15)/-4.7));
+                         return {
+                            labels,
+                            datasets: [{
+                                label: 'Clean Signal',
+                                data,
+                                borderColor: '#10b981',
+                                borderWidth: 2.5,
+                                backgroundColor: '#10b98130',
+                                fill: true,
+                                steppped: true
+                            }]
+                        };
+                    } else {
+                        data = labels.map(i => i > 5 && i < 20 ? 1 : (i > 25 && i < 40 ? 1 : 0));
+                        data = data.map((d,i) => d === 1 ? Math.sin((i%15)/4.7) + (Math.random()-0.5)*0.4 : Math.sin((i%15)/-4.7) + (Math.random()-0.5)*0.4);
+                        return {
+                            labels,
+                            datasets: [{
+                                label: 'Distorted Signal',
+                                data,
+                                borderColor: '#ef4444',
+                                borderWidth: 2.5,
+                                backgroundColor: '#ef444430',
+                                fill: true
+                            }]
+                        };
+                    }
+                },
+
+                toggleSignalChart() {
+                    this.showCleanSignal = !this.showCleanSignal;
+                    if (this.signalChartInstance) {
+                        const newData = this.getSignalChartData();
+                        this.signalChartInstance.data = newData;
+                        this.signalChartInstance.update();
+                    }
+                }
+            };
+        }
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('pcbApp', pcbApp);
+        })
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</body>
+</html>

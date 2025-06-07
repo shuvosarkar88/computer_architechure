@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The PCB Industry: An Interactive Infographic</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: The infographic follows a narrative flow to guide the user from high-level market data to technical specifics. It starts with a Hero Section with key stats, followed by a Market Overview with charts for market size and share. It then details the Anatomy and Types of PCBs using diagrams and comparison charts. A process flow visualizes the Design to Manufacturing journey. Key Challenges (Signal Integrity, Thermal Management) are highlighted with focused visuals. Finally, an Applications section shows the broad impact. This structure is chosen to tell a compelling story, making complex data digestible. -->
+    <!-- Visualization & Content Choices: 1. Market Size: (Goal: Inform) Line chart to show growth over time. Justification: Clearly visualizes trend data. Library: Chart.js. 2. Market Share: (Goal: Compare) Donut chart to show composition. Justification: Better readability than a pie chart. Library: Chart.js. 3. Anatomy: (Goal: Organize) HTML/CSS diagram. Justification: Visually engaging and styled without SVG. Method: HTML/CSS. 4. PCB Types: (Goal: Compare) Horizontal Bar Chart. Justification: Ideal for comparing categories on a single metric. Library: Chart.js. 5. Process Flow: (Goal: Organize) HTML/CSS timeline. Justification: Simple and clear for sequential data. Method: HTML/CSS. 6. Signal Integrity: (Goal: Inform) A 'Big Number' stat and a simple line chart comparing clean vs. distorted signals. Justification: High impact and easy comparison. Library: Chart.js. All visualizations are Canvas-based. NO SVG/Mermaid used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #BFD7EA; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        .flow-arrow::after { content: '→'; font-size: 2rem; color: #FF5A5F; margin: 0 1rem; }
+        .flow-step:last-child .flow-arrow::after { content: ''; }
+    </style>
+</head>
+<body class="text-gray-800">
+    <div class="container mx-auto p-4 sm:p-8">
+        
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-[#0B3954] mb-4">The World of Printed Circuit Boards</h1>
+            <p class="text-xl text-[#087E8B] max-w-3xl mx-auto">An infographic exploring the market, technology, and applications of the foundational component of modern electronics.</p>
+        </header>
+
+        <section id="market-overview" class="mb-16">
+            <h2 class="text-3xl font-bold text-center text-[#0B3954] mb-8">Market Overview: A Growing Industry</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white rounded-lg shadow-xl p-6 flex flex-col justify-center items-center">
+                    <h3 class="text-xl font-bold text-[#087E8B] mb-4 text-center">Global PCB Market Size (USD Billion)</h3>
+                    <div class="chart-container h-64 sm:h-80">
+                        <canvas id="marketSizeChart"></canvas>
+                    </div>
+                     <p class="text-sm text-gray-500 mt-4 text-center">The global PCB market demonstrates steady growth, driven by demand in telecommunications, consumer electronics, and automotive sectors.</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-xl p-6 flex flex-col justify-center items-center">
+                    <h3 class="text-xl font-bold text-[#087E8B] mb-4 text-center">Market Share by PCB Type</h3>
+                    <div class="chart-container h-64 sm:h-80">
+                        <canvas id="marketShareChart"></canvas>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-4 text-center">Multi-layer PCBs dominate the market due to their suitability for complex, high-density applications in modern devices.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="anatomy" class="mb-16">
+            <h2 class="text-3xl font-bold text-center text-[#0B3954] mb-8">Anatomy of a PCB</h2>
+            <div class="bg-white rounded-lg shadow-xl p-8 max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-8">
+                <div class="w-full md:w-1/2">
+                    <h3 class="text-2xl font-bold text-[#087E8B] mb-4">The Core Layers</h3>
+                    <p class="text-gray-600 mb-6">A standard PCB is a composite structure, laminated into a single unit. Each layer plays a vital role in its function and reliability.</p>
+                    <ul class="space-y-4">
+                        <li class="flex items-start"><span class="font-bold text-[#FF5A5F] mr-2">1.</span> <div><strong class="text-[#0B3954]">Substrate (FR-4):</strong> The base material, typically fiberglass, providing rigidity and insulation.</div></li>
+                        <li class="flex items-start"><span class="font-bold text-[#FF5A5F] mr-2">2.</span> <div><strong class="text-[#0B3954]">Copper:</strong> A thin, conductive layer etched to form traces, pads, and planes.</div></li>
+                        <li class="flex items-start"><span class="font-bold text-[#FF5A5F] mr-2">3.</span> <div><strong class="text-[#0B3954]">Solder Mask:</strong> A protective layer (usually green) that insulates copper traces from accidental contact.</div></li>
+                        <li class="flex items-start"><span class="font-bold text-[#FF5A5F] mr-2">4.</span> <div><strong class="text-[#0B3954]">Silkscreen:</strong> The top layer that adds letters, numbers, and symbols for component identification.</div></li>
+                    </ul>
+                </div>
+                 <div class="w-full md:w-1/2 flex items-center justify-center p-4">
+                     <div class="relative w-64 h-40">
+                         <div class="absolute inset-x-0 top-0 h-8 bg-gray-200 rounded-t-lg flex items-center justify-center text-sm font-semibold text-[#0B3954] z-40">Silkscreen</div>
+                         <div class="absolute inset-x-0 top-8 h-4 bg-green-500 z-30"></div>
+                         <div class="absolute inset-x-0 top-12 h-2 bg-orange-400 z-20"></div>
+                         <div class="absolute inset-x-0 top-14 h-24 bg-yellow-600 rounded-b-lg z-10"></div>
+                     </div>
+                 </div>
+            </div>
+        </section>
+
+        <section id="types-comparison" class="mb-16">
+            <h2 class="text-3xl font-bold text-center text-[#0B3954] mb-8">PCB Technology Adoption Rates</h2>
+            <div class="bg-white rounded-lg shadow-xl p-6">
+                <h3 class="text-xl font-bold text-[#087E8B] mb-4 text-center">Comparison of Key PCB Technologies</h3>
+                <div class="chart-container h-96">
+                    <canvas id="typesComparisonChart"></canvas>
+                </div>
+                 <p class="text-sm text-gray-500 mt-4 text-center">This chart compares the primary PCB types based on key decision-making factors. While rigid boards are the workhorse, flexible technologies are seeing rapid adoption where space and form factor are critical.</p>
+            </div>
+        </section>
+        
+        <section id="process-flow" class="mb-16">
+            <h2 class="text-3xl font-bold text-center text-[#0B3954] mb-8">From Concept to Creation: The PCB Process Flow</h2>
+            <div class="bg-white rounded-lg shadow-xl p-8">
+                 <p class="text-center text-gray-600 mb-8 max-w-3xl mx-auto">The journey from an idea to a physical board is a precise, multi-stage process that ensures the final product is manufacturable and meets all design specifications.</p>
+                <div class="flex flex-wrap items-center justify-center">
+                    <div class="flow-step flex flex-col items-center text-center p-2">
+                        <div class="text-4xl mb-2 text-[#087E8B]">📝</div>
+                        <h4 class="font-bold text-[#0B3954]">Schematic Design</h4>
+                        <p class="text-xs text-gray-500">Create circuit blueprint.</p>
+                    </div>
+                    <div class="flow-arrow hidden md:block"></div>
+                    <div class="flow-step flex flex-col items-center text-center p-2">
+                         <div class="text-4xl mb-2 text-[#087E8B]">📐</div>
+                        <h4 class="font-bold text-[#0B3954]">PCB Layout</h4>
+                        <p class="text-xs text-gray-500">Place components.</p>
+                    </div>
+                     <div class="flow-arrow hidden md:block"></div>
+                    <div class="flow-step flex flex-col items-center text-center p-2">
+                         <div class="text-4xl mb-2 text-[#087E8B]">↔️</div>
+                        <h4 class="font-bold text-[#0B3954]">Routing</h4>
+                        <p class="text-xs text-gray-500">Draw conductive traces.</p>
+                    </div>
+                     <div class="flow-arrow hidden md:block"></div>
+                    <div class="flow-step flex flex-col items-center text-center p-2">
+                         <div class="text-4xl mb-2 text-[#087E8B]">⚙️</div>
+                        <h4 class="font-bold text-[#0B3954]">Gerber Files</h4>
+                        <p class="text-xs text-gray-500">Generate mfg. data.</p>
+                    </div>
+                     <div class="flow-arrow hidden md:block"></div>
+                    <div class="flow-step flex flex-col items-center text-center p-2">
+                        <div class="text-4xl mb-2 text-[#087E8B]">🏭</div>
+                        <h4 class="font-bold text-[#0B3954]">Fabrication</h4>
+                        <p class="text-xs text-gray-500">Manufacture the board.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="challenges" class="mb-16">
+            <h2 class="text-3xl font-bold text-center text-[#0B3954] mb-8">Key Design Challenges</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white rounded-lg shadow-xl p-6">
+                    <h3 class="text-2xl font-bold text-[#087E8B] mb-2">Signal Integrity</h3>
+                    <p class="text-gray-600 mb-4">Ensuring signals travel from source to destination without distortion is critical in high-speed systems.</p>
+                    <div class="text-center bg-[#FF5A5F] text-white p-4 rounded-lg mb-4">
+                        <div class="text-4xl font-extrabold">~50%</div>
+                        <p class="font-semibold">of high-speed system failures can be attributed to poor signal integrity.</p>
+                    </div>
+                    <div class="chart-container h-48">
+                        <canvas id="signalIntegrityChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-xl p-6">
+                     <h3 class="text-2xl font-bold text-[#087E8B] mb-2">Thermal Management</h3>
+                    <p class="text-gray-600 mb-4">As devices get smaller and more powerful, effectively dissipating heat is essential for reliability and longevity.</p>
+                    <div class="space-y-4">
+                        <div class="flex items-center">
+                            <span class="text-3xl mr-4">💨</span>
+                            <div>
+                                <h4 class="font-bold text-[#0B3954]">Heat Sinks</h4>
+                                <p class="text-sm text-gray-500">External components that dissipate heat into the air.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-3xl mr-4">🕳️</span>
+                            <div>
+                                <h4 class="font-bold text-[#0B3954]">Thermal Vias</h4>
+                                <p class="text-sm text-gray-500">Holes that transfer heat to other layers or heat sinks.</p>
+                            </div>
+                        </div>
+                         <div class="flex items-center">
+                            <span class="text-3xl mr-4">🟧</span>
+                            <div>
+                                <h4 class="font-bold text-[#0B3954]">Copper Pours</h4>
+                                <p class="text-sm text-gray-500">Large areas of copper to help spread heat evenly.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <footer class="text-center mt-12">
+            <p class="text-sm text-[#0B3954]">Infographic based on the "Understanding Printed Circuit Boards" research report.</p>
+        </footer>
+
+    </div>
+
+    <script>
+        const wrapLabel = (str) => {
+            const words = str.split(' ');
+            const lines = [];
+            let currentLine = '';
+            words.forEach(word => {
+                if ((currentLine + word).length > 16) {
+                    lines.push(currentLine.trim());
+                    currentLine = '';
+                }
+                currentLine += word + ' ';
+            });
+            lines.push(currentLine.trim());
+            return lines;
+        };
+
+        const tooltipTitleCallback = (tooltipItems) => {
+            const item = tooltipItems[0];
+            let label = item.chart.data.labels[item.dataIndex];
+            if (Array.isArray(label)) {
+              return label.join(' ');
+            }
+            return label;
+        };
+
+        const brilliantBlues = {
+            dark: '#0B3954',
+            teal: '#087E8B',
+            light: '#BFD7EA',
+            coral: '#FF5A5F',
+            red: '#C81D25'
+        };
+
+        new Chart(document.getElementById('marketSizeChart'), {
+            type: 'line',
+            data: {
+                labels: ['2022', '2023', '2024', '2025 (P)', '2026 (P)'],
+                datasets: [{
+                    label: 'Market Size',
+                    data: [75.8, 80.2, 85.1, 90.4, 96.3],
+                    borderColor: brilliantBlues.coral,
+                    backgroundColor: 'rgba(255, 90, 95, 0.2)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        new Chart(document.getElementById('marketShareChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Multi-Layer', 'Double-Sided', 'Single-Sided', 'Flex & Rigid-Flex'],
+                datasets: [{
+                    label: 'Market Share',
+                    data: [55, 25, 10, 10],
+                    backgroundColor: [brilliantBlues.dark, brilliantBlues.teal, brilliantBlues.light, brilliantBlues.coral],
+                    borderColor: '#FFFFFF',
+                    borderWidth: 2
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '60%' }
+        });
+
+        new Chart(document.getElementById('typesComparisonChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Cost-Effectiveness', 'Design Complexity', 'Durability', 'High-Speed Performance'],
+                datasets: [
+                    {
+                        label: 'Rigid PCB',
+                        data: [8, 5, 9, 6],
+                        backgroundColor: brilliantBlues.dark,
+                    },
+                    {
+                        label: 'Flex PCB',
+                        data: [4, 7, 6, 8],
+                        backgroundColor: brilliantBlues.teal,
+                    },
+                    {
+                        label: 'Rigid-Flex PCB',
+                        data: [2, 9, 8, 9],
+                        backgroundColor: brilliantBlues.coral,
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { x: { stacked: true }, y: { stacked: true } }
+            }
+        });
+
+        new Chart(document.getElementById('signalIntegrityChart'), {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 20}, (_, i) => i),
+                datasets: [
+                    {
+                        label: 'Clean Signal',
+                        data: [0,0,0,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1],
+                        borderColor: brilliantBlues.teal,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        stepped: true
+                    },
+                    {
+                        label: 'Distorted Signal',
+                        data: [0.1, -0.1, 0.2, 0.8, 1.2, 0.9, 1.1, 1.0, 0.9, 1.3, 0.1, -0.2, 0.1, 0.0, 0.7, 1.1, 0.8, 1.2, 1.0, 0.9],
+                        borderColor: brilliantBlues.red,
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true } },
+                scales: { x: { display: false }, y: { display: false } }
+            }
+        });
+    </script>
+</body>
+</html>

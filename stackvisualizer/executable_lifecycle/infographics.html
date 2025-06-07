@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographic: The Journey of an Executable</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Brilliant Blues -->
+    <!-- Application Structure Plan: A single-page, top-to-bottom narrative infographic. The flow follows the 6 phases from the report: Invocation > Loading > Memory Setup > Linking > Execution > Termination. This linear story is ideal for an infographic format, guiding the user chronologically. Key interactions are limited to hovers for tooltips to keep the experience fluid and focused on information absorption rather than complex control. -->
+    <!-- Visualization & Content Choices: Data: 6 Phases of Execution -> Goal: Inform -> Viz: Single Big Number -> Justification: Creates a strong "hook" at the start. Data: ELF File Structure -> Goal: Organize -> Viz: HTML/CSS diagram -> Justification: Clearly shows the hierarchy and key parts of the file format without needing SVG. Data: fork()->execve() paradigm -> Goal: Organize -> Viz: HTML/CSS flowchart -> Justification: A flowchart is the best way to show a process. HTML/CSS is used to avoid SVG/Mermaid. Data: Process Memory Layout -> Goal: Inform/Compare -> Viz: Chart.js Bar Chart -> Justification: A bar chart effectively visualizes the relative sizes and order of memory segments. Data: Static vs Dynamic Linking -> Goal: Compare -> Viz: HTML Table -> Justification: Best for direct, feature-by-feature comparison. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F0F9FF; /* sky-50 */
+            color: #0C4A6E; /* sky-900 */
+        }
+        .header-gradient {
+            background: linear-gradient(135deg, #0284C7, #0369A1);
+        }
+        .stat-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .section-title {
+            font-weight: 900;
+            font-size: 2.25rem;
+            line-height: 2.5rem;
+            color: #075985; /* sky-800 */
+        }
+        .flowchart-box {
+            border: 2px solid #7DD3FC; /* sky-300 */
+            background-color: #E0F2FE; /* sky-100 */
+            color: #0C4A6E; /* sky-900 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-weight: 600;
+        }
+        .flowchart-arrow {
+            font-size: 2.5rem;
+            color: #38BDF8; /* sky-400 */
+            align-self: center;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px;
+            max-height: 60vh;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="header-gradient text-white py-12 sm:py-20">
+        <div class="container mx-auto px-6 text-center">
+            <h1 class="text-4xl md:text-6xl font-black tracking-tight mb-4">The Lifecycle of an Executable</h1>
+            <p class="text-lg md:text-xl max-w-3xl mx-auto text-sky-100">From a static file on disk to a dynamic process in memory, every program embarks on a complex journey orchestrated by the Operating System.</p>
+        </div>
+    </header>
+
+    <main class="py-12 md:py-20">
+        <div class="container mx-auto px-6">
+
+            <!-- Introduction Section -->
+            <section class="text-center mb-20 md:mb-28">
+                <p class="text-xl md:text-2xl text-sky-700 font-medium mb-4">The entire process unfolds across</p>
+                <div class="text-8xl md:text-9xl font-black text-sky-600 mb-6">6</div>
+                <h2 class="section-title max-w-2xl mx-auto">Key Phases from Invocation to Termination</h2>
+                <p class="max-w-3xl mx-auto text-lg text-sky-800 mt-4">Each phase represents a critical step where the OS manages resources, sets up the environment, and ensures the secure and stable execution of code.</p>
+            </section>
+
+            <!-- Phase 1 & 2: Invocation and Loading -->
+            <section class="mb-20 md:mb-28">
+                <div class="text-center">
+                    <span class="text-sky-500 font-semibold uppercase tracking-wider">Phases 1-3</span>
+                    <h2 class="section-title mt-2">Invocation, Loading & Memory Setup</h2>
+                    <p class="max-w-3xl mx-auto text-lg text-sky-800 mt-4 mb-12">When a user runs a program, the OS springs into action. It creates a new process and begins loading the executable file by reading its internal blueprint—the ELF header—to prepare its memory space.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                    <div class="stat-card p-6">
+                        <h3 class="text-2xl font-bold text-sky-800 mb-4">Program Creation Flow</h3>
+                        <p class="text-sky-700 mb-6">In Linux, new programs are typically launched using the efficient `fork()` then `execve()` model.</p>
+                        <div class="space-y-4">
+                            <div class="flowchart-box">🚀 User runs command (e.g. ./program)</div>
+                            <div class="flowchart-arrow">↓</div>
+                            <div class="flowchart-box bg-sky-200">Shell calls `fork()` to create a child process</div>
+                            <div class="flowchart-arrow">↓</div>
+                            <div class="flowchart-box">Child process calls `execve()` to load the new program</div>
+                             <div class="flowchart-arrow">↓</div>
+                            <div class="flowchart-box bg-cyan-200 border-cyan-400">Child's memory is replaced by the new program's code & data</div>
+                        </div>
+                    </div>
+                    <div class="stat-card p-6">
+                        <h3 class="text-2xl font-bold text-sky-800 mb-4">Inside the Executable Blueprint (ELF)</h3>
+                        <p class="text-sky-700 mb-6">The OS Loader reads the ELF (Executable and Linkable Format) file's headers to know what to do.</p>
+                         <div class="space-y-3">
+                            <div class="p-3 bg-slate-100 rounded-md">
+                                <h4 class="font-bold text-slate-800">ELF Header</h4>
+                                <p class="text-sm text-slate-600">Identifies the file, architecture (e.g., x86-64), and entry point address.</p>
+                            </div>
+                            <div class="p-3 bg-slate-100 rounded-md">
+                                <h4 class="font-bold text-slate-800">Program Headers</h4>
+                                <p class="text-sm text-slate-600">Define loadable segments and their permissions (Read/Write/Execute).</p>
+                            </div>
+                            <div class="p-3 bg-slate-100 rounded-md">
+                                <h4 class="font-bold text-slate-800">.text Section</h4>
+                                <p class="text-sm text-slate-600">Contains the actual machine code. (Read-Only + Execute)</p>
+                            </div>
+                            <div class="p-3 bg-slate-100 rounded-md">
+                                <h4 class="font-bold text-slate-800">.data / .bss Sections</h4>
+                                <p class="text-sm text-slate-600">Holds initialized and uninitialized global variables. (Read + Write)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card p-6 mt-10">
+                    <h3 class="text-2xl font-bold text-sky-800 mb-4 text-center">Process Memory Layout</h3>
+                    <p class="text-sky-700 mb-6 text-center max-w-2xl mx-auto">The OS allocates a virtual address space for the process, organizing it into distinct segments. ASLR randomizes these locations for security.</p>
+                    <div class="chart-container">
+                        <canvas id="memoryLayoutChart"></canvas>
+                    </div>
+                    <p class="text-xs text-center text-sky-600 mt-2">Addresses increase from bottom to top.</p>
+                </div>
+            </section>
+
+            <!-- Phase 4: Linking -->
+            <section class="mb-20 md:mb-28">
+                <div class="text-center">
+                    <span class="text-sky-500 font-semibold uppercase tracking-wider">Phase 4</span>
+                    <h2 class="section-title mt-2">Linking & Resolving Dependencies</h2>
+                    <p class="max-w-3xl mx-auto text-lg text-sky-800 mt-4 mb-12">Most programs rely on shared libraries for common functions. The dynamic linker (`ld-linux.so`) finds, loads, and connects these dependencies at runtime.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <div class="stat-card p-6">
+                        <h3 class="text-2xl font-bold text-sky-800 mb-4">Static vs. Dynamic Linking</h3>
+                        <p class="text-sky-700 mb-6">The choice of linking strategy impacts executable size, memory usage, and how updates are handled.</p>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="border-b-2 border-sky-200">
+                                        <th class="p-3 font-semibold">Feature</th>
+                                        <th class="p-3 font-semibold text-cyan-700">Static</th>
+                                        <th class="p-3 font-semibold text-blue-700">Dynamic</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-sky-100">
+                                        <td class="p-3 font-medium">Executable Size</td>
+                                        <td class="p-3 text-cyan-800">Larger</td>
+                                        <td class="p-3 text-blue-800">Smaller</td>
+                                    </tr>
+                                    <tr class="border-b border-sky-100">
+                                        <td class="p-3 font-medium">Memory Usage</td>
+                                        <td class="p-3 text-cyan-800">Higher</td>
+                                        <td class="p-3 text-blue-800">Lower (Shared)</td>
+                                    </tr>
+                                    <tr class="border-b border-sky-100">
+                                        <td class="p-3 font-medium">Updating Library</td>
+                                        <td class="p-3 text-cyan-800">Recompile App</td>
+                                        <td class="p-3 text-blue-800">Replace .so file</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-3 font-medium">Dependencies</td>
+                                        <td class="p-3 text-cyan-800">Self-contained</td>
+                                        <td class="p-3 text-blue-800">External .so files</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="stat-card p-6">
+                        <h3 class="text-2xl font-bold text-sky-800 mb-4">Lazy Binding with PLT & GOT</h3>
+                        <p class="text-sky-700 mb-6">For efficiency, function addresses are resolved only on their first call using the Procedure Linkage Table (PLT) and Global Offset Table (GOT).</p>
+                        <div class="space-y-4">
+                            <div class="flowchart-box">1. Code calls function via its PLT entry</div>
+                            <div class="flowchart-arrow">↓</div>
+                            <div class="flowchart-box">2. PLT jumps to the GOT entry</div>
+                             <div class="flowchart-arrow">↓</div>
+                            <div class="flowchart-box bg-cyan-200 border-cyan-400">3. <b>First Call:</b> Jumps to dynamic linker to find address & patch GOT</div>
+                             <div class="flowchart-arrow">↓</div>
+                            <div class="flowchart-box bg-blue-200 border-blue-400">4. <b>Later Calls:</b> Jumps directly to function via patched GOT address</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Phase 5 & 6: Execution and Termination -->
+            <section>
+                <div class="text-center">
+                    <span class="text-sky-500 font-semibold uppercase tracking-wider">Phases 5-6</span>
+                    <h2 class="section-title mt-2">Execution & Termination</h2>
+                    <p class="max-w-3xl mx-auto text-lg text-sky-800 mt-4 mb-12">Finally, the CPU begins executing the program's code. It runs until it completes its task or is terminated, at which point the OS cleans up all associated resources.</p>
+                </div>
+
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="stat-card p-8 text-center">
+                        <p class="text-6xl font-black text-sky-600">_start</p>
+                        <h3 class="text-xl font-bold text-sky-800 mt-4">The True Entry Point</h3>
+                        <p class="text-sky-700 mt-2">Control is first passed to `_start`, a C runtime routine that sets up the environment before calling your `main()` function.</p>
+                    </div>
+                    <div class="stat-card p-8 text-center">
+                        <p class="text-6xl font-black text-sky-600">syscall</p>
+                        <h3 class="text-xl font-bold text-sky-800 mt-4">Kernel Interaction</h3>
+                        <p class="text-sky-700 mt-2">Programs request OS services (like file I/O) by making system calls, which trap into the secure kernel mode.</p>
+                    </div>
+                     <div class="stat-card p-8 text-center">
+                        <p class="text-6xl font-black text-sky-600">exit()</p>
+                        <h3 class="text-xl font-bold text-sky-800 mt-4">Graceful Termination</h3>
+                        <p class="text-sky-700 mt-2">When a program finishes, `exit()` is called, and the OS reclaims all memory and closes open files, leaving no trace behind.</p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+    
+    <footer class="mt-20 md:mt-28 bg-sky-900 text-sky-200 py-6">
+        <div class="container mx-auto px-6 text-center">
+            <p>Infographic based on the "Executable Execution Deep Dive" report.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Color palette from "Brilliant Blues"
+        const colors = {
+            sky900: '#0C4A6E', // Text
+            sky800: '#075985',
+            sky700: '#0369A1',
+            sky600: '#0284C7',
+            sky400: '#38BDF8', // Arrows / Highlights
+            sky300: '#7DD3FC',
+            sky200: '#BAE6FD',
+            cyan400: '#22D3EE',
+            blue400: '#60A5FA'
+        };
+
+        const wrapLabel = (label) => {
+            const maxLength = 16;
+            if (label.length <= maxLength) return label;
+            
+            const words = label.split(' ');
+            let lines = [];
+            let currentLine = '';
+
+            words.forEach(word => {
+                if ((currentLine + ' ' + word).trim().length > maxLength) {
+                    lines.push(currentLine.trim());
+                    currentLine = word;
+                } else {
+                    currentLine = (currentLine + ' ' + word).trim();
+                }
+            });
+            if (currentLine) {
+                lines.push(currentLine.trim());
+            }
+            return lines;
+        };
+
+        const memoryLayoutData = {
+            labels: [
+                'Stack (Grows Down)',
+                'Memory Mapped Libraries',
+                'Heap (Grows Up)',
+                'BSS (Uninitialized Data)',
+                'Data (Initialized Data)',
+                'Text (Code, Read-Only)'
+            ],
+            datasets: [{
+                label: 'Segment Size',
+                data: [15, 20, 25, 5, 5, 10], // Relative sizes
+                backgroundColor: [
+                    colors.blue400,
+                    colors.cyan400,
+                    '#F472B6', // Pink for heap
+                    colors.sky400,
+                    colors.sky600,
+                    colors.sky800,
+                ],
+                borderColor: colors.sky900,
+                borderWidth: 1
+            }]
+        };
+
+        const ctx = document.getElementById('memoryLayoutChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: memoryLayoutData.labels.map(wrapLabel),
+                datasets: memoryLayoutData.datasets
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                const item = tooltipItems[0];
+                                let label = item.chart.data.labels[item.dataIndex];
+                                if (Array.isArray(label)) {
+                                  return label.join(' ');
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: {
+                            display: false,
+                            drawBorder: false,
+                        },
+                        ticks: {
+                           display: false
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                         grid: {
+                            display: false,
+                            drawBorder: false,
+                        },
+                        ticks: {
+                            color: colors.sky800,
+                            font: {
+                                weight: '600'
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>

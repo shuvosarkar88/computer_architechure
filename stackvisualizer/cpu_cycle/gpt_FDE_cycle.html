@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FDE Cycle Simulator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    #controls, #registers, #explanation {
+      margin: 1rem 0;
+    }
+    .component {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .box {
+      background: white;
+      border: 2px solid #ccc;
+      padding: 1rem;
+      border-radius: 10px;
+      width: 120px;
+      text-align: center;
+      transition: 0.3s ease-in-out;
+    }
+    .active {
+      border-color: #007bff;
+      background: #e0f0ff;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    #instructionInput {
+      padding: 0.5rem;
+      font-size: 1rem;
+      width: 200px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Fetch-Decode-Execute Simulator</h1>
+  <div id="controls">
+    <input type="text" id="instructionInput" placeholder="Enter instruction e.g., ADD R1,R2" />
+    <button onclick="startSimulation()">Start Simulation</button>
+    <button onclick="nextStep()">Next Step</button>
+    <button onclick="restartSimulation()">Restart</button>
+  </div>
+  <div id="registers" class="component">
+    <div id="pc" class="box">PC: 0x100</div>
+    <div id="mar" class="box">MAR: empty</div>
+    <div id="mdr" class="box">MDR: empty</div>
+    <div id="ir" class="box">IR: empty</div>
+    <div id="r1" class="box">R1: 5</div>
+    <div id="r2" class="box">R2: 10</div>
+  </div>
+  <div id="explanation">
+    <strong>Explanation:</strong>
+    <p id="stepExplanation">Enter an instruction and press Start Simulation.</p>
+  </div>
+
+  <script>
+    const steps = [
+      {
+        explain: "PC value (0x100) is copied to MAR.",
+        update: () => {
+          activate("pc");
+          setBox("mar", "MAR: 0x100", true);
+        },
+      },
+      {
+        explain: "Instruction (ADD R1, R2) is loaded into MDR. PC incremented.",
+        update: () => {
+          setBox("pc", "PC: 0x101");
+          setBox("mdr", `MDR: ${instruction}`);
+        },
+      },
+      {
+        explain: "Instruction from MDR copied to IR.",
+        update: () => {
+          setBox("ir", `IR: ${instruction}`, true);
+        },
+      },
+      {
+        explain: "Control Unit decodes instruction. Prepares ALU.",
+        update: () => {
+          activate("ir");
+        },
+      },
+      {
+        explain: "ALU adds R1 and R2. 5 + 10 = 15.",
+        update: () => {
+          activate("r1");
+          activate("r2");
+        },
+      },
+      {
+        explain: "Result (15) written back to R1.",
+        update: () => {
+          setBox("r1", "R1: 15", true);
+        },
+      },
+      {
+        explain: "Instruction complete. Ready for next cycle.",
+        update: () => {
+          deactivateAll();
+        },
+      },
+    ];
+
+    let currentStep = -1;
+    let instruction = "";
+
+    function setBox(id, content, active = false) {
+      const box = document.getElementById(id);
+      box.textContent = content;
+      if (active) box.classList.add("active");
+    }
+
+    function activate(id) {
+      document.getElementById(id).classList.add("active");
+    }
+
+    function deactivateAll() {
+      document.querySelectorAll(".box").forEach((el) => el.classList.remove("active"));
+    }
+
+    function nextStep() {
+      if (currentStep < steps.length - 1) {
+        currentStep++;
+        deactivateAll();
+        steps[currentStep].update();
+        document.getElementById("stepExplanation").textContent = steps[currentStep].explain;
+      }
+    }
+
+    function startSimulation() {
+      instruction = document.getElementById("instructionInput").value || "ADD R1, R2";
+      restartSimulation();
+      nextStep();
+    }
+
+    function restartSimulation() {
+      currentStep = -1;
+      setBox("pc", "PC: 0x100");
+      setBox("mar", "MAR: empty");
+      setBox("mdr", "MDR: empty");
+      setBox("ir", "IR: empty");
+      setBox("r1", "R1: 5");
+      setBox("r2", "R2: 10");
+      document.getElementById("stepExplanation").textContent = "Simulation reset. Click 'Next Step' to continue.";
+      deactivateAll();
+    }
+  </script>
+</body>
+</html>
