@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Encoding: An Interactive Infographic</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Energetic & Playful -->
+    <!-- Application Structure Plan: The infographic follows a narrative scrolling structure. It starts with a "Market Overview" showing UTF-8's dominance (Donut Chart). It then dives into a "Key Players" section comparing UTF-8, -16, and -32 with fact cards. A "Process Flow" section (HTML/CSS diagram) demystifies how encoding works. A "Competitive Landscape" section uses an interactive Bar Chart to compare file size efficiency. Finally, a "Common Problem" section visualizes Mojibake. This structure guides the user from the big picture to technical details and practical implications, making the complex report digestible. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: UTF-8 Web Usage (99%) -> Goal: Inform -> Viz: Donut Chart (Chart.js/Canvas) -> Justification: Best for showing part-to-whole relationships, immediately highlighting market dominance.
+        - Report Info: ASCII vs. Unicode scale -> Goal: Compare -> Viz: Bar Chart (Chart.js/Canvas) -> Justification: Visually demonstrates the massive growth from a limited set to a universal one.
+        - Report Info: Encoding Process -> Goal: Organize -> Viz: HTML/CSS Flow Diagram -> Justification: A clear, static visualization for a core process, avoiding complex JS where not needed.
+        - Report Info: File Size Efficiency -> Goal: Compare -> Viz: Interactive Bar Chart (Chart.js/Canvas) -> Interaction: Buttons to switch data -> Justification: Makes the abstract concept of efficiency tangible and user-driven.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        .small-chart-container { position: relative; width: 100%; max-width: 450px; margin-left: auto; margin-right: auto; height: 280px; max-height: 300px; }
+        @media (max-width: 768px) {
+            .chart-container { height: 300px; max-height: 350px; }
+            .small-chart-container { height: 250px; }
+        }
+        .data-card { background-color: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); padding: 1.5rem; border: 1px solid #e2e8f0; }
+        .interactive-button.active { background-color: #3357FF; color: white; }
+    </style>
+</head>
+<body class="text-slate-700">
+
+    <header class="text-center py-12 px-4">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 mb-3 tracking-tight">The Global Language of Computers</h1>
+        <p class="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto">An infographic on the past, present, and future of character encoding.</p>
+    </header>
+
+    <main class="container mx-auto px-4 md:px-8 space-y-16 md:space-y-24">
+
+        <section id="market-overview" class="data-card">
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="text-center md:text-left">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">UTF-8 is the Undisputed Standard</h2>
+                    <p class="mb-4">UTF-8's variable-width design and backward compatibility with ASCII have led to its near-universal adoption. It provides the perfect balance of efficiency and completeness for the modern web.</p>
+                    <div class="bg-blue-100 text-blue-800 p-4 rounded-lg">
+                        <span class="text-5xl font-extrabold">99%</span>
+                        <p class="font-semibold">of websites use UTF-8, making it the mandatory encoding for all web content.</p>
+                    </div>
+                </div>
+                <div>
+                    <div class="small-chart-container">
+                        <canvas id="webUsageChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="evolution">
+            <h2 class="text-3xl font-bold text-center mb-4 text-slate-900">A Universe of Characters</h2>
+            <p class="text-center text-lg text-slate-600 max-w-3xl mx-auto mb-8">The journey from ASCII's 128-character limit to Unicode's massive set supporting over 150,000 characters (including 3,790 emoji) represents one of computing's greatest standardization efforts.</p>
+            <div class="data-card">
+                 <div class="chart-container">
+                    <canvas id="evolutionChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="key-players">
+            <h2 class="text-3xl font-bold text-center mb-8 text-slate-900">The Main Encoding Schemes</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="data-card text-center flex flex-col">
+                    <h3 class="text-xl font-bold text-slate-800 mb-3">UTF-8</h3>
+                    <p class="flex-grow">Uses 1 to 4 bytes. Dominant on the web due to its efficiency for English text and full Unicode support.</p>
+                    <div class="mt-4 font-mono p-3 bg-slate-100 rounded-md text-slate-600 text-sm">Example 'A': <span class="font-bold">41</span></div>
+                </div>
+                <div class="data-card text-center flex flex-col">
+                    <h3 class="text-xl font-bold text-slate-800 mb-3">UTF-16</h3>
+                    <p class="flex-grow">Uses 2 or 4 bytes. The native internal encoding for systems like Java and Windows. More efficient for Asian languages.</p>
+                    <div class="mt-4 font-mono p-3 bg-slate-100 rounded-md text-slate-600 text-sm">Example 'A': <span class="font-bold">00 41</span></div>
+                </div>
+                <div class="data-card text-center flex flex-col md:col-span-2 lg:col-span-1">
+                    <h3 class="text-xl font-bold text-slate-800 mb-3">UTF-32</h3>
+                    <p class="flex-grow">Uses a fixed 4 bytes. Simple to process but highly space-inefficient, making it rare in practice.</p>
+                     <div class="mt-4 font-mono p-3 bg-slate-100 rounded-md text-slate-600 text-sm">Example 'A': <span class="font-bold">00 00 00 41</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="process-flow">
+            <h2 class="text-3xl font-bold text-center mb-8 text-slate-900">How Encoding Works</h2>
+            <div class="data-card max-w-4xl mx-auto">
+                <div class="flex flex-col md:flex-row justify-around items-center space-y-6 md:space-y-0 md:space-x-6 text-center">
+                    <div class="flex flex-col items-center">
+                        <div class="text-4xl font-bold w-20 h-20 flex items-center justify-center bg-slate-100 rounded-full mb-2">A</div>
+                        <p class="font-semibold">1. Character</p>
+                        <p class="text-sm">The abstract symbol.</p>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-400">→</div>
+                    <div class="flex flex-col items-center">
+                        <div class="text-2xl font-mono w-20 h-20 flex items-center justify-center bg-slate-100 rounded-full mb-2">U+0041</div>
+                        <p class="font-semibold">2. Code Point</p>
+                        <p class="text-sm">Its unique number in Unicode.</p>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-400">→</div>
+                    <div class="flex flex-col items-center">
+                        <div class="text-2xl font-mono w-20 h-20 flex items-center justify-center bg-slate-100 rounded-full mb-2">41</div>
+                        <p class="font-semibold">3. UTF-8 Bytes</p>
+                        <p class="text-sm">The final bytes for storage.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="file-size-comparison">
+            <h2 class="text-3xl font-bold text-center mb-4 text-slate-900">The Efficiency Equation</h2>
+            <p class="text-center text-lg text-slate-600 max-w-3xl mx-auto mb-8">The best encoding often depends on the language. UTF-8 excels with English-heavy text, while UTF-16 can be more compact for text rich in CJK characters. Click the buttons below to see the difference.</p>
+            <div class="data-card">
+                 <div class="flex justify-center flex-wrap gap-3 mb-6">
+                    <button data-lang="english" class="interactive-button px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 bg-slate-200 text-slate-700 hover:bg-blue-500 hover:text-white">English Text</button>
+                    <button data-lang="cjk" class="interactive-button px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 bg-slate-200 text-slate-700 hover:bg-blue-500 hover:text-white">CJK Text</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="fileSizeChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="mojibake-problem">
+            <h2 class="text-3xl font-bold text-center mb-4 text-slate-900">When Encodings Don't Match</h2>
+            <p class="text-center text-lg text-slate-600 max-w-3xl mx-auto mb-8">"Mojibake" (文字化け) is the garbled text that appears when data written in one encoding is read by a system expecting another. It's a classic compatibility problem.</p>
+             <div class="data-card max-w-2xl mx-auto text-center">
+                <p class="mb-2">A file with "¡Hola, €uro!" saved as UTF-8...</p>
+                <p class="mb-4">...incorrectly read as common legacy encoding `ISO-8859-1`:</p>
+                <div class="p-4 bg-red-100 text-red-800 rounded-lg font-mono text-xl md:text-2xl tracking-wider">Â¡Hola, â‚¬uro!</div>
+            </div>
+        </section>
+        
+    </main>
+
+    <footer class="text-center py-10 mt-16 bg-slate-800 text-slate-400">
+        <p>A data-driven infographic based on the comprehensive report:</p>
+        <p class="font-semibold text-slate-300">"Understanding Character Encoding and Character Codes."</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const wrapLabel = (label) => {
+                if (label.length <= 16) return label;
+                const words = label.split(' ');
+                const lines = [];
+                let currentLine = '';
+                for (const word of words) {
+                    if ((currentLine + ' ' + word).trim().length > 16) {
+                        lines.push(currentLine.trim());
+                        currentLine = word;
+                    } else {
+                        currentLine = (currentLine + ' ' + word).trim();
+                    }
+                }
+                if (currentLine) lines.push(currentLine.trim());
+                return lines;
+            };
+
+            const multiLineTooltipTitle = function(tooltipItems) {
+                const item = tooltipItems[0];
+                let label = item.chart.data.labels[item.dataIndex];
+                return Array.isArray(label) ? label.join(' ') : label;
+            };
+
+            const chartColors = {
+                orange: '#FF5733',
+                yellow: '#FFC300',
+                green: '#33FF57',
+                blue: '#3357FF',
+                red: '#C70039'
+            };
+            
+            new Chart(document.getElementById('webUsageChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['UTF-8', 'Other Encodings'],
+                    datasets: [{
+                        data: [99, 1],
+                        backgroundColor: [chartColors.blue, '#e2e8f0'],
+                        borderColor: ['#ffffff'],
+                        borderWidth: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { title: multiLineTooltipTitle } }
+                    }
+                }
+            });
+
+            new Chart(document.getElementById('evolutionChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['ASCII (1963)', 'Unicode Version 16.0'],
+                    datasets: [{
+                        label: 'Supported Characters',
+                        data: [128, 154998],
+                        backgroundColor: [chartColors.yellow, chartColors.green],
+                        barThickness: 50,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: { type: 'logarithmic', title: { display: true, text: 'Number of Characters (Log Scale)' } }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: multiLineTooltipTitle,
+                                label: (context) => `${context.dataset.label}: ${context.raw.toLocaleString()}`
+                            }
+                        }
+                    }
+                }
+            });
+
+            const fileSizeData = {
+                english: {
+                    label: 'Size in bytes for: "The quick brown fox jumps over the lazy dog."',
+                    sizes: [45, 90, 180] 
+                },
+                cjk: {
+                    label: 'Size in bytes for: "你好世界，这是一个测试"',
+                    sizes: [33, 22, 44]
+                }
+            };
+
+            const fileSizeChartCtx = document.getElementById('fileSizeChart').getContext('2d');
+            const fileSizeChart = new Chart(fileSizeChartCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['UTF-8', 'UTF-16', 'UTF-32'],
+                    datasets: [{
+                        label: 'Size in Bytes',
+                        data: fileSizeData.english.sizes,
+                        backgroundColor: [chartColors.orange, chartColors.red, chartColors.yellow]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { title: multiLineTooltipTitle } },
+                        title: { display: true, text: fileSizeData.english.label, padding: { bottom: 10 } }
+                    },
+                    scales: {
+                        y: { title: { display: true, text: 'Bytes' } }
+                    }
+                }
+            });
+
+            document.querySelectorAll('.interactive-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    document.querySelector('.interactive-button.active')?.classList.remove('active');
+                    e.target.classList.add('active');
+                    
+                    const lang = e.target.dataset.lang;
+                    fileSizeChart.data.datasets[0].data = fileSizeData[lang].sizes;
+                    fileSizeChart.options.plugins.title.text = fileSizeData[lang].label;
+                    fileSizeChart.update();
+                });
+            });
+            document.querySelector('.interactive-button[data-lang="english"]').click();
+        });
+    </script>
+</body>
+</html>

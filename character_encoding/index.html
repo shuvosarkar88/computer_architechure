@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide to Character Encoding</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Cool Slate -->
+    <!-- Application Structure Plan: The SPA is designed as a single-page, vertical-scrolling narrative to guide users from foundational concepts to practical applications. The structure is thematic, not a mirror of the report, to enhance learning. It starts with a Hero section for navigation, moves to "The Basics" to visually separate 'character sets' from 'encodings', then to "The Evolution" to show the scale shift from ASCII to Unicode with a chart. The core is the "Encodings Compared" interactive tool where users can type text and see the byte-level output for UTF-8, UTF-16, and UTF-32. This hands-on approach is key. The final section, "Practical Problems," uses interactive simulators for 'Mojibake' and 'File Size' to make abstract issues tangible. This top-to-bottom flow creates a cohesive learning journey, while the navigation bar allows experts to jump to specific tools. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: ASCII vs. Unicode Character Count -> Goal: Compare -> Viz: Bar Chart (Chart.js) -> Interaction: Hover for tooltips -> Justification: Immediately conveys the massive scale difference, a core concept.
+        - Report Info: How UTF-8/16/32 represent characters -> Goal: Inform/Engage -> Viz: Interactive Byte Visualizer (HTML/JS) -> Interaction: User types text, JS displays hex bytes -> Justification: Transforms abstract encoding rules into a concrete, live demonstration, which is the most effective way to teach this topic.
+        - Report Info: File size differences between encodings -> Goal: Compare -> Viz: Bar Chart (Chart.js) -> Interaction: Buttons select different text types (English, CJK, etc.) to update the chart -> Justification: Clearly illustrates performance trade-offs in a dynamic way.
+        - Report Info: Encoding Mismatches -> Goal: Inform/Engage -> Viz: Mojibake Simulator (HTML/JS) -> Interaction: Dropdowns select mismatched encodings to garble text -> Justification: Provides a memorable and visual "a-ha!" moment for a common, frustrating problem.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        @media (max-width: 640px) { .chart-container { height: 300px; max-height: 350px; } }
+        .tab-button.active { background-color: #0284c7; color: #ffffff; }
+        .file-size-button.active { background-color: #0891b2; color: #ffffff; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 border-b border-slate-200">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl font-bold text-sky-700">Character Encoding</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#basics" class="text-slate-600 hover:bg-slate-200 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">The Basics</a>
+                        <a href="#evolution" class="text-slate-600 hover:bg-slate-200 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">Evolution</a>
+                        <a href="#comparison" class="text-slate-600 hover:bg-slate-200 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">Comparison Tool</a>
+                        <a href="#problems" class="text-slate-600 hover:bg-slate-200 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">Practical Problems</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        
+        <section id="hero" class="text-center mb-16">
+            <h2 class="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 tracking-tight">An Interactive Guide to Digital Text</h2>
+            <p class="max-w-3xl mx-auto text-lg text-slate-600">
+                Explore the fundamental bridge between human-readable text and computer-processable binary data. This guide demystifies how characters are represented digitally, from the early days of ASCII to the universal standard of Unicode.
+            </p>
+        </section>
+
+        <div class="space-y-20">
+
+            <section id="basics">
+                <h3 class="text-3xl font-bold text-center mb-2 text-slate-900">The Core Concepts</h3>
+                <p class="text-center text-slate-600 max-w-2xl mx-auto mb-12">
+                    To understand character encoding, we must first distinguish between the abstract collection of symbols (a character set) and the specific method used to convert those symbols into bytes (an encoding scheme). This separation is key to digital communication.
+                </p>
+                <div class="grid md:grid-cols-2 gap-8 items-center max-w-4xl mx-auto">
+                    <div class="bg-white p-6 rounded-xl shadow-md border border-slate-200 text-center">
+                        <div class="text-5xl mb-4">📚</div>
+                        <h4 class="text-xl font-semibold mb-2 text-sky-700">Character Set (The "What")</h4>
+                        <p class="text-slate-600">A collection of characters and symbols. Think of it as a dictionary. For example, Unicode is a character set that contains 'A', '€', and '😀'. Each character is assigned a unique number called a <strong class="font-semibold text-slate-800">code point</strong> (e.g., 'A' is U+0041).</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md border border-slate-200 text-center">
+                        <div class="text-5xl mb-4">🔢</div>
+                        <h4 class="text-xl font-semibold mb-2 text-teal-700">Encoding Scheme (The "How")</h4>
+                        <p class="text-slate-600">A set of rules for transforming a character's code point into a sequence of bytes for storage or transmission. UTF-8 and UTF-16 are different schemes for encoding the same Unicode character set.</p>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="evolution">
+                <h3 class="text-3xl font-bold text-center mb-2 text-slate-900">From ASCII to a Universal Standard</h3>
+                <p class="text-center text-slate-600 max-w-2xl mx-auto mb-12">
+                    Early computing used ASCII, which could only represent 128 characters, primarily for English. The need to support all world languages led to Unicode, a monumental achievement in standardization. This chart shows the dramatic growth in character support.
+                </p>
+                <div class="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-200">
+                    <div class="chart-container">
+                        <canvas id="evolutionChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section id="comparison">
+                <h3 class="text-3xl font-bold text-center mb-2 text-slate-900">Interactive Encoding Comparison</h3>
+                <p class="text-center text-slate-600 max-w-2xl mx-auto mb-8">
+                    The same character can be represented by different bytes depending on the encoding scheme. Select an encoding and type some text (try 'A', '€', '你好', or '😀') to see how UTF-8, UTF-16, and UTF-32 convert it into hexadecimal bytes. This tool reveals the efficiency and design differences firsthand.
+                </p>
+                <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg border border-slate-200 max-w-4xl mx-auto">
+                    <div class="mb-6">
+                        <div class="flex justify-center flex-wrap gap-2 mb-6">
+                            <button data-encoding="UTF-8" class="tab-button px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 bg-slate-200 text-slate-700 hover:bg-sky-600 hover:text-white">UTF-8</button>
+                            <button data-encoding="UTF-16" class="tab-button px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 bg-slate-200 text-slate-700 hover:bg-sky-600 hover:text-white">UTF-16</button>
+                            <button data-encoding="UTF-32" class="tab-button px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 bg-slate-200 text-slate-700 hover:bg-sky-600 hover:text-white">UTF-32</button>
+                        </div>
+                        <input type="text" id="byte-input" class="w-full p-3 border border-slate-300 rounded-lg text-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500" placeholder="Type text here...">
+                    </div>
+                    <div>
+                        <h4 id="encoding-title" class="text-lg font-semibold mb-2 text-slate-700">Byte Representation</h4>
+                        <div id="byte-output" class="w-full p-4 bg-slate-100 rounded-lg font-mono text-slate-800 break-words text-left h-24 overflow-y-auto">Select an encoding and type to see results.</div>
+                        <p id="encoding-explanation" class="mt-4 text-sm text-slate-600"></p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="problems">
+                <h3 class="text-3xl font-bold text-center mb-2 text-slate-900">Practical Problems &amp; Trade-offs</h3>
+                <p class="text-center text-slate-600 max-w-2xl mx-auto mb-12">
+                   Choosing an encoding has real-world consequences for file size, performance, and compatibility. The following tools simulate two of the most common issues developers face: garbled text from mismatched encodings (mojibake) and differing file sizes.
+                </p>
+                <div class="grid lg:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                        <h4 class="text-xl font-semibold text-center mb-4 text-slate-800">Mojibake Simulator</h4>
+                        <p class="text-sm text-center text-slate-600 mb-6">This happens when text written in one encoding is read by a system expecting another. See what happens when "¡Hola, €uro!" is misinterpreted.</p>
+                        <div class="flex justify-center items-center space-x-4 mb-4">
+                             <select id="mojibake-select" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-teal-500">
+                                 <option value="correct">Read as UTF-8 (Correct)</option>
+                                 <option value="incorrect">Read as Latin-1 (Incorrect)</option>
+                             </select>
+                        </div>
+                        <div class="w-full p-4 bg-slate-100 rounded-lg text-center">
+                            <p id="mojibake-output" class="font-mono text-xl text-teal-700 break-words"></p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                        <h4 class="text-xl font-semibold text-center mb-4 text-slate-800">File Size Comparison</h4>
+                        <p class="text-sm text-center text-slate-600 mb-6">Encodings vary in efficiency depending on the content. Select a text type to see how many bytes each encoding would use.</p>
+                        <div class="flex justify-center flex-wrap gap-2 mb-4">
+                            <button data-sample="english" class="file-size-button px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 bg-slate-200 text-slate-700 hover:bg-teal-600 hover:text-white">English</button>
+                            <button data-sample="cjk" class="file-size-button px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 bg-slate-200 text-slate-700 hover:bg-teal-600 hover:text-white">CJK</button>
+                            <button data-sample="emoji" class="file-size-button px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 bg-slate-200 text-slate-700 hover:bg-teal-600 hover:text-white">Emoji</button>
+                        </div>
+                         <div class="chart-container h-64" style="height: 250px; max-height: 250px;">
+                            <canvas id="fileSizeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="bg-slate-800 text-slate-300 mt-20">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-sm">
+            <p>An interactive visualization based on "Understanding Character Encoding."</p>
+            <p>&copy; 2025. Designed to make complex concepts clear and accessible.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const state = {
+                encoding: 'UTF-8',
+                sample: 'english'
+            };
+
+            const explanations = {
+                "UTF-8": "Variable-width (1-4 bytes). Efficient for ASCII text. The dominant web standard. Notice how standard English letters take only 1 byte, while other symbols take more.",
+                "UTF-16": "Variable-width (2 or 4 bytes). Native in environments like Java and Windows. Most common characters take 2 bytes. Characters outside the Basic Multilingual Plane (like many emoji) require 4 bytes (a surrogate pair).",
+                "UTF-32": "Fixed-width (4 bytes). Simple, as every character takes the same space. However, it's very inefficient for most text, especially English, wasting a lot of space."
+            };
+
+            const byteInput = document.getElementById('byte-input');
+            const byteOutput = document.getElementById('byte-output');
+            const encodingTitle = document.getElementById('encoding-title');
+            const encodingExplanation = document.getElementById('encoding-explanation');
+
+            const toHex = (n) => n.toString(16).toUpperCase().padStart(2, '0');
+
+            const encode = {
+                "UTF-8": (str) => {
+                    const utf8 = [];
+                    for (let i = 0; i < str.length; i++) {
+                        let charcode = str.charCodeAt(i);
+                        if (charcode < 0x80) utf8.push(charcode);
+                        else if (charcode < 0x800) {
+                            utf8.push(0xc0 | (charcode >> 6), 0x80 | (charcode & 0x3f));
+                        } else if (charcode < 0xd800 || charcode >= 0xe000) {
+                            utf8.push(0xe0 | (charcode >> 12), 0x80 | ((charcode >> 6) & 0x3f), 0x80 | (charcode & 0x3f));
+                        } else {
+                            i++;
+                            charcode = 0x10000 + (((charcode & 0x3ff) << 10) | (str.charCodeAt(i) & 0x3ff));
+                            utf8.push(0xf0 | (charcode >> 18), 0x80 | ((charcode >> 12) & 0x3f), 0x80 | ((charcode >> 6) & 0x3f), 0x80 | (charcode & 0x3f));
+                        }
+                    }
+                    return utf8.map(toHex).join(' ');
+                },
+                "UTF-16": (str) => {
+                    const utf16 = [];
+                    for (let i = 0; i < str.length; i++) {
+                        const code = str.charCodeAt(i);
+                        utf16.push(toHex(code >> 8), toHex(code & 0xFF));
+                    }
+                    return utf16.join(' ');
+                },
+                "UTF-32": (str) => {
+                    const utf32 = [];
+                    for (let i = 0; i < str.length; i++) {
+                        let code = str.charCodeAt(i);
+                        if (code >= 0xD800 && code <= 0xDBFF) {
+                           const high = code;
+                           const low = str.charCodeAt(++i);
+                           code = 0x10000 + ((high & 0x3FF) << 10) + (low & 0x3FF);
+                        }
+                        utf32.push('00', toHex(code >> 16 & 0xFF), toHex(code >> 8 & 0xFF), toHex(code & 0xFF));
+                    }
+                    return utf32.join(' ');
+                }
+            };
+
+            function updateByteVisualizer() {
+                const text = byteInput.value;
+                if (!text) {
+                    byteOutput.textContent = 'Type something in the box above.';
+                    return;
+                }
+                byteOutput.textContent = encode[state.encoding](text);
+            }
+
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    document.querySelector('.tab-button.active')?.classList.remove('active');
+                    button.classList.add('active');
+                    state.encoding = button.dataset.encoding;
+                    encodingTitle.textContent = `${state.encoding} Byte Representation`;
+                    encodingExplanation.textContent = explanations[state.encoding];
+                    updateByteVisualizer();
+                });
+            });
+
+            byteInput.addEventListener('input', updateByteVisualizer);
+            document.querySelector('.tab-button[data-encoding="UTF-8"]').click();
+
+            const mojibakeSelect = document.getElementById('mojibake-select');
+            const mojibakeOutput = document.getElementById('mojibake-output');
+            const originalText = "¡Hola, €uro!";
+            
+            function simulateMojibake() {
+                if (mojibakeSelect.value === 'correct') {
+                    mojibakeOutput.textContent = originalText;
+                } else {
+                    let garbled = '';
+                    for (let i = 0; i < originalText.length; i++) {
+                       const charCode = originalText.charCodeAt(i);
+                       if (charCode > 255) {
+                           garbled += '�'; // Replacement character for unmappable chars
+                       } else {
+                           garbled += String.fromCharCode(charCode);
+                       }
+                    }
+                    mojibakeOutput.textContent = garbled.split('').map(c => String.fromCharCode(c.charCodeAt(0) + 0)).join('').replace('€', 'â‚¬');
+                }
+            }
+            mojibakeSelect.addEventListener('change', simulateMojibake);
+            simulateMojibake();
+
+            const chartOptions = {
+                maintainAspectRatio: false,
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                             callback: function(value) {
+                                let label = this.getLabelForValue(value);
+                                if (label.length > 16) {
+                                    return label.slice(0, 16) + '...';
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#e2e8f0' }
+                    }
+                }
+            };
+            
+            const evolutionCtx = document.getElementById('evolutionChart').getContext('2d');
+            new Chart(evolutionCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['ASCII (1963)', 'Unicode (Today)'],
+                    datasets: [{
+                        label: 'Supported Characters',
+                        data: [128, 154998],
+                        backgroundColor: ['#0ea5e9', '#14b8a6'],
+                        borderColor: ['#0284c7', '#0f766e'],
+                        borderWidth: 1
+                    }]
+                },
+                options: { ...chartOptions, scales: {...chartOptions.scales, y: {...chartOptions.scales.y, type: 'logarithmic'}}}
+            });
+
+            const fileSizeSamples = {
+                english: "Hello world!",
+                cjk: "你好世界",
+                emoji: "你好😀"
+            };
+
+            const calculateSize = (text) => ({
+                "UTF-8": encode["UTF-8"](text).split(' ').length,
+                "UTF-16": encode["UTF-16"](text).split(' ').length,
+                "UTF-32": encode["UTF-32"](text).split(' ').length,
+            });
+
+            const fileSizeCtx = document.getElementById('fileSizeChart').getContext('2d');
+            const fileSizeChart = new Chart(fileSizeCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['UTF-8', 'UTF-16', 'UTF-32'],
+                    datasets: [{
+                        label: 'Size in Bytes',
+                        data: Object.values(calculateSize(fileSizeSamples[state.sample])),
+                        backgroundColor: ['#38bdf8', '#2dd4bf', '#94a3b8'],
+                        borderWidth: 0,
+                    }]
+                },
+                options: {...chartOptions, scales: {...chartOptions.scales, y: {...chartOptions.scales.y, ticks: {callback: (value) => `${value} B` }}}}
+            });
+
+            function updateFileSizeChart() {
+                const sizes = calculateSize(fileSizeSamples[state.sample]);
+                fileSizeChart.data.datasets[0].data = Object.values(sizes);
+                fileSizeChart.update();
+            }
+
+            document.querySelectorAll('.file-size-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    document.querySelector('.file-size-button.active')?.classList.remove('active');
+                    button.classList.add('active');
+                    state.sample = button.dataset.sample;
+                    updateFileSizeChart();
+                });
+            });
+            document.querySelector('.file-size-button[data-sample="english"]').click();
+        });
+    </script>
+</body>
+</html>
