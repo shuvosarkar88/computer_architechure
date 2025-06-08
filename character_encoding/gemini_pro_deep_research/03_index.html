@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Journey of a Character: From Text to Bytes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: The application is structured as an interactive, scroll-based learning journey, rather than mirroring the report's chapters. It starts with a simple concept (ASCII), introduces the universal solution (Unicode), provides a deep, interactive dive into the core mechanics (UTF-8 Explorer), demonstrates the practical application (Converter), and finally shows real-world code (Python). This progressive disclosure approach is designed for better comprehension and engagement. A sticky navigation bar allows users to jump between these logical, task-oriented sections, facilitating non-linear exploration. This structure transforms a passive document into an active learning tool, focusing on "doing" and "seeing" over just "reading". -->
+    <!-- Visualization & Content Choices: 
+        - ASCII Binary: Report Info: ASCII mapping. Goal: Inform. Viz: Dynamic text. Interaction: User input. Justification: Hands-on demonstration of the simplest encoding. Method: Vanilla JS.
+        - Unicode Planes: Report Info: Unicode planes. Goal: Compare. Viz: Bar Chart. Interaction: Static visual. Justification: To give a sense of the scale of Unicode. Library: Chart.js.
+        - UTF-8 Explorer: Report Info: UTF-8 encoding rules. Goal: Explain a process. Viz: Interactive HTML/CSS diagram. Interaction: User input triggers a step-by-step animated visualization of the bit-level encoding. Justification: Demystifies the most complex part of the report. This is the app's core interactive element. Method: Vanilla JS DOM manipulation.
+        - Interactive Converter: Report Info: encode/decode process. Goal: Demonstrate a tool. Viz: Side-by-side text areas. Interaction: Real-time, bidirectional conversion. Justification: Provides a practical sandbox for users to experiment with. Method: Vanilla JS.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFDFB;
+            color: #383838;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .bit-box {
+            transition: all 0.3s ease-in-out;
+            min-height: 40px;
+        }
+        .highlight-rule {
+            background-color: #FFFBEB;
+            border-color: #FBBF24;
+            transform: scale(1.02);
+        }
+        .nav-link.active {
+            color: #D97706;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-amber-50/50 backdrop-blur-sm sticky top-0 z-50 border-b border-amber-200/60">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="font-bold text-xl text-amber-900">Text to Bytes</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#introduction" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-amber-800 hover:bg-amber-100/50">Introduction</a>
+                        <a href="#ascii" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-amber-800 hover:bg-amber-100/50">ASCII</a>
+                        <a href="#unicode" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-amber-800 hover:bg-amber-100/50">Unicode</a>
+                        <a href="#utf8-explorer" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-amber-800 hover:bg-amber-100/50">UTF-8 Explorer</a>
+                        <a href="#converter" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-amber-800 hover:bg-amber-100/50">Converter</a>
+                        <a href="#code" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-amber-800 hover:bg-amber-100/50">Code in Action</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+
+        <section id="introduction" class="text-center py-16">
+            <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-amber-900">The Journey of a Character</h1>
+            <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-600">From a simple key press to the complex stream of bytes a computer understands, every piece of text undergoes a fascinating transformation. This interactive guide explores how character encodings like ASCII and UTF-8 make modern digital communication possible.</p>
+        </section>
+
+        <section id="ascii" class="py-16 scroll-mt-20">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold text-amber-900">The Foundation: ASCII</h2>
+                <p class="mt-3 max-w-2xl mx-auto text-base text-gray-600">This section explores ASCII, the original standard for representing English characters. While revolutionary for its time, its limitations paved the way for more universal systems. Here, you can see how simple it is to map a character to its binary value in ASCII.</p>
+            </div>
+            <div class="mt-12 max-w-lg mx-auto bg-white p-8 rounded-xl shadow-md border border-gray-200">
+                <label for="ascii-input" class="block text-sm font-medium text-gray-700">Type a single English character:</label>
+                <input id="ascii-input" type="text" maxlength="1" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm" placeholder="e.g., A">
+                <div class="mt-6 p-4 bg-amber-50 rounded-lg text-center">
+                    <p class="text-sm text-amber-800">Binary Representation (8-bit)</p>
+                    <p id="ascii-output" class="text-2xl font-mono font-bold text-amber-900">-</p>
+                </div>
+                <p class="mt-4 text-xs text-gray-500">ASCII uses 7 bits for 128 characters, but is usually stored in an 8-bit byte. Its major limitation is that it cannot represent characters from other languages, which led to the creation of Unicode.</p>
+            </div>
+        </section>
+
+        <section id="unicode" class="py-16 scroll-mt-20">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold text-amber-900">A Universal Library: Unicode</h2>
+                <p class="mt-3 max-w-2xl mx-auto text-base text-gray-600">Unicode solves ASCII's problem by assigning a unique number, or "code point," to every character in every language. This section visualizes the vast scope of Unicode and lets you look up the code point for any character you can type.</p>
+            </div>
+            <div class="mt-12 grid md:grid-cols-2 gap-8 items-center">
+                <div class="bg-white p-8 rounded-xl shadow-md border border-gray-200">
+                    <h3 class="font-semibold text-lg text-center text-gray-800">Unicode Code Point Lookup</h3>
+                    <label for="unicode-input" class="block text-sm font-medium text-gray-700 mt-4">Type any character:</label>
+                    <input id="unicode-input" type="text" maxlength="1" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm" placeholder="e.g., A, €, क, 😊">
+                    <div class="mt-6 p-4 bg-amber-50 rounded-lg text-center">
+                        <p class="text-sm text-amber-800">Unicode Code Point</p>
+                        <p id="unicode-output" class="text-2xl font-mono font-bold text-amber-900">-</p>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-xl shadow-md border border-gray-200">
+                     <h3 class="font-semibold text-lg text-center text-gray-800">The Scale of Unicode</h3>
+                     <div class="chart-container">
+                        <canvas id="unicodePlanesChart"></canvas>
+                     </div>
+                     <p class="mt-2 text-xs text-gray-500 text-center">Most common characters are in the Basic Multilingual Plane (BMP), but Unicode has room for over a million characters in its Supplementary Planes.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="utf8-explorer" class="py-16 scroll-mt-20">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold text-amber-900">The Rules of Translation: UTF-8 Explorer</h2>
+                <p class="mt-3 max-w-3xl mx-auto text-base text-gray-600">UTF-8 is the dominant encoding that translates Unicode code points into a sequence of 1 to 4 bytes. This interactive explorer lets you input a character and see exactly how its code point is broken down and fitted into the UTF-8 binary pattern. This is the core magic of how text is stored and sent across the internet.</p>
+            </div>
+
+            <div class="mt-12 max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg border border-gray-200">
+                <div class="flex flex-col md:flex-row gap-4 items-center">
+                    <div class="w-full md:w-auto">
+                        <label for="utf8-input" class="block text-sm font-medium text-gray-700">Enter a character to explore:</label>
+                        <input id="utf8-input" type="text" maxlength="1" class="mt-1 w-full md:w-48 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-amber-500 focus:border-amber-500" placeholder="e.g., A, €, क, 😊">
+                    </div>
+                    <div class="w-full md:w-auto flex-1">
+                        <label class="block text-sm font-medium text-gray-700">Or pick an example:</label>
+                        <div id="utf8-examples" class="mt-1 flex flex-wrap gap-2">
+                            <button class="utf8-example-btn text-lg px-4 py-2 bg-gray-100 hover:bg-amber-100 rounded-md transition">A</button>
+                            <button class="utf8-example-btn text-lg px-4 py-2 bg-gray-100 hover:bg-amber-100 rounded-md transition">¢</button>
+                            <button class="utf8-example-btn text-lg px-4 py-2 bg-gray-100 hover:bg-amber-100 rounded-md transition">€</button>
+                            <button class="utf8-example-btn text-lg px-4 py-2 bg-gray-100 hover:bg-amber-100 rounded-md transition">क</button>
+                            <button class="utf8-example-btn text-lg px-4 py-2 bg-gray-100 hover:bg-amber-100 rounded-md transition">😊</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 border-t border-gray-200 pt-6">
+                    <div id="utf8-step1" class="hidden">
+                        <h4 class="font-semibold">Step 1: Find Unicode Code Point</h4>
+                        <div class="mt-2 p-4 font-mono bg-gray-50 rounded-md text-lg break-all">
+                            Character: <span id="utf8-char" class="font-bold"></span> &rarr; Code Point: <span id="utf8-codepoint" class="font-bold"></span>
+                        </div>
+                    </div>
+                    <div id="utf8-step2" class="mt-6 hidden">
+                        <h4 class="font-semibold">Step 2: Convert to Binary</h4>
+                        <div class="mt-2 p-4 font-mono bg-gray-50 rounded-md text-lg break-all">
+                            <span id="utf8-binary" class="font-bold"></span>
+                        </div>
+                    </div>
+                    <div id="utf8-step3" class="mt-6 hidden">
+                        <h4 class="font-semibold">Step 3: Determine UTF-8 Byte Pattern</h4>
+                        <p class="text-sm text-gray-600">Based on the code point's value, one of these rules is chosen. The payload bits from the binary above (in <span class="text-amber-600 font-semibold">orange</span>) are fitted into the <span class="font-mono text-blue-600">x</span> slots.</p>
+                        <div id="utf8-rules" class="mt-4 space-y-2 font-mono text-sm">
+                            <div id="rule-1" class="p-3 border rounded-md transition-all duration-300">
+                                <p><strong>1 Byte:</strong> For U+0000 to U+007F</p>
+                                <p class="text-blue-600">0<span class="text-amber-600">xxxxxxx</span></p>
+                            </div>
+                            <div id="rule-2" class="p-3 border rounded-md transition-all duration-300">
+                                <p><strong>2 Bytes:</strong> For U+0080 to U+07FF</p>
+                                <p class="text-blue-600">110<span class="text-amber-600">xxxxx</span> 10<span class="text-amber-600">xxxxxx</span></p>
+                            </div>
+                            <div id="rule-3" class="p-3 border rounded-md transition-all duration-300">
+                                <p><strong>3 Bytes:</strong> For U+0800 to U+FFFF</p>
+                                <p class="text-blue-600">1110<span class="text-amber-600">xxxx</span> 10<span class="text-amber-600">xxxxxx</span> 10<span class="text-amber-600">xxxxxx</span></p>
+                            </div>
+                            <div id="rule-4" class="p-3 border rounded-md transition-all duration-300">
+                                <p><strong>4 Bytes:</strong> For U+10000 to U+10FFFF</p>
+                                <p class="text-blue-600">11110<span class="text-amber-600">xxx</span> 10<span class="text-amber-600">xxxxxx</span> 10<span class="text-amber-600">xxxxxx</span> 10<span class="text-amber-600">xxxxxx</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="utf8-step4" class="mt-6 hidden">
+                        <h4 class="font-semibold">Step 4: Final Byte Sequence</h4>
+                         <div class="mt-2 flex flex-wrap gap-2 font-mono text-center">
+                            <div class="flex-1 min-w-[150px] p-3 bg-green-50 rounded-md">
+                                <p class="text-sm text-green-800">Binary Bytes</p>
+                                <p id="utf8-binary-result" class="text-lg font-bold text-green-900 break-words"></p>
+                            </div>
+                            <div class="flex-1 min-w-[150px] p-3 bg-purple-50 rounded-md">
+                                <p class="text-sm text-purple-800">Hex Bytes</p>
+                                <p id="utf8-hex-result" class="text-lg font-bold text-purple-900"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="utf8-placeholder" class="text-center py-10 text-gray-500">
+                        <p>Enter a character above to begin...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="converter" class="py-16 scroll-mt-20">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold text-amber-900">The Round Trip: Interactive Converter</h2>
+                <p class="mt-3 max-w-2xl mx-auto text-base text-gray-600">This tool demonstrates the complete encoding and decoding process in action. Type text to see it converted into UTF-8 bytes, or enter bytes to see them decoded back into text. This is what programming languages do with `.encode()` and `.decode()` methods.</p>
+            </div>
+            <div class="mt-12 max-w-4xl mx-auto grid md:grid-cols-2 gap-4">
+                <div>
+                    <label for="encode-input" class="block text-sm font-medium text-gray-700">Unicode Text (String)</label>
+                    <textarea id="encode-input" rows="6" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-amber-500 focus:border-amber-500 p-4" placeholder="Type text here..."></textarea>
+                </div>
+                <div>
+                    <label for="decode-input" class="block text-sm font-medium text-gray-700">UTF-8 Bytes (Hexadecimal)</label>
+                    <textarea id="decode-input" rows="6" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-amber-500 focus:border-amber-500 p-4 font-mono" placeholder="Enter hex bytes like F0 9F 98 8A..."></textarea>
+                </div>
+                 <div id="converter-error" class="md:col-span-2 text-sm text-red-600 text-center h-4"></div>
+            </div>
+        </section>
+        
+        <section id="code" class="py-16 scroll-mt-20">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold text-amber-900">Code in Action: A Python Example</h2>
+                <p class="mt-3 max-w-2xl mx-auto text-base text-gray-600">Programming languages provide built-in functions to handle encoding. Here's how Python 3 uses `.encode()` and `.decode()` to manage the conversion between its universal string type and byte sequences, which is crucial for file I/O and network communication.</p>
+            </div>
+            <div class="mt-12 max-w-3xl mx-auto bg-gray-800 rounded-xl shadow-lg p-6">
+                <pre class="text-white text-sm whitespace-pre-wrap"><code class="language-python"># In Python 3, strings are Unicode by default.
+text_to_encode = 'Hi 😊'
+
+# Use .encode() to get a 'bytes' object. UTF-8 is the default.
+utf8_bytes = text_to_encode.encode()
+
+# Bytes are represented with a b'' prefix.
+# Note the 4 bytes for the emoji!
+print(f"Encoded: {utf8_bytes}")
+# >> Encoded: b'Hi \xf0\x9f\x98\x8a'
+
+# Use .decode() to convert bytes back to a string.
+decoded_text = utf8_bytes.decode()
+print(f"Decoded: '{decoded_text}'")
+# >> Decoded: 'Hi 😊'
+
+
+# Handling errors is important. What if we try to encode
+# a character that doesn't exist in an older encoding like ASCII?
+euro_symbol = '€'
+try:
+    euro_symbol.encode('ascii')
+except UnicodeEncodeError as e:
+    print(f"\nError: {e}")
+    # >> Error: 'ascii' codec can't encode character '\u20ac' in position 0: ordinal not in range(128)
+</code></pre>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-gray-800 text-white">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-sm">
+            <p>Interactive experience designed to explore concepts from the report on text-to-byte conversion.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const asciiInput = document.getElementById('ascii-input');
+            const asciiOutput = document.getElementById('ascii-output');
+            
+            asciiInput.addEventListener('input', (e) => {
+                const char = e.target.value;
+                if (char.length === 1) {
+                    const asciiValue = char.charCodeAt(0);
+                    if (asciiValue < 128) {
+                        asciiOutput.textContent = asciiValue.toString(2).padStart(8, '0');
+                    } else {
+                        asciiOutput.textContent = 'Non-ASCII';
+                    }
+                } else {
+                    asciiOutput.textContent = '-';
+                }
+            });
+
+            const unicodeInput = document.getElementById('unicode-input');
+            const unicodeOutput = document.getElementById('unicode-output');
+
+            unicodeInput.addEventListener('input', (e) => {
+                const char = e.target.value;
+                if (char.length > 0) {
+                     const codePoint = char.codePointAt(0);
+                     unicodeOutput.textContent = 'U+' + codePoint.toString(16).toUpperCase().padStart(4, '0');
+                } else {
+                    unicodeOutput.textContent = '-';
+                }
+            });
+
+            const unicodePlanesCtx = document.getElementById('unicodePlanesChart').getContext('2d');
+            new Chart(unicodePlanesCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Basic Multilingual Plane (BMP)', 'Supplementary Planes'],
+                    datasets: [{
+                        label: 'Allocated Code Points',
+                        data: [65536, 1048576],
+                        backgroundColor: ['#FBBF24', '#F59E0B'],
+                        borderColor: ['#D97706', '#B45309'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.raw.toLocaleString()} code points`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                           ticks: {
+                                callback: function(value) {
+                                    if (value >= 1000000) return value / 1000000 + 'M';
+                                    if (value >= 1000) return value / 1000 + 'K';
+                                    return value;
+                                }
+                            },
+                            title: { display: true, text: 'Number of Code Points' }
+                        }
+                    }
+                }
+            });
+
+            const utf8Input = document.getElementById('utf8-input');
+            const utf8Examples = document.getElementById('utf8-examples');
+            const utf8Placeholder = document.getElementById('utf8-placeholder');
+            const utf8Step1 = document.getElementById('utf8-step1');
+            const utf8Step2 = document.getElementById('utf8-step2');
+            const utf8Step3 = document.getElementById('utf8-step3');
+            const utf8Step4 = document.getElementById('utf8-step4');
+            const rules = document.querySelectorAll('#utf8-rules > div');
+
+            utf8Input.addEventListener('input', (e) => {
+                const char = e.target.value;
+                if (char) {
+                    visualizeUtf8(char.slice(0, 1));
+                } else {
+                    resetUtf8Explorer();
+                }
+            });
+
+            utf8Examples.addEventListener('click', (e) => {
+                if (e.target.classList.contains('utf8-example-btn')) {
+                    const char = e.target.textContent;
+                    utf8Input.value = char;
+                    visualizeUtf8(char);
+                }
+            });
+            
+            function resetUtf8Explorer() {
+                utf8Placeholder.style.display = 'block';
+                [utf8Step1, utf8Step2, utf8Step3, utf8Step4].forEach(el => el.style.display = 'none');
+                rules.forEach(r => r.classList.remove('highlight-rule'));
+            }
+
+            function visualizeUtf8(char) {
+                utf8Placeholder.style.display = 'none';
+                [utf8Step1, utf8Step2, utf8Step3, utf8Step4].forEach(el => el.style.display = 'block');
+
+                const codePoint = char.codePointAt(0);
+                const binary = codePoint.toString(2);
+
+                document.getElementById('utf8-char').textContent = char;
+                document.getElementById('utf8-codepoint').textContent = 'U+' + codePoint.toString(16).toUpperCase().padStart(4, '0');
+                document.getElementById('utf8-binary').textContent = binary;
+
+                rules.forEach(r => r.classList.remove('highlight-rule'));
+                
+                let byteCount, binaryResult, hexResult;
+
+                if (codePoint <= 0x7F) {
+                    byteCount = 1;
+                    document.getElementById('rule-1').classList.add('highlight-rule');
+                    const bits = binary.padStart(7, '0');
+                    binaryResult = `0${bits}`;
+                } else if (codePoint <= 0x7FF) {
+                    byteCount = 2;
+                    document.getElementById('rule-2').classList.add('highlight-rule');
+                    const bits = binary.padStart(11, '0');
+                    const b1 = `110${bits.slice(0, 5)}`;
+                    const b2 = `10${bits.slice(5)}`;
+                    binaryResult = `${b1} ${b2}`;
+                } else if (codePoint <= 0xFFFF) {
+                    byteCount = 3;
+                    document.getElementById('rule-3').classList.add('highlight-rule');
+                    const bits = binary.padStart(16, '0');
+                    const b1 = `1110${bits.slice(0, 4)}`;
+                    const b2 = `10${bits.slice(4, 10)}`;
+                    const b3 = `10${bits.slice(10)}`;
+                    binaryResult = `${b1} ${b2} ${b3}`;
+                } else {
+                    byteCount = 4;
+                    document.getElementById('rule-4').classList.add('highlight-rule');
+                    const bits = binary.padStart(21, '0');
+                    const b1 = `11110${bits.slice(0, 3)}`;
+                    const b2 = `10${bits.slice(3, 9)}`;
+                    const b3 = `10${bits.slice(9, 15)}`;
+                    const b4 = `10${bits.slice(15)}`;
+                    binaryResult = `${b1} ${b2} ${b3} ${b4}`;
+                }
+
+                hexResult = binaryResult.split(' ').map(bin => 
+                    parseInt(bin, 2).toString(16).toUpperCase().padStart(2, '0')
+                ).join(' ');
+
+                document.getElementById('utf8-binary-result').textContent = binaryResult;
+                document.getElementById('utf8-hex-result').textContent = hexResult;
+            }
+
+            const encodeInput = document.getElementById('encode-input');
+            const decodeInput = document.getElementById('decode-input');
+            const converterError = document.getElementById('converter-error');
+
+            encodeInput.addEventListener('input', () => {
+                try {
+                    const text = encodeInput.value;
+                    let hexString = '';
+                    for (let i = 0; i < text.length; i++) {
+                        const codePoint = text.codePointAt(i);
+                        if (codePoint > 0xFFFF) { i++; } 
+
+                        if (codePoint <= 0x7F) {
+                            hexString += codePoint.toString(16).padStart(2, '0');
+                        } else if (codePoint <= 0x7FF) {
+                            const b1 = 0xC0 | (codePoint >> 6);
+                            const b2 = 0x80 | (codePoint & 0x3F);
+                            hexString += b1.toString(16) + b2.toString(16);
+                        } else if (codePoint <= 0xFFFF) {
+                            const b1 = 0xE0 | (codePoint >> 12);
+                            const b2 = 0x80 | ((codePoint >> 6) & 0x3F);
+                            const b3 = 0x80 | (codePoint & 0x3F);
+                            hexString += b1.toString(16) + b2.toString(16) + b3.toString(16);
+                        } else {
+                            const b1 = 0xF0 | (codePoint >> 18);
+                            const b2 = 0x80 | ((codePoint >> 12) & 0x3F);
+                            const b3 = 0x80 | ((codePoint >> 6) & 0x3F);
+                            const b4 = 0x80 | (codePoint & 0x3F);
+                            hexString += b1.toString(16) + b2.toString(16) + b3.toString(16) + b4.toString(16);
+                        }
+                    }
+                    decodeInput.value = hexString.replace(/(.{2})/g, '$1 ').trim().toUpperCase();
+                    converterError.textContent = '';
+                } catch (e) {
+                    converterError.textContent = 'Error during encoding.';
+                }
+            });
+
+            decodeInput.addEventListener('input', () => {
+                const hexString = decodeInput.value.replace(/\s/g, '');
+                 if (hexString.length % 2 !== 0) {
+                     converterError.textContent = 'Invalid hex string length.';
+                     return;
+                 }
+                try {
+                    const bytes = [];
+                    for (let i = 0; i < hexString.length; i += 2) {
+                        bytes.push(parseInt(hexString.substr(i, 2), 16));
+                    }
+                    
+                    let resultString = '';
+                    let i = 0;
+                    while (i < bytes.length) {
+                        const byte1 = bytes[i++];
+                        if (isNaN(byte1)) continue;
+
+                        if ((byte1 & 0x80) === 0) { // 0xxxxxxx
+                            resultString += String.fromCodePoint(byte1);
+                        } else if ((byte1 & 0xE0) === 0xC0) { // 110xxxxx
+                            const byte2 = bytes[i++];
+                            if (isNaN(byte2)) throw new Error('Invalid sequence');
+                            const codePoint = ((byte1 & 0x1F) << 6) | (byte2 & 0x3F);
+                            resultString += String.fromCodePoint(codePoint);
+                        } else if ((byte1 & 0xF0) === 0xE0) { // 1110xxxx
+                            const byte2 = bytes[i++];
+                            const byte3 = bytes[i++];
+                            if (isNaN(byte2) || isNaN(byte3)) throw new Error('Invalid sequence');
+                            const codePoint = ((byte1 & 0x0F) << 12) | ((byte2 & 0x3F) << 6) | (byte3 & 0x3F);
+                            resultString += String.fromCodePoint(codePoint);
+                        } else if ((byte1 & 0xF8) === 0xF0) { // 11110xxx
+                             const byte2 = bytes[i++];
+                             const byte3 = bytes[i++];
+                             const byte4 = bytes[i++];
+                             if (isNaN(byte2) || isNaN(byte3) || isNaN(byte4)) throw new Error('Invalid sequence');
+                             const codePoint = ((byte1 & 0x07) << 18) | ((byte2 & 0x3F) << 12) | ((byte3 & 0x3F) << 6) | (byte4 & 0x3F);
+                             resultString += String.fromCodePoint(codePoint);
+                        } else {
+                            throw new Error('Invalid start byte');
+                        }
+                    }
+                    encodeInput.value = resultString;
+                    converterError.textContent = '';
+                } catch (e) {
+                    converterError.textContent = `Error: Invalid UTF-8 byte sequence.`;
+                }
+            });
+            
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href').substring(1) === entry.target.id) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, { rootMargin: "-50% 0px -50% 0px" });
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        });
+    </script>
+
+</body>
+</html>

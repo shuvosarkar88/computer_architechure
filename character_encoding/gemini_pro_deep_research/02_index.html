@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide to Unicode Encodings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Warm Neutrals (Tailwind Stone) with a Teal Accent -->
+    <!-- Application Structure Plan: A single-page application with a primary top navigation to switch between four main views: 'Overview', 'Encoding Deep Dive', 'Side-by-Side Comparison', and an 'Interactive Explorer'. This task-oriented structure was chosen over mirroring the report's linear flow to better facilitate learning and comparison. Users can start with high-level concepts (Overview), investigate specific encodings in a consistent format (Deep Dive), see direct feature comparisons (Comparison), and finally, apply knowledge with a hands-on tool (Explorer). This non-linear approach empowers users to explore based on their immediate questions and learning style, promoting a deeper understanding of the trade-offs between UTF-8, UTF-16, and UTF-32. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Core concepts of Unicode, Code Points, and Planes. -> Goal: Inform. -> Viz/Method: Structured HTML/CSS diagram. -> Interaction: Static. -> Justification: Provides necessary background context in a simple, digestible visual format.
+        - Report Info: Properties, pros, cons, and mechanics of each UTF. -> Goal: Organize & Explain. -> Viz/Method: Tabbed content cards with consistent layouts (Key Stats, How it Works, Pros/Cons). -> Interaction: Clicking tabs for UTF-8/16/32 reveals detailed content. -> Justification: Allows focused learning on one encoding at a time while maintaining a consistent structure for easy comparison.
+        - Report Info: Byte-level encoding rules (UTF-8 patterns, UTF-16 surrogates). -> Goal: Demonstrate. -> Viz/Method: 'Interactive Explorer' tool with text input and byte output. -> Interaction: User types a string, JS functions calculate and display the byte representation for all encodings in real-time. -> Justification: Turns abstract rules into a concrete, hands-on experience, which is the most effective way to teach encoding mechanics.
+        - Report Info: Comparative data on memory efficiency and features. -> Goal: Compare. -> Viz/Method: Grouped bar chart (Chart.js) and a detailed HTML table. -> Interaction: Buttons to change the sample text type for the chart (ASCII, CJK, Emoji), dynamically updating the visualization to show how efficiency changes. -> Justification: Charts offer an immediate visual grasp of quantitative comparisons (space usage), while the table provides a comprehensive, detailed reference for qualitative features.
+        - Library/Method: All charts use Chart.js (Canvas). All diagrams and layouts use HTML with Tailwind CSS. All interactions are powered by vanilla JavaScript.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container { position: relative; width: 100%; max-width: 800px; margin-left: auto; margin-right: auto; height: 300px; max-height: 40vh; }
+        @media (min-width: 768px) { .chart-container { height: 350px; } }
+        .nav-btn { transition: background-color 0.2s, color 0.2s; }
+        .nav-btn.active { background-color: #0d9488; color: white; }
+        .nav-btn:not(.active):hover { background-color: #f1f5f9; }
+        .tab-btn { transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
+        .tab-btn.active { background-color: #f0fdfa; color: #0d9488; border-color: #0d9488; }
+        .tab-btn:not(.active):hover { background-color: #f8fafc; }
+        .byte { 
+            display: inline-block;
+            width: 2.5em; 
+            height: 2.5em;
+            line-height: 2.5em;
+            text-align: center;
+            font-family: monospace;
+            margin: 2px;
+            border-radius: 0.25rem;
+            background-color: #f1f5f9;
+            color: #475569;
+            font-size: 0.9em;
+        }
+        .byte-group { margin-right: 8px; }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800">
+
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-teal-700">An Interactive Guide to Unicode Encodings</h1>
+            <p class="mt-4 text-lg text-stone-600 max-w-3xl mx-auto">Visually explore and compare the world's most common text encoding standards. Understand the trade-offs between UTF-8, UTF-16, and UTF-32.</p>
+        </header>
+
+        <nav class="flex flex-wrap justify-center gap-2 md:gap-4 p-2 mb-8 bg-white rounded-xl shadow-sm border border-stone-200">
+            <button id="nav-overview" class="nav-btn px-4 py-2 rounded-lg font-semibold text-stone-700">Fundamentals</button>
+            <button id="nav-deepdive" class="nav-btn px-4 py-2 rounded-lg font-semibold text-stone-700">Encoding Deep Dive</button>
+            <button id="nav-comparison" class="nav-btn px-4 py-2 rounded-lg font-semibold text-stone-700">Side-by-Side Comparison</button>
+            <button id="nav-explorer" class="nav-btn px-4 py-2 rounded-lg font-semibold text-stone-700">Interactive Explorer</button>
+        </nav>
+
+        <main id="content-container">
+            
+            <section id="overview-content" class="page-section space-y-8">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">Why Do We Need Encodings?</h2>
+                    <p class="text-stone-600 leading-relaxed">
+                        Computers only understand numbers. To represent text from every language, the <span class="font-semibold text-teal-600">Unicode</span> standard assigns a unique number, called a <span class="font-semibold text-teal-600">code point</span>, to every character. For example, 'A' is U+0041, '€' is U+20AC, and '👍' is U+1F44D. However, Unicode is just the map; a <span class="font-semibold text-teal-600">character encoding</span> is the set of rules for how to translate those code points into the actual bytes (sequences of 1s and 0s) that are stored in a file or sent over a network. UTF-8, UTF-16, and UTF-32 are three different sets of rules for doing this translation.
+                    </p>
+                </div>
+                 <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">Unicode Planes: Organizing the World's Characters</h2>
+                    <p class="text-stone-600 leading-relaxed mb-6">
+                       Unicode's over one million code points are organized into conceptual blocks called "planes." Each plane holds 65,536 code points. The most important planes are:
+                    </p>
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <div class="flex-1 p-4 border-2 border-teal-500 rounded-lg bg-teal-50">
+                            <h3 class="font-bold text-lg text-teal-800">Plane 0: Basic Multilingual Plane (BMP)</h3>
+                            <p class="text-teal-700 mt-2">This is the first plane (U+0000 to U+FFFF). It contains characters for almost all modern languages, including Latin, Cyrillic, Greek, Arabic, Hebrew, and most common Chinese, Japanese, and Korean (CJK) characters. The original Unicode standard only included the BMP.</p>
+                        </div>
+                         <div class="flex-1 p-4 border-2 border-dashed border-stone-400 rounded-lg bg-stone-100">
+                            <h3 class="font-bold text-lg text-stone-700">Planes 1-16: Supplementary Planes</h3>
+                            <p class="text-stone-600 mt-2">These planes (U+010000 to U+10FFFF) contain less common characters. This includes historical scripts, additional CJK ideographs, mathematical symbols, and most emoji characters.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="deepdive-content" class="page-section hidden">
+                <div class="text-center mb-6">
+                    <p class="text-lg text-stone-600 max-w-2xl mx-auto">Each encoding has a different strategy for converting Unicode code points into bytes. Click a tab to see how it works and understand its unique advantages and disadvantages.</p>
+                </div>
+                <div class="flex flex-wrap justify-center gap-2 mb-6 border-b border-stone-200 pb-2">
+                    <button class="tab-btn active px-4 py-2 rounded-t-lg font-semibold border-b-2" data-target="utf8">UTF-8</button>
+                    <button class="tab-btn px-4 py-2 rounded-t-lg font-semibold border-b-2 border-transparent" data-target="utf16">UTF-16</button>
+                    <button class="tab-btn px-4 py-2 rounded-t-lg font-semibold border-b-2 border-transparent" data-target="utf32">UTF-32</button>
+                </div>
+                <div id="deepdive-details" class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                </div>
+            </section>
+
+            <section id="comparison-content" class="page-section hidden space-y-8">
+                 <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-2">Visualizing Space Efficiency</h2>
+                    <p class="text-stone-600 leading-relaxed mb-4">
+                        One of the biggest trade-offs is storage space. This chart shows the total bytes required to store different types of text in each encoding. Notice how the "best" encoding changes depending on the content.
+                    </p>
+                    <div class="flex justify-center gap-2 mb-4">
+                        <button class="comparison-btn bg-teal-500 text-white px-3 py-1 rounded-md text-sm" data-text-type="ascii">ASCII Text</button>
+                        <button class="comparison-btn bg-stone-200 text-stone-700 px-3 py-1 rounded-md text-sm" data-text-type="cjk">CJK Text</button>
+                        <button class="comparison-btn bg-stone-200 text-stone-700 px-3 py-1 rounded-md text-sm" data-text-type="emoji">Emoji Text</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="comparisonChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">Feature-by-Feature Breakdown</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-stone-100">
+                                <tr>
+                                    <th class="p-3 font-semibold">Feature</th>
+                                    <th class="p-3 font-semibold">UTF-8</th>
+                                    <th class="p-3 font-semibold">UTF-16</th>
+                                    <th class="p-3 font-semibold">UTF-32</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comparison-table-body" class="divide-y divide-stone-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="explorer-content" class="page-section hidden">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-2">Encoding Explorer</h2>
+                     <p class="text-stone-600 leading-relaxed mb-4">
+                        Type any text below to see how it's converted into a sequence of bytes by each encoding in real-time. This provides a hands-on way to understand how the encoding rules are applied to different characters.
+                    </p>
+                    <textarea id="explorer-input" class="w-full p-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition" rows="3" placeholder="Type text here... e.g., Hello, 你好, 👍"></textarea>
+                    
+                    <div id="explorer-output" class="mt-6 space-y-6"></div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+        const pages = {
+            overview: document.getElementById('overview-content'),
+            deepdive: document.getElementById('deepdive-content'),
+            comparison: document.getElementById('comparison-content'),
+            explorer: document.getElementById('explorer-content')
+        };
+
+        const navButtons = {
+            overview: document.getElementById('nav-overview'),
+            deepdive: document.getElementById('nav-deepdive'),
+            comparison: document.getElementById('nav-comparison'),
+            explorer: document.getElementById('nav-explorer')
+        };
+
+        const deepDiveTabs = document.querySelectorAll('#deepdive-content .tab-btn');
+        const deepDiveDetailsContainer = document.getElementById('deepdive-details');
+
+        let comparisonChart;
+
+        const deepDiveData = {
+            utf8: {
+                title: 'UTF-8: The Web Standard',
+                description: 'UTF-8 is a variable-width encoding that is backward compatible with ASCII. Its design prioritizes space efficiency for common Western characters.',
+                howItWorksTitle: 'How It Works: Smart Byte Prefixes',
+                howItWorks: 'UTF-8 uses 1 to 4 bytes per character. The first byte of a sequence tells you how many bytes are in the character. This self-synchronizing nature is very robust.',
+                howItWorksList: [
+                    '<strong>1 Byte:</strong> For all ASCII characters (U+0000 - U+007F). Byte starts with <code>0</code>.',
+                    '<strong>2 Bytes:</strong> For Latin extensions, Greek, Cyrillic, etc. (U+0080 - U+07FF). Bytes start with <code>110</code>, <code>10</code>.',
+                    '<strong>3 Bytes:</strong> For most of the BMP, including CJK characters (U+0800 - U+FFFF). Bytes start with <code>1110</code>, <code>10</code>, <code>10</code>.',
+                    '<strong>4 Bytes:</strong> For supplementary characters like emoji (U+10000 - U+10FFFF). Bytes start with <code>11110</code>, <code>10</code>, <code>10</code>, <code>10</code>.'
+                ],
+                pros: ['Dominant on the web (~99%)', 'Fully backward compatible with ASCII', 'Space-efficient for ASCII-heavy text', 'No byte order (endianness) issues'],
+                cons: ['Variable character width complicates indexing', 'Can be less space-efficient for CJK text than UTF-16']
+            },
+            utf16: {
+                title: 'UTF-16: The Windows Native',
+                description: 'UTF-16 is a variable-width encoding primarily used by Windows APIs and in environments like Java and JavaScript.',
+                howItWorksTitle: 'How It Works: BMP & Surrogate Pairs',
+                howItWorks: 'UTF-16 uses 2 bytes for common characters and a special 4-byte mechanism for less common ones.',
+                howItWorksList: [
+                    '<strong>2 Bytes:</strong> For any character in the Basic Multilingual Plane (BMP). The 16-bit value is the code point itself.',
+                    '<strong>4 Bytes (Surrogate Pair):</strong> For supplementary characters. A character is encoded as a pair of special 16-bit values called a "high surrogate" and a "low surrogate".'
+                ],
+                pros: ['Space-efficient for BMP-heavy text (e.g., CJK)', 'Fixed-width for BMP characters can simplify some processing'],
+                cons: ['Not backward compatible with ASCII', 'Variable-width overall due to surrogates', 'Requires handling byte order (endianness) with a BOM']
+            },
+            utf32: {
+                title: 'UTF-32: Fixed-Width Simplicity',
+                description: 'UTF-32 is a fixed-width encoding where every character is represented by 4 bytes. It prioritizes processing simplicity over space.',
+                howItWorksTitle: 'How It Works: Always 4 Bytes',
+                howItWorks: 'UTF-32 is the simplest encoding conceptually. The 32-bit (4-byte) value is simply the numerical value of the Unicode code point.',
+                howItWorksList: [
+                    '<strong>4 Bytes:</strong> Always used for every single character, from simple ASCII to complex emoji. Much of the 4-byte space is often unused (filled with zeros).'
+                ],
+                pros: ['Simple to find the Nth character in a string (fixed-width)', 'No complex logic for variable lengths'],
+                cons: ['Extremely space-inefficient (2-4x larger than other UTFs)', 'Poor adoption in files and network protocols', 'Requires handling byte order (endianness)']
+            }
+        };
+
+        const comparisonTableData = [
+            { feature: 'Code Unit Size', utf8: '8 bits', utf16: '16 bits', utf32: '32 bits' },
+            { feature: 'Bytes per Character', utf8: '1-4', utf16: '2 or 4', utf32: '4' },
+            { feature: 'ASCII Compatibility', utf8: 'Yes', utf16: 'No', utf32: 'No' },
+            { feature: 'Endianness Issues', utf8: 'No', utf16: 'Yes', utf32: 'Yes' },
+            { feature: 'Storage Efficiency (ASCII)', utf8: 'Excellent', utf16: 'Poor', utf32: 'Very Poor' },
+            { feature: 'Storage Efficiency (CJK)', utf8: 'Good', utf16: 'Excellent', utf32: 'Poor' },
+            { feature: 'Character Indexing', utf8: 'Complex (O(n))', utf16: 'Mixed', utf32: 'Simple (O(1))' },
+            { feature: 'Web Prevalence', utf8: 'Dominant (~99%)', utf16: 'Very Low', utf32: 'Negligible' }
+        ];
+
+        const comparisonChartData = {
+            ascii: {
+                label: '1KB of English Text ("Hello World...")',
+                utf8: 1024,
+                utf16: 2048,
+                utf32: 4096,
+            },
+            cjk: {
+                label: '1KB of Chinese Text ("你好世界...")',
+                utf8: 1500,
+                utf16: 1024,
+                utf32: 2048
+            },
+            emoji: {
+                label: '1KB of Emoji Text ("👍😂🚀...")',
+                utf8: 1024,
+                utf16: 1024,
+                utf32: 1024
+            }
+        };
+
+
+        function switchPage(pageName) {
+            Object.values(pages).forEach(p => p.classList.add('hidden'));
+            pages[pageName].classList.remove('hidden');
+
+            Object.values(navButtons).forEach(b => b.classList.remove('active'));
+            navButtons[pageName].classList.add('active');
+            
+            if (pageName === 'comparison') {
+                renderComparisonChart('ascii');
+                renderComparisonTable();
+            }
+            if (pageName === 'deepdive') {
+                renderDeepDive('utf8');
+            }
+            if(pageName === 'explorer') {
+                renderExplorer();
+            }
+        }
+        
+        function renderDeepDive(encoding) {
+            const data = deepDiveData[encoding];
+            let prosList = data.pros.map(p => `<li class="flex items-start"><span class="text-green-500 mr-2 mt-1">✓</span>${p}</li>`).join('');
+            let consList = data.cons.map(c => `<li class="flex items-start"><span class="text-red-500 mr-2 mt-1">✗</span>${c}</li>`).join('');
+            let howToList = data.howItWorksList.map(h => `<li class="text-stone-600">${h}</li>`).join('');
+
+            deepDiveDetailsContainer.innerHTML = `
+                <h3 class="text-3xl font-bold text-teal-700 mb-2">${data.title}</h3>
+                <p class="text-stone-600 mb-6">${data.description}</p>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-stone-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-lg text-stone-800 mb-2">${data.howItWorksTitle}</h4>
+                        <p class="text-stone-600 mb-3">${data.howItWorks}</p>
+                        <ul class="space-y-2">${howToList}</ul>
+                    </div>
+                    <div class="grid grid-rows-2 gap-4">
+                       <div class="bg-green-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-lg text-green-800 mb-2">Advantages</h4>
+                            <ul class="space-y-1 text-green-700">${prosList}</ul>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-lg text-red-800 mb-2">Disadvantages</h4>
+                            <ul class="space-y-1 text-red-700">${consList}</ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderComparisonTable() {
+            const tableBody = document.getElementById('comparison-table-body');
+            tableBody.innerHTML = comparisonTableData.map(row => `
+                <tr class="hover:bg-stone-50">
+                    <td class="p-3 font-medium">${row.feature}</td>
+                    <td class="p-3">${row.utf8}</td>
+                    <td class="p-3">${row.utf16}</td>
+                    <td class="p-3">${row.utf32}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderComparisonChart(textType) {
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+            const data = comparisonChartData[textType];
+            
+            const chartConfig = {
+                type: 'bar',
+                data: {
+                    labels: ['UTF-8', 'UTF-16', 'UTF-32'],
+                    datasets: [{
+                        label: 'Bytes Used',
+                        data: [data.utf8, data.utf16, data.utf32],
+                        backgroundColor: [
+                            'rgba(13, 148, 136, 0.7)',
+                            'rgba(59, 130, 246, 0.7)',
+                            'rgba(239, 68, 68, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(13, 148, 136, 1)',
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(239, 68, 68, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: data.label, font: { size: 16 } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.raw.toLocaleString()} bytes`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return `${value / 1024} KB`;
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            
+            if (comparisonChart) {
+                comparisonChart.data.datasets[0].data = [data.utf8, data.utf16, data.utf32];
+                comparisonChart.options.plugins.title.text = data.label;
+                comparisonChart.update();
+            } else {
+                comparisonChart = new Chart(ctx, chartConfig);
+            }
+        }
+        
+        function stringToHexBytes(str, encoding) {
+            let bytes = [];
+            for (let i = 0; i < str.length; i++) {
+                let codePoint = str.codePointAt(i);
+                if (codePoint > 0xFFFF) i++;
+                
+                if (encoding === 'utf8') {
+                    if (codePoint < 0x80) {
+                        bytes.push(codePoint);
+                    } else if (codePoint < 0x800) {
+                        bytes.push(0xC0 | (codePoint >> 6), 0x80 | (codePoint & 0x3F));
+                    } else if (codePoint < 0x10000) {
+                        bytes.push(0xE0 | (codePoint >> 12), 0x80 | ((codePoint >> 6) & 0x3F), 0x80 | (codePoint & 0x3F));
+                    } else {
+                        bytes.push(0xF0 | (codePoint >> 18), 0x80 | ((codePoint >> 12) & 0x3F), 0x80 | ((codePoint >> 6) & 0x3F), 0x80 | (codePoint & 0x3F));
+                    }
+                } else if (encoding.startsWith('utf16')) {
+                    if (codePoint < 0x10000) {
+                        bytes.push(codePoint & 0xFF, codePoint >> 8);
+                    } else {
+                        let U = codePoint - 0x10000;
+                        let W1 = 0xD800 | (U >> 10);
+                        let W2 = 0xDC00 | (U & 0x3FF);
+                        bytes.push(W1 & 0xFF, W1 >> 8, W2 & 0xFF, W2 >> 8);
+                    }
+                } else if (encoding.startsWith('utf32')) {
+                    bytes.push(codePoint & 0xFF, (codePoint >> 8) & 0xFF, (codePoint >> 16) & 0xFF, (codePoint >> 24) & 0xFF);
+                }
+            }
+            
+            if (encoding === 'utf16be' || encoding === 'utf32be') {
+                for (let i = 0; i < bytes.length; i += (encoding === 'utf16be' ? 2 : 4)) {
+                   let chunk = bytes.slice(i, i + (encoding === 'utf16be' ? 2 : 4));
+                   chunk.reverse();
+                   for(let j=0; j<chunk.length; j++) bytes[i+j] = chunk[j];
+                }
+            }
+            return bytes.map(b => b.toString(16).toUpperCase().padStart(2, '0'));
+        }
+
+        function renderExplorer() {
+            const input = document.getElementById('explorer-input');
+            const outputContainer = document.getElementById('explorer-output');
+            
+            const updateExplorer = () => {
+                const text = input.value;
+                if (!text) {
+                    outputContainer.innerHTML = '<p class="text-center text-stone-500">Start typing to see the magic!</p>';
+                    return;
+                }
+                
+                const encodings = [
+                    { name: 'UTF-8', func: () => stringToHexBytes(text, 'utf8'), groupSize: 0 },
+                    { name: 'UTF-16 (Little Endian)', func: () => stringToHexBytes(text, 'utf16le'), groupSize: 2 },
+                    { name: 'UTF-16 (Big Endian)', func: () => stringToHexBytes(text, 'utf16be'), groupSize: 2 },
+                    { name: 'UTF-32 (Little Endian)', func: () => stringToHexBytes(text, 'utf32le'), groupSize: 4 },
+                    { name: 'UTF-32 (Big Endian)', func: () => stringToHexBytes(text, 'utf32be'), groupSize: 4 }
+                ];
+
+                outputContainer.innerHTML = encodings.map(enc => {
+                    const bytes = enc.func();
+                    let byteHtml = '';
+                    if (enc.groupSize > 0) {
+                        for (let i = 0; i < bytes.length; i += enc.groupSize) {
+                             byteHtml += '<span class="byte-group">';
+                             for(let j=0; j<enc.groupSize && (i+j) < bytes.length; j++){
+                                 byteHtml += `<span class="byte">${bytes[i+j]}</span>`;
+                             }
+                             byteHtml += '</span>';
+                        }
+                    } else {
+                         byteHtml = bytes.map(b => `<span class="byte">${b}</span>`).join('');
+                    }
+
+                    return `
+                        <div>
+                            <h4 class="font-semibold text-stone-700">${enc.name} <span class="text-sm font-normal text-stone-500">(${bytes.length} bytes)</span></h4>
+                            <div class="mt-2 p-3 bg-stone-50 rounded-lg flex flex-wrap items-center">${byteHtml || '<span class="text-stone-400">Empty</span>'}</div>
+                        </div>
+                    `;
+                }).join('');
+            };
+
+            input.addEventListener('input', updateExplorer);
+            updateExplorer(); // Initial render
+        }
+
+        Object.keys(navButtons).forEach(key => {
+            navButtons[key].addEventListener('click', () => switchPage(key));
+        });
+
+        deepDiveTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                deepDiveTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                renderDeepDive(tab.dataset.target);
+            });
+        });
+        
+        document.querySelector('#comparison-content').addEventListener('click', (e) => {
+            if (e.target.classList.contains('comparison-btn')) {
+                document.querySelectorAll('.comparison-btn').forEach(btn => {
+                    btn.classList.remove('bg-teal-500', 'text-white');
+                    btn.classList.add('bg-stone-200', 'text-stone-700');
+                });
+                e.target.classList.add('bg-teal-500', 'text-white');
+                e.target.classList.remove('bg-stone-200', 'text-stone-700');
+                renderComparisonChart(e.target.dataset.textType);
+            }
+        });
+        
+        switchPage('overview');
+    });
+    </script>
+
+</body>
+</html>

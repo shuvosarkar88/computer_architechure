@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive UTF-8 Memory Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Warm Neutrals (Stone, Amber, Teal) -->
+    <!-- Application Structure Plan: The SPA is structured around an interactive 'UTF-8 Explorer' tool as the primary component, allowing users to learn by doing. This is supported by collapsible accordion sections for 'Deep Dive' conceptual explanations from the report. This design prioritizes engagement and non-linear exploration over the original report's linear format, making complex information more digestible for a technical audience by immediately connecting theory (in accordions) to practice (in the explorer tool). -->
+    <!-- Visualization & Content Choices:
+        - Input String Analysis: Report Info (UTF-8 encoding process) -> Goal (Demonstrate) -> Viz (HTML Table) -> Interaction (Live text input updates table) -> Justification (Clearly maps each logical character to its code point and physical byte representation in real-time). Library: Vanilla JS.
+        - Byte Usage Comparison: Report Info (Variable-length nature of UTF-8) -> Goal (Compare) -> Viz (Bar Chart) -> Interaction (Updates with text input) -> Justification (Provides an immediate, easy-to-digest visual comparison of character byte lengths). Library: Chart.js.
+        - Core Concepts: Report Info (RAM, Unicode, UTF-8 Rules) -> Goal (Inform) -> Presentation (Collapsible text/table sections) -> Interaction (Click to expand/collapse) -> Justification (Keeps the main UI clean and focused, providing deep-dive information on demand without overwhelming the user). Library: Vanilla JS.
+        -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .font-code {
+            font-family: 'Source Code Pro', monospace;
+        }
+        .accordion-content {
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            max-height: 0;
+            overflow: hidden;
+        }
+        .accordion-open .accordion-content {
+            max-height: 2000px;
+        }
+        .accordion-open .accordion-arrow {
+            transform: rotate(90deg);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 40vh;
+        }
+         @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-5xl font-bold text-teal-800">UTF-8 Memory Explorer</h1>
+            <p class="mt-2 text-lg text-stone-600">An interactive guide to how text is stored in memory.</p>
+        </header>
+
+        <main>
+            <section id="explorer" class="bg-white p-6 rounded-xl shadow-lg border border-stone-200">
+                <h2 class="text-2xl font-bold mb-4">Live UTF-8 Encoder</h2>
+                <p class="mb-6 text-stone-600">Type or paste text into the box below to see a real-time breakdown of its memory representation. This tool reveals the connection between a "logical character" (what you see) and the "physical bytes" it occupies in RAM according to the UTF-8 encoding standard.</p>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="text-input" class="block text-sm font-medium text-stone-700 mb-1">Your Text:</label>
+                        <textarea id="text-input" rows="4" class="w-full p-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 font-code" placeholder="Type here... try 'Test€🎉'">Test€🎉</textarea>
+                    </div>
+                    <div class="flex flex-col sm:flex-row justify-around items-center bg-stone-100 p-4 rounded-lg">
+                        <div class="text-center">
+                            <p class="text-sm text-stone-500">Logical Characters</p>
+                            <p id="char-count" class="text-4xl font-bold text-teal-600">0</p>
+                        </div>
+                         <div class="text-center my-4 sm:my-0">
+                            <p class="text-3xl text-stone-300 font-light">&harr;</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-sm text-stone-500">Physical Bytes in Memory</p>
+                            <p id="byte-count" class="text-4xl font-bold text-orange-600">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 overflow-x-auto">
+                    <table class="min-w-full divide-y divide-stone-200">
+                        <thead class="bg-stone-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Character</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Unicode Code Point</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">UTF-8 Bytes (Hex)</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Byte Count</th>
+                            </tr>
+                        </thead>
+                        <tbody id="output-table" class="bg-white divide-y divide-stone-200 font-code">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <section id="visualizer" class="bg-white p-6 rounded-xl shadow-lg border border-stone-200 mt-8">
+                 <h2 class="text-2xl font-bold mb-4">Byte Usage Visualization</h2>
+                 <p class="mb-6 text-stone-600">This chart provides a quick visual comparison of the number of bytes each character in your string requires. It highlights the variable-length nature of UTF-8, where simple ASCII characters take 1 byte and more complex characters or emoji can take up to 4 bytes.</p>
+                 <div class="chart-container">
+                    <canvas id="byteChart"></canvas>
+                 </div>
+            </section>
+
+            <section id="deep-dive" class="mt-12">
+                <h2 class="text-3xl font-bold text-center mb-8">Conceptual Deep Dive</h2>
+                <div class="space-y-4">
+                    <div class="accordion-item bg-white rounded-lg shadow-md border border-stone-200">
+                        <button class="accordion-header w-full flex justify-between items-center p-5 text-left text-xl font-semibold">
+                            <span>From Physical Bits to Logical Bytes</span>
+                            <span class="accordion-arrow text-teal-500 transition-transform duration-300 transform">&#x276F;</span>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="p-5 pt-0 text-stone-700 space-y-4">
+                                <p>At its most elemental level, Random Access Memory (RAM) stores data as bits (binary digits), where each bit is a 0 or a 1. These are physically realized as electrical charges in tiny components called capacitors. For practical use, these bits are grouped into bytes, with one byte being a sequence of 8 bits. In virtually all modern computers, the byte is the smallest unit of memory that can be individually located or "addressed" by the processor. This means that RAM is essentially a vast, linear array of numbered bytes, and all data, including text, must ultimately be represented as a sequence of these bytes.</p>
+                                <p>Crucially, RAM is agnostic; it only holds the binary patterns. The meaning of a byte sequence—whether it's an integer, a pixel color, or a character of text—is determined by software conventions and standards. When we talk about storing text, we are talking about a specific convention: a character encoding.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item bg-white rounded-lg shadow-md border border-stone-200">
+                        <button class="accordion-header w-full flex justify-between items-center p-5 text-left text-xl font-semibold">
+                            <span>The Unicode Standard: A Universal Dictionary</span>
+                            <span class="accordion-arrow text-teal-500 transition-transform duration-300 transform">&#x276F;</span>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="p-5 pt-0 text-stone-700 space-y-4">
+                                <p>To solve the problem of countless conflicting character sets, the Unicode Standard was created. It acts like a universal dictionary, assigning a unique number, called a **code point**, to every character, symbol, and emoji from all known writing systems. For example, the code point for the capital letter 'A' is U+0041, and for the Euro sign '€' is U+20AC.</p>
+                                <p>A code point is an abstract identifier. It is not the visual shape of the character (the glyph) nor is it the final byte sequence in memory. This separation is key, as it allows a single universal character set to be represented using different byte-level encoding schemes, each with different strengths.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item bg-white rounded-lg shadow-md border border-stone-200">
+                        <button class="accordion-header w-full flex justify-between items-center p-5 text-left text-xl font-semibold">
+                            <span>The UTF-8 Algorithm: From Code Points to Bytes</span>
+                            <span class="accordion-arrow text-teal-500 transition-transform duration-300 transform">&#x276F;</span>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="p-5 pt-0 text-stone-700 space-y-4">
+                                <p>UTF-8 is the algorithm that translates abstract Unicode code points into the physical bytes that are actually stored in memory. Its genius lies in its variable-width design, which makes it both space-efficient and universally capable.</p>
+                                <p>The rules are based on the code point's value:</p>
+                                <div class="overflow-x-auto mt-4">
+                                    <table class="min-w-full text-sm">
+                                        <thead class="bg-stone-100">
+                                            <tr>
+                                                <th class="p-2 text-left font-semibold">Code Point Range</th>
+                                                <th class="p-2 text-left font-semibold">UTF-8 Byte Pattern (Binary)</th>
+                                                <th class="p-2 text-left font-semibold"># of Bytes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="font-code">
+                                            <tr class="border-t">
+                                                <td class="p-2">U+0000 - U+007F</td>
+                                                <td class="p-2">0xxxxxxx</td>
+                                                <td class="p-2">1</td>
+                                            </tr>
+                                            <tr class="border-t bg-stone-50">
+                                                <td class="p-2">U+0080 - U+07FF</td>
+                                                <td class="p-2">110yyyyy 10xxxxxx</td>
+                                                <td class="p-2">2</td>
+                                            </tr>
+                                            <tr class="border-t">
+                                                <td class="p-2">U+0800 - U+FFFF</td>
+                                                <td class="p-2">1110zzzz 10yyyyyy 10xxxxxx</td>
+                                                <td class="p-2">3</td>
+                                            </tr>
+                                            <tr class="border-t bg-stone-50">
+                                                <td class="p-2">U+010000 - U+10FFFF</td>
+                                                <td class="p-2">11110www 10zzzzzz 10yyyyyy 10xxxxxx</td>
+                                                <td class="p-2">4</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p class="mt-4">The 'x', 'y', 'z', and 'w' bits are filled with the binary representation of the code point. This design makes UTF-8 backward-compatible with ASCII (the first 128 characters), as they are encoded identically with a single byte.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer class="text-center mt-12 py-6 border-t border-stone-200">
+            <p class="text-stone-500">Built to demystify character encoding in modern computing.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const textInput = document.getElementById('text-input');
+            const outputTable = document.getElementById('output-table');
+            const charCountEl = document.getElementById('char-count');
+            const byteCountEl = document.getElementById('byte-count');
+            
+            let byteChart;
+
+            function toHex(n) {
+                return n.toString(16).toUpperCase().padStart(2, '0');
+            }
+
+            function updateExplorer() {
+                const text = textInput.value;
+                let charCount = 0;
+                let totalByteCount = 0;
+                let tableHtml = '';
+                const chartLabels = [];
+                const chartData = [];
+
+                for (const char of text) {
+                    charCount++;
+                    const codePoint = char.codePointAt(0);
+                    let bytes = [];
+                    let hexBytes = '';
+
+                    if (codePoint < 0x80) { // 1-byte
+                        bytes.push(codePoint);
+                    } else if (codePoint < 0x800) { // 2-byte
+                        bytes.push(0xC0 | (codePoint >> 6));
+                        bytes.push(0x80 | (codePoint & 0x3F));
+                    } else if (codePoint < 0x10000) { // 3-byte
+                        bytes.push(0xE0 | (codePoint >> 12));
+                        bytes.push(0x80 | ((codePoint >> 6) & 0x3F));
+                        bytes.push(0x80 | (codePoint & 0x3F));
+                    } else { // 4-byte
+                        bytes.push(0xF0 | (codePoint >> 18));
+                        bytes.push(0x80 | ((codePoint >> 12) & 0x3F));
+                        bytes.push(0x80 | ((codePoint >> 6) & 0x3F));
+                        bytes.push(0x80 | (codePoint & 0x3F));
+                    }
+
+                    hexBytes = bytes.map(toHex).join(' ');
+                    const byteCount = bytes.length;
+                    totalByteCount += byteCount;
+                    
+                    chartLabels.push(char);
+                    chartData.push(byteCount);
+
+                    tableHtml += `
+                        <tr class="hover:bg-amber-50">
+                            <td class="px-4 py-3 text-2xl">${char}</td>
+                            <td class="px-4 py-3">U+${codePoint.toString(16).toUpperCase().padStart(4, '0')}</td>
+                            <td class="px-4 py-3 text-orange-600 font-semibold">${hexBytes}</td>
+                            <td class="px-4 py-3">${byteCount}</td>
+                        </tr>
+                    `;
+                }
+
+                if(text.length === 0){
+                    tableHtml = `<tr><td colspan="4" class="text-center p-8 text-stone-500">The table will populate as you type.</td></tr>`;
+                }
+
+                outputTable.innerHTML = tableHtml;
+                charCountEl.textContent = charCount;
+                byteCountEl.textContent = totalByteCount;
+                
+                updateChart(chartLabels, chartData);
+            }
+
+            function initChart() {
+                const ctx = document.getElementById('byteChart').getContext('2d');
+                byteChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Bytes per Character',
+                            data: [],
+                            backgroundColor: 'rgba(234, 88, 12, 0.6)',
+                            borderColor: 'rgba(234, 88, 12, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 4,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    font: {
+                                        family: "'Source Code Pro', monospace",
+                                        size: 14
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(context) {
+                                        return `Character: "${context[0].label}"`;
+                                    },
+                                    label: function(context) {
+                                        return `Bytes: ${context.raw}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function updateChart(labels, data) {
+                byteChart.data.labels = labels;
+                byteChart.data.datasets[0].data = data;
+                byteChart.update();
+            }
+
+            textInput.addEventListener('input', updateExplorer);
+
+            document.querySelectorAll('.accordion-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const accordionItem = header.parentElement;
+                    accordionItem.classList.toggle('accordion-open');
+                });
+            });
+
+            initChart();
+            updateExplorer();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>An Interactive Guide to Text Encoding</title>
+    <!-- Chosen Palette: Serene Slate -->
+    <!-- Application Structure Plan: The application uses a two-column layout with a sticky sidebar navigation for non-linear exploration of the report's content. This structure was chosen over the report's linear format to allow users to immediately access topics of interest, such as comparing programming languages or understanding a specific issue like 'mojibake'. The content is reorganized into four thematic sections: 'The Essentials' for foundational concepts, an 'Interactive Explorer' for deep dives into languages and systems, 'Real-World Scenarios' for practical application and problem-solving, and 'Best Practices' for key takeaways. This task-oriented design enhances usability by prioritizing user goals and interactive learning over passive reading. -->
+    <!-- Visualization & Content Choices: The application translates the report's text and tables into interactive components to improve comprehension and engagement. Report Info: Encoding scheme comparison table -> Goal: Compare properties -> Viz/Method: Chart.js Bar Chart ('Bytes per Char') & interactive HTML table -> Interaction: Hover to highlight table rows -> Justification: The chart provides a quick visual comparison of encoding efficiency, while the interactive table allows focused examination of details. Report Info: Browser encoding detection algorithm -> Goal: Explain a process -> Viz/Method: HTML/CSS flowchart -> Interaction: None (visual structure is the key) -> Justification: A flowchart is more intuitive for understanding a prioritized process than a text list. Report Info: Mojibake explanation -> Goal: Demonstrate the problem -> Viz/Method: Interactive Mojibake Simulator -> Interaction: User types text, selects encodings, and sees the live result -> Justification: Active, hands-on learning makes the abstract concept of encoding mismatch tangible and memorable. All visualizations are built with Chart.js or HTML/CSS/JS, confirming no SVG or Mermaid is used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .nav-link.active {
+            background-color: #eef2ff;
+            color: #4338ca;
+            font-weight: 600;
+        }
+        .tab.active {
+            border-bottom-color: #4f46e5;
+            color: #4f46e5;
+            font-weight: 600;
+        }
+        .content-section {
+            padding-top: 4rem;
+            margin-top: -4rem;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-700">
+
+    <div class="container mx-auto px-4">
+        <div class="lg:flex">
+            <!-- Sticky Sidebar Navigation -->
+            <aside class="w-full lg:w-64 lg:sticky lg:top-0 lg:h-screen py-8 lg:pr-8">
+                <h1 class="text-2xl font-bold text-slate-900 mb-2">Text Encoding</h1>
+                <p class="text-sm text-slate-500 mb-8">An Interactive Guide</p>
+                <nav class="flex flex-col space-y-2">
+                    <a href="#fundamentals" class="nav-link px-4 py-2 rounded-md transition-colors duration-200 hover:bg-slate-100">The Essentials</a>
+                    <a href="#explorer" class="nav-link px-4 py-2 rounded-md transition-colors duration-200 hover:bg-slate-100">Interactive Explorer</a>
+                    <a href="#scenarios" class="nav-link px-4 py-2 rounded-md transition-colors duration-200 hover:bg-slate-100">Real-World Scenarios</a>
+                    <a href="#best-practices" class="nav-link px-4 py-2 rounded-md transition-colors duration-200 hover:bg-slate-100">Best Practices</a>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 py-8">
+                
+                <!-- Section 1: The Essentials -->
+                <section id="fundamentals" class="content-section space-y-8">
+                    <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">The Essentials</h2>
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-semibold text-slate-800 mb-4">What is Text Encoding?</h3>
+                        <p class="mb-4">Computers only understand numbers. Character encoding is the bridge between human language and machine-readable bytes. It's a two-step process:</p>
+                        <div class="grid md:grid-cols-3 gap-4 text-center">
+                            <div class="bg-slate-100 p-4 rounded-md">
+                                <div class="text-4xl mb-2">A</div>
+                                <h4 class="font-semibold text-slate-800">1. Character Set</h4>
+                                <p class="text-sm">A collection of characters (like letters, numbers, symbols).</p>
+                            </div>
+                            <div class="bg-slate-100 p-4 rounded-md">
+                                <div class="text-4xl font-mono mb-2 text-indigo-600">65</div>
+                                <h4 class="font-semibold text-slate-800">2. Code Point</h4>
+                                <p class="text-sm">A unique number assigned to each character. 'A' is 65 in Unicode.</p>
+                            </div>
+                            <div class="bg-slate-100 p-4 rounded-md">
+                                <div class="text-4xl font-mono mb-2 text-indigo-600">01000001</div>
+                                <h4 class="font-semibold text-slate-800">3. Encoding</h4>
+                                <p class="text-sm">A rule for converting code points into bytes for storage.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-semibold text-slate-800 mb-4">Key Encoding Schemes Compared</h3>
+                        <p class="mb-4">Different encodings exist, each with its own rules and use cases. UTF-8 is the modern standard, but understanding others is key to working with legacy systems.</p>
+                        <div class="lg:flex gap-8">
+                            <div class="flex-1 mb-8 lg:mb-0">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left text-sm" id="encoding-table">
+                                        <thead class="bg-slate-100">
+                                            <tr>
+                                                <th class="p-3 font-semibold rounded-tl-md">Feature</th>
+                                                <th class="p-3 font-semibold">ASCII</th>
+                                                <th class="p-3 font-semibold">ISO-8859-1</th>
+                                                <th class="p-3 font-semibold">UTF-8</th>
+                                                <th class="p-3 font-semibold rounded-tr-md">UTF-16</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="border-b hover:bg-slate-50">
+                                                <td class="p-3 font-medium">Bytes per Char.</td>
+                                                <td class="p-3">1</td>
+                                                <td class="p-3">1</td>
+                                                <td class="p-3">1 to 4</td>
+                                                <td class="p-3">2 or 4</td>
+                                            </tr>
+                                            <tr class="border-b hover:bg-slate-50">
+                                                <td class="p-3 font-medium">Unicode Support</td>
+                                                <td class="p-3">Partial (128)</td>
+                                                <td class="p-3">Partial (256)</td>
+                                                <td class="p-3 text-green-600 font-semibold">Full</td>
+                                                <td class="p-3 text-green-600 font-semibold">Full</td>
+                                            </tr>
+                                            <tr class="hover:bg-slate-50">
+                                                <td class="p-3 font-medium">Primary Use</td>
+                                                <td class="p-3">Legacy</td>
+                                                <td class="p-3">Legacy Western EU</td>
+                                                <td class="p-3">Web, Modern Systems</td>
+                                                <td class="p-3">Java, Windows API</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="flex-1 lg:max-w-sm">
+                                <div class="chart-container h-64 max-h-64 w-full max-w-sm mx-auto">
+                                    <canvas id="bytesPerCharChart"></canvas>
+                                </div>
+                                <p class="text-center text-sm mt-2 text-slate-500">Maximum bytes per character.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 2: Interactive Explorer -->
+                <section id="explorer" class="content-section space-y-8">
+                    <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Interactive Explorer</h2>
+                    
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-semibold text-slate-800 mb-4">How Systems Interpret Text</h3>
+                        <p class="mb-6">The same text data is handled differently by various parts of a computer system. This explorer shows how programming languages, terminals, and browsers determine which encoding to use.</p>
+                        <div id="explorer-tabs">
+                            <div class="border-b border-slate-200 mb-6">
+                                <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                                    <button class="tab active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm" data-tab="languages">Programming Languages</button>
+                                    <button class="tab whitespace-nowrap py-3 px-1 border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 font-medium text-sm" data-tab="systems">Terminals, Editors & Browsers</button>
+                                </nav>
+                            </div>
+                            
+                            <!-- Languages Tab Content -->
+                            <div id="tab-content-languages" class="tab-content">
+                                <!-- Language-specific sub-tabs -->
+                                <div id="language-sub-tabs" class="mb-4 flex space-x-4 border-b border-slate-200">
+                                    <button class="lang-tab tab active" data-lang="python">Python</button>
+                                    <button class="lang-tab tab" data-lang="java">Java</button>
+                                    <button class="lang-tab tab" data-lang="cpp">C/C++</button>
+                                </div>
+                                
+                                <div id="lang-content-python" class="lang-content space-y-4">
+                                    <p>Python 3 makes a strong distinction between abstract text (Unicode `str`) and raw data (sequences of `bytes`). This "Unicode Sandwich" model forces developers to explicitly encode and decode at the boundaries of their application.</p>
+                                    <div class="grid md:grid-cols-2 gap-4">
+                                        <div class="bg-slate-50 p-4 rounded-md">
+                                            <h4 class="font-semibold text-slate-800">Internal Representation</h4>
+                                            <p class="text-sm">Unicode `str`. A sequence of abstract code points, not bytes.</p>
+                                        </div>
+                                        <div class="bg-slate-50 p-4 rounded-md">
+                                            <h4 class="font-semibold text-slate-800">Key Operations</h4>
+                                            <p class="text-sm font-mono">`'text'.encode('utf-8')` <span class="text-slate-400"># str -> bytes</span></p>
+                                            <p class="text-sm font-mono">`b'data'.decode('utf-8')` <span class="text-slate-400"># bytes -> str</span></p>
+                                            <p class="text-sm font-mono">`open('file.txt', encoding='utf-8')`</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="lang-content-java" class="lang-content hidden space-y-4">
+                                    <p>Java was designed with internationalization in mind, using UTF-16 internally for its `String` objects. Encoding and decoding happen at I/O boundaries using bridge classes.</p>
+                                     <div class="grid md:grid-cols-2 gap-4">
+                                        <div class="bg-slate-50 p-4 rounded-md">
+                                            <h4 class="font-semibold text-slate-800">Internal Representation</h4>
+                                            <p class="text-sm">UTF-16. `String` is a sequence of 16-bit `char`s.</p>
+                                        </div>
+                                        <div class="bg-slate-50 p-4 rounded-md">
+                                            <h4 class="font-semibold text-slate-800">Key I/O Classes</h4>
+                                            <p class="text-sm">`InputStreamReader`: Decodes byte streams into character streams.</p>
+                                            <p class="text-sm">`OutputStreamWriter`: Encodes character streams into byte streams.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="lang-content-cpp" class="lang-content hidden space-y-4">
+                                    <p>C++ has evolved from ambiguous `char` types to specific, type-safe Unicode characters in modern standards. However, developers often still rely on libraries like ICU for complex text manipulation.</p>
+                                    <table class="w-full text-left text-sm">
+                                        <thead class="bg-slate-100">
+                                            <tr>
+                                                <th class="p-3 font-semibold rounded-tl-md">Type</th>
+                                                <th class="p-3 font-semibold">Standard</th>
+                                                <th class="p-3 font-semibold">Typical Encoding</th>
+                                                <th class="p-3 font-semibold rounded-tr-md">Note</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="border-b hover:bg-slate-50"><td class="p-3 font-mono">char</td><td class="p-3">Legacy</td><td class="p-3">System-dependent (often UTF-8)</td><td class="p-3">Ambiguous</td></tr>
+                                            <tr class="border-b hover:bg-slate-50"><td class="p-3 font-mono">wchar_t</td><td class="p-3">Legacy</td><td class="p-3">UTF-16 (Win), UTF-32 (Linux)</td><td class="p-3">Not portable</td></tr>
+                                            <tr class="border-b hover:bg-slate-50"><td class="p-3 font-mono">char8_t</td><td class="p-3">C++20</td><td class="p-3">UTF-8</td><td class="p-3 text-green-600 font-semibold">Modern, Safe</td></tr>
+                                            <tr class="hover:bg-slate-50"><td class="p-3 font-mono">char16_t</td><td class="p-3">C++11</td><td class="p-3">UTF-16</td><td class="p-3 text-green-600 font-semibold">Modern, Safe</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <!-- Systems Tab Content -->
+                            <div id="tab-content-systems" class="tab-content hidden">
+                                <h4 class="text-lg font-semibold text-slate-800 mb-4">Web Browser Encoding Detection</h4>
+                                <p class="mb-6">Web browsers follow a strict order of precedence to determine a page's encoding. Providing an explicit declaration via HTTP headers and a `<meta>` tag is the most robust method.</p>
+                                
+                                <div class="space-y-2">
+                                    <div class="flex items-center">
+                                        <div class="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm z-10">1</div>
+                                        <div class="bg-indigo-100 text-indigo-800 font-semibold p-3 rounded-md w-full ml-[-0.5rem] pl-6">Byte Order Mark (BOM)</div>
+                                    </div>
+                                    <div class="ml-4 border-l-2 border-slate-300 h-6"></div>
+                                    <div class="flex items-center">
+                                        <div class="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm z-10">2</div>
+                                        <div class="bg-indigo-100 text-indigo-800 font-semibold p-3 rounded-md w-full ml-[-0.5rem] pl-6">HTTP `Content-Type` Header (`charset`)</div>
+                                    </div>
+                                    <div class="ml-4 border-l-2 border-slate-300 h-6"></div>
+                                    <div class="flex items-center">
+                                        <div class="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm z-10">3</div>
+                                        <div class="bg-indigo-100 text-indigo-800 font-semibold p-3 rounded-md w-full ml-[-0.5rem] pl-6">HTML `<meta charset="...">` Tag</div>
+                                    </div>
+                                    <div class="ml-4 border-l-2 border-slate-300 h-6"></div>
+                                    <div class="flex items-center">
+                                        <div class="bg-slate-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm z-10">4</div>
+                                        <div class="bg-slate-200 text-slate-800 font-semibold p-3 rounded-md w-full ml-[-0.5rem] pl-6">Fallback (Heuristics, Browser Default)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Section 3: Real-World Scenarios -->
+                <section id="scenarios" class="content-section space-y-8">
+                    <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Real-World Scenarios</h2>
+
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-semibold text-slate-800 mb-4">Mojibake Simulator</h3>
+                        <p class="mb-4">"Mojibake" (garbled text) happens when text encoded one way is decoded another. See it in action below. Type a character with an accent (like `é`, `ü`, or `ñ`) to see how it gets garbled.</p>
+                        
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="originalText" class="block text-sm font-medium text-slate-700">1. Original Text (Encoded as UTF-8)</label>
+                                <textarea id="originalText" rows="3" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 font-mono">café</textarea>
+                            </div>
+                            <div>
+                                <label for="interpretedAs" class="block text-sm font-medium text-slate-700">2. Incorrectly Interpreted As</label>
+                                <select id="interpretedAs" class="mt-1 block w-full rounded-md border-slate-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm">
+                                    <option>windows-1252</option>
+                                    <option>iso-8859-1</option>
+                                    <option>macroman</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-6">
+                             <label class="block text-sm font-medium text-slate-700">3. Resulting Garbled Text (Mojibake)</label>
+                             <div id="mojibakeResult" class="mt-1 w-full rounded-md bg-rose-50 border border-rose-200 p-4 font-mono text-rose-900 min-h-[5rem]"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-semibold text-slate-800 mb-4">How to Declare Encodings</h3>
+                        <p class="mb-4">To prevent Mojibake, you must explicitly declare your encoding. Here are the most common ways for web content.</p>
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-slate-800">HTML5 Meta Tag (Recommended)</h4>
+                                <p class="text-sm mb-1">Place this as the first element inside your `<head>` tag.</p>
+                                <pre class="bg-slate-100 text-slate-800 p-3 rounded-md text-sm font-mono overflow-x-auto"><code>&lt;meta charset="UTF-8"&gt;</code></pre>
+                            </div>
+                             <div>
+                                <h4 class="font-semibold text-slate-800">HTTP Header (Server-side)</h4>
+                                <p class="text-sm mb-1">Configure your web server (e.g., Apache, Nginx) to send this header.</p>
+                                <pre class="bg-slate-100 text-slate-800 p-3 rounded-md text-sm font-mono overflow-x-auto"><code>Content-Type: text/html; charset=utf-8</code></pre>
+                            </div>
+                             <div>
+                                <h4 class="font-semibold text-slate-800">XML Declaration</h4>
+                                <p class="text-sm mb-1">Use this as the very first line in XML files.</p>
+                                <pre class="bg-slate-100 text-slate-800 p-3 rounded-md text-sm font-mono overflow-x-auto"><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Section 4: Best Practices -->
+                <section id="best-practices" class="content-section space-y-8">
+                    <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Best Practices</h2>
+                    <p>Avoiding encoding issues comes down to consistency and being explicit. Follow these guidelines to ensure your applications handle text correctly.</p>
+
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="bg-white p-6 rounded-lg shadow-sm">
+                           <div class="text-2xl mb-2 text-indigo-600">✔️</div>
+                           <h3 class="text-lg font-semibold text-slate-800 mb-2">Use UTF-8 Everywhere</h3>
+                           <p class="text-sm">Make UTF-8 your default for files, databases, APIs, and web pages. It's the universal standard and prevents most common issues.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg shadow-sm">
+                           <div class="text-2xl mb-2 text-indigo-600">✔️</div>
+                           <h3 class="text-lg font-semibold text-slate-800 mb-2">Declare Your Encoding</h3>
+                           <p class="text-sm">Never assume. Explicitly declare your encoding in HTTP headers, HTML meta tags, and when opening files in your code.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg shadow-sm">
+                           <div class="text-2xl mb-2 text-indigo-600">✔️</div>
+                           <h3 class="text-lg font-semibold text-slate-800 mb-2">Validate at Boundaries</h3>
+                           <p class="text-sm">When receiving data from an external source (user input, APIs, files), validate or convert it to your application's internal standard (UTF-8) immediately.</p>
+                        </div>
+                         <div class="bg-white p-6 rounded-lg shadow-sm">
+                           <div class="text-2xl mb-2 text-indigo-600">✔️</div>
+                           <h3 class="text-lg font-semibold text-slate-800 mb-2">Configure Your Tools</h3>
+                           <p class="text-sm">Ensure your text editor, terminal, and database client are all configured to use UTF-8 by default.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg shadow-sm">
+                           <div class="text-2xl mb-2 text-indigo-600">✔️</div>
+                           <h3 class="text-lg font-semibold text-slate-800 mb-2">Be Wary of Defaults</h3>
+                           <p class="text-sm">Many language functions and systems default to platform-specific encodings. This breaks portability. Always specify the encoding explicitly.</p>
+                        </div>
+                         <div class="bg-white p-6 rounded-lg shadow-sm">
+                           <div class="text-2xl mb-2 text-indigo-600">✔️</div>
+                           <h3 class="text-lg font-semibold text-slate-800 mb-2">Use a BOM with Caution</h3>
+                           <p class="text-sm">A Byte Order Mark can help some editors detect UTF-8, but it can break older scripts and tools. For web content, prefer UTF-8 without a BOM.</p>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Bytes per character chart
+    const ctx = document.getElementById('bytesPerCharChart').getContext('2d');
+    const bytesPerCharChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['ASCII', 'ISO-8859-1', 'UTF-8', 'UTF-16'],
+            datasets: [{
+                label: 'Max Bytes per Character',
+                data: [1, 1, 4, 4],
+                backgroundColor: [
+                    'rgba(148, 163, 184, 0.5)',
+                    'rgba(148, 163, 184, 0.5)',
+                    'rgba(79, 70, 229, 0.5)',
+                    'rgba(79, 70, 229, 0.5)'
+                ],
+                borderColor: [
+                    'rgb(148, 163, 184)',
+                    'rgb(148, 163, 184)',
+                    'rgb(79, 70, 229)',
+                    'rgb(79, 70, 229)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                if (context.label === 'UTF-8' || context.label === 'UTF-16'){
+                                    label += '1 to ' + context.parsed.y;
+                                } else {
+                                    label += context.parsed.y;
+                                }
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Explorer Tabs
+    const explorerTabs = document.getElementById('explorer-tabs');
+    const tabs = explorerTabs.querySelectorAll('.tab[data-tab]');
+    const tabContents = explorerTabs.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            const targetContentId = `tab-content-${tab.dataset.tab}`;
+            tabContents.forEach(content => {
+                if (content.id === targetContentId) {
+                    content.classList.remove('hidden');
+                } else {
+                    content.classList.add('hidden');
+                }
+            });
+        });
+    });
+    
+    // Language Sub-tabs
+    const langSubTabs = document.getElementById('language-sub-tabs');
+    const langTabs = langSubTabs.querySelectorAll('.lang-tab');
+    const langContents = document.querySelectorAll('.lang-content');
+
+    langTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            langTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            const targetContentId = `lang-content-${tab.dataset.lang}`;
+            langContents.forEach(content => {
+                if (content.id === targetContentId) {
+                    content.classList.remove('hidden');
+                } else {
+                    content.classList.add('hidden');
+                }
+            });
+        });
+    });
+
+
+    // Mojibake Simulator
+    const originalTextInput = document.getElementById('originalText');
+    const interpretedAsSelect = document.getElementById('interpretedAs');
+    const mojibakeResultDiv = document.getElementById('mojibakeResult');
+
+    function simulateMojibake() {
+        const originalText = originalTextInput.value;
+        const targetEncoding = interpretedAsSelect.value;
+
+        try {
+            const utf8Encoder = new TextEncoder();
+            const originalBytes = utf8Encoder.encode(originalText);
+
+            const wrongDecoder = new TextDecoder(targetEncoding);
+            const mojibakeText = wrongDecoder.decode(originalBytes);
+
+            mojibakeResultDiv.textContent = mojibakeText;
+        } catch (e) {
+            mojibakeResultDiv.textContent = `Error: ${e.message}. This encoding may not be supported by your browser.`;
+        }
+    }
+
+    originalTextInput.addEventListener('input', simulateMojibake);
+    interpretedAsSelect.addEventListener('change', simulateMojibake);
+    simulateMojibake();
+
+
+    // Sticky Nav active state on scroll
+    const sections = document.querySelectorAll('.content-section');
+    const navLinks = document.querySelectorAll('.nav-link');
+
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.3
+    };
+
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const id = entry.target.getAttribute('id');
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${id}`) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+        });
+    }, observerOptions);
+
+    sections.forEach(section => {
+        observer.observe(section);
+    });
+
+});
+</script>
+
+</body>
+</html>
