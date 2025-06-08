@@ -1,463 +1,138 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Interactive Guide to Character Encoding</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Chosen Palette: Slate & Teal -->
-    <!-- Application Structure Plan: The SPA is structured as a narrative journey with four main thematic sections accessible via a sticky top navigation: 'Home' (Introduction), 'ASCII', 'Unicode', and an 'Encoding Explorer'. This non-linear, thematic structure was chosen over the report's linear format to enhance usability and learning. Users can either follow the logical progression from old to new technology or jump directly to a topic of interest. The 'Encoding Explorer' serves as a capstone, allowing users to apply the learned concepts by inputting their own text and seeing a live, visual breakdown of how it's encoded. This hands-on approach makes abstract concepts concrete and memorable, which is a more effective learning experience than passive reading. -->
-    <!-- Visualization & Content Choices: 
-        - Report Info: Core terminology -> Goal: Inform -> Viz: Interactive Cards -> Interaction: Hover/Click to reveal definition -> Justification: Breaks down complex terms into digestible, on-demand pieces.
-        - Report Info: ASCII Table -> Goal: Explore -> Viz: Interactive HTML Table -> Interaction: Hover on row highlights character and shows details -> Justification: Makes a static data table engaging and easier to parse.
-        - Report Info: Unicode Planes -> Goal: Organize/Inform -> Viz: HTML/CSS Grid Diagram -> Interaction: Hover to show plane details -> Justification: Visually represents the vast scale and organization of Unicode's codespace. NO SVG used.
-        - Report Info: UTF-8 byte structure -> Goal: Relate/Explore -> Viz: Dynamic HTML `div` blocks representing bytes -> Interaction: User input dynamically generates colored byte blocks; hover shows details -> Justification: The most crucial visualization. It transforms a complex algorithmic process into an intuitive visual output.
-        - Report Info: Encoding efficiency -> Goal: Compare -> Viz: Chart.js Bar Chart -> Interaction: Dynamically updates with user input -> Justification: Provides immediate, clear visual feedback on the storage trade-offs between different encodings.
-    -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc; /* slate-50 */
-            color: #334155; /* slate-700 */
-        }
-        .section-fade-in {
-            opacity: 0;
-            transform: translateY(20px);
-            animation: fadeIn 0.8s forwards;
-        }
-        @keyframes fadeIn {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .nav-link {
-            transition: color 0.3s, border-color 0.3s;
-        }
-        .chart-container {
-            position: relative;
-            width: 100%;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
-            height: 300px;
-            max-height: 40vh;
-        }
-        @media (min-width: 768px) {
-            .chart-container {
-                height: 350px;
-            }
-        }
-    </style>
-</head>
-<body class="bg-slate-50 text-slate-700">
+    <link rel="stylesheet" href="css/01_style.css"> </head>
+<body>
 
-    <header class="bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-50">
-        <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
-            <a href="#home" class="text-xl font-bold text-teal-600">Encoding Explained</a>
-            <div class="hidden md:flex items-center space-x-8">
-                <a href="#ascii" class="nav-link text-slate-600 hover:text-teal-600 border-b-2 border-transparent hover:border-teal-600 pb-1">ASCII</a>
-                <a href="#unicode" class="nav-link text-slate-600 hover:text-teal-600 border-b-2 border-transparent hover:border-teal-600 pb-1">Unicode</a>
-                <a href="#explorer" class="nav-link text-slate-600 hover:text-teal-600 border-b-2 border-transparent hover:border-teal-600 pb-1">Encoding Explorer</a>
+    <header class="main-header">
+        <nav class="container nav-container">
+            <a href="#home" class="logo">Encoding Explained</a>
+            <div class="desktop-nav">
+                <a href="#ascii" class="nav-link">ASCII</a>
+                <a href="#unicode" class="nav-link">Unicode</a>
+                <a href="#explorer" class="nav-link">Encoding Explorer</a>
             </div>
-            <button id="mobile-menu-button" class="md:hidden text-slate-600 focus:outline-none">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            <button id="mobile-menu-button" class="mobile-menu-toggle">
+                <svg class="hamburger-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
             </button>
         </nav>
-        <div id="mobile-menu" class="hidden md:hidden">
-            <a href="#ascii" class="block py-2 px-4 text-sm hover:bg-teal-50">ASCII</a>
-            <a href="#unicode" class="block py-2 px-4 text-sm hover:bg-teal-50">Unicode</a>
-            <a href="#explorer" class="block py-2 px-4 text-sm hover:bg-teal-50">Encoding Explorer</a>
+        <div id="mobile-menu" class="mobile-nav">
+            <a href="#ascii" class="mobile-nav-link">ASCII</a>
+            <a href="#unicode" class="mobile-nav-link">Unicode</a>
+            <a href="#explorer" class="mobile-nav-link">Encoding Explorer</a>
         </div>
     </header>
 
-    <main class="container mx-auto p-4 md:p-8">
+    <main class="container main-content">
 
-        <section id="home" class="min-h-screen flex flex-col justify-center items-center text-center section-fade-in">
-            <h1 class="text-4xl md:text-6xl font-bold text-slate-800 mb-4">From Bits to 'Bytes' of Meaning</h1>
-            <p class="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-12">Ever wonder how your computer understands 'A', '€', or '😀'? It all comes down to character encoding, the silent translator that turns symbols into numbers. This guide will take you on an interactive journey through this fundamental concept of computing.</p>
+        <section id="home" class="section hero-section section-fade-in">
+            <h1 class="hero-title">From Bits to 'Bytes' of Meaning</h1>
+            <p class="hero-subtitle">Ever wonder how your computer understands 'A', '€', or '😀'? It all comes down to character encoding, the silent translator that turns symbols into numbers. This guide will take you on an interactive journey through this fundamental concept of computing.</p>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
-                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-teal-500">
-                    <h3 class="text-xl font-semibold mb-2 text-slate-800">Character</h3>
+            <div class="definitions-grid">
+                <div class="card">
+                    <h3 class="card-title">Character</h3>
                     <p>An abstract idea of a letter, symbol, or emoji. The smallest unit of text with meaning, like 'B' or '貓'.</p>
                 </div>
-                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-teal-500">
-                    <h3 class="text-xl font-semibold mb-2 text-slate-800">Code Point</h3>
+                <div class="card">
+                    <h3 class="card-title">Code Point</h3>
                     <p>The unique number a standard like Unicode assigns to a character. 'A' is U+0041, '🔥' is U+1F525.</p>
                 </div>
-                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-teal-500">
-                    <h3 class="text-xl font-semibold mb-2 text-slate-800">Encoding</h3>
+                <div class="card">
+                    <h3 class="card-title">Encoding</h3>
                     <p>The rulebook (like UTF-8) for turning a code point into a sequence of bytes that can be stored or sent.</p>
                 </div>
             </div>
-             <a href="#ascii" class="mt-12 text-teal-600 font-semibold animate-bounce">
-                <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+             <a href="#ascii" class="scroll-down-link">
+                <svg class="scroll-down-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
                 Begin the Journey
             </a>
         </section>
 
-        <section id="ascii" class="pt-24 section-fade-in">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold text-slate-800">The Pioneer: ASCII</h2>
-                <p class="mt-4 text-lg max-w-3xl mx-auto">The American Standard Code for Information Interchange was a monumental first step. Born in the 1960s, its 7-bit design provided 128 slots to represent the English alphabet, numbers, and control signals for teletype machines. It laid the groundwork for all future encodings but was quickly constrained by its limited size in an increasingly global world.</p>
+        <section id="ascii" class="section section-fade-in">
+            <div class="section-header">
+                <h2 class="section-title">The Pioneer: ASCII</h2>
+                <p class="section-subtitle">The American Standard Code for Information Interchange was a monumental first step. Born in the 1960s, its 7-bit design provided 128 slots to represent the English alphabet, numbers, and control signals for teletype machines. It laid the groundwork for all future encodings but was quickly constrained by its limited size in an increasingly global world.</p>
             </div>
 
-            <div class="bg-white p-6 rounded-lg shadow-xl overflow-x-auto">
-                 <h3 class="text-xl font-semibold mb-4 text-center">Interactive ASCII Table (Printable Characters)</h3>
-                 <div id="ascii-table-container" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 text-center">
-                    
+            <div class="content-box ascii-table-wrapper">
+                 <h3 class="content-box-title">Interactive ASCII Table (Printable Characters)</h3>
+                 <div id="ascii-table-container" class="ascii-grid">
                  </div>
-                 <div id="ascii-details" class="mt-4 p-4 bg-slate-100 rounded-lg text-center h-24 flex items-center justify-center transition-all duration-300">
-                     <p class="text-slate-500">Hover over a character to see its details.</p>
+                 <div id="ascii-details" class="details-pane">
+                     <p class="placeholder-text">Hover over a character to see its details.</p>
                  </div>
             </div>
-             <div class="mt-8 text-center bg-amber-100 border-l-4 border-amber-500 text-amber-800 p-4 rounded-lg">
-                <h4 class="font-bold">The Limitation</h4>
+             <div class="notice-box">
+                <h4 class="notice-title">The Limitation</h4>
                 <p>With only 128 positions, ASCII couldn't support accented characters, non-Latin scripts, or modern symbols like the Euro sign (€) or emojis, leading to a period of incompatible "extended ASCII" versions and paving the way for a universal solution.</p>
              </div>
         </section>
 
-        <section id="unicode" class="pt-24 section-fade-in">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold text-slate-800">The Universal Solution: Unicode</h2>
-                <p class="mt-4 text-lg max-w-3xl mx-auto">Unicode was created to solve the "code page hell" caused by ASCII's limitations. Its ambitious goal is to provide a unique code point for every character in every language. It's not an encoding itself, but a massive, standardized character set—the dictionary for all modern text.</p>
+        <section id="unicode" class="section section-fade-in">
+            <div class="section-header">
+                <h2 class="section-title">The Universal Solution: Unicode</h2>
+                <p class="section-subtitle">Unicode was created to solve the "code page hell" caused by ASCII's limitations. Its ambitious goal is to provide a unique code point for every character in every language. It's not an encoding itself, but a massive, standardized character set—the dictionary for all modern text.</p>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-                <div class="bg-white p-6 rounded-lg shadow-xl">
-                    <h3 class="text-xl font-semibold mb-4 text-center">Unicode's Vast Codespace</h3>
-                    <p class="mb-4 text-slate-600">Unicode's codespace contains over 1.1 million possible code points, organized into 17 "planes." Plane 0, the Basic Multilingual Plane (BMP), contains characters for almost all modern languages and many symbols. Other planes house historical scripts, mathematical symbols, and emojis. Hover over a plane to learn more.</p>
-                    <div id="unicode-planes" class="grid grid-cols-4 gap-2 text-xs font-mono">
+            <div class="unicode-grid">
+                <div class="content-box">
+                    <h3 class="content-box-title">Unicode's Vast Codespace</h3>
+                    <p class="content-box-text">Unicode's codespace contains over 1.1 million possible code points, organized into 17 "planes." Plane 0, the Basic Multilingual Plane (BMP), contains characters for almost all modern languages and many symbols. Other planes house historical scripts, mathematical symbols, and emojis. Hover over a plane to learn more.</p>
+                    <div id="unicode-planes" class="planes-grid">
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-lg shadow-xl">
-                     <h3 class="text-xl font-semibold mb-4 text-center">Character Inspector</h3>
-                     <p class="mb-4 text-slate-600">Type a single character (even an emoji!) below to discover its Unicode code point. This demonstrates how every symbol has its own unique ID in the Unicode system.</p>
-                     <input type="text" id="char-inspector-input" maxlength="2" class="w-full text-4xl text-center p-4 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500" placeholder="A">
-                     <div id="char-inspector-output" class="mt-4 p-4 bg-slate-100 rounded-lg text-center h-20 flex items-center justify-center transition-all duration-300">
-                         <p class="text-slate-500">Enter a character above.</p>
+                <div class="content-box">
+                     <h3 class="content-box-title">Character Inspector</h3>
+                     <p class="content-box-text">Type a single character (even an emoji!) below to discover its Unicode code point. This demonstrates how every symbol has its own unique ID in the Unicode system.</p>
+                     <input type="text" id="char-inspector-input" maxlength="2" class="char-input" placeholder="A">
+                     <div id="char-inspector-output" class="details-pane">
+                         <p class="placeholder-text">Enter a character above.</p>
                      </div>
                 </div>
             </div>
         </section>
 
-        <section id="explorer" class="pt-24 section-fade-in">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold text-slate-800">Encoding Explorer</h2>
-                <p class="mt-4 text-lg max-w-3xl mx-auto">This is where Unicode code points become real bytes. An encoding like UTF-8 translates the abstract code points into a sequence of bytes a computer can actually save or send. Type some text below to see how different encodings represent your message and how their efficiency compares.</p>
+        <section id="explorer" class="section section-fade-in">
+            <div class="section-header">
+                <h2 class="section-title">Encoding Explorer</h2>
+                <p class="section-subtitle">This is where Unicode code points become real bytes. An encoding like UTF-8 translates the abstract code points into a sequence of bytes a computer can actually save or send. Type some text below to see how different encodings represent your message and how their efficiency compares.</p>
             </div>
 
-            <div class="bg-white p-6 rounded-lg shadow-xl">
-                <label for="explorer-input" class="font-semibold text-lg">Your Text:</label>
-                <input type="text" id="explorer-input" class="w-full text-xl mt-2 p-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500" placeholder="Hello world! 😊">
+            <div class="content-box">
+                <label for="explorer-input" class="input-label">Your Text:</label>
+                <input type="text" id="explorer-input" class="text-input" placeholder="Hello world! 😊">
                 
-                <div class="mt-8 space-y-6">
+                <div class="explorer-outputs">
                     <div id="explorer-output-ascii"></div>
                     <div id="explorer-output-utf8"></div>
                     <div id="explorer-output-utf16"></div>
                     <div id="explorer-output-utf32"></div>
                 </div>
 
-                <div class="mt-12">
-                    <h3 class="text-xl font-semibold mb-4 text-center">Storage Efficiency Comparison</h3>
-                    <p class="text-center text-slate-600 mb-4">This chart shows the total number of bytes needed to store your text in each encoding. Notice how UTF-8 is efficient for English, while fixed-width encodings use more space.</p>
+                <div class="chart-wrapper">
+                    <h3 class="content-box-title">Storage Efficiency Comparison</h3>
+                    <p class="chart-description">This chart shows the total number of bytes needed to store your text in each encoding. Notice how UTF-8 is efficient for English, while fixed-width encodings use more space.</p>
                     <div class="chart-container">
                         <canvas id="encoding-chart"></canvas>
                     </div>
                 </div>
             </div>
         </section>
-
     </main>
     
-    <footer class="text-center py-8 mt-16 border-t border-slate-200">
-        <p class="text-slate-500">An interactive exploration of character encoding.</p>
+    <footer class="main-footer">
+        <p>An interactive exploration of character encoding.</p>
     </footer>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const mobileMenuButton = document.getElementById('mobile-menu-button');
-            const mobileMenu = document.getElementById('mobile-menu');
-            
-            mobileMenuButton.addEventListener('click', () => {
-                mobileMenu.classList.toggle('hidden');
-            });
-
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('section-fade-in');
-                    }
-                });
-            }, { threshold: 0.1 });
-
-            document.querySelectorAll('section').forEach(section => {
-                observer.observe(section);
-            });
-            
-            const asciiData = [];
-            for (let i = 32; i <= 126; i++) {
-                asciiData.push({
-                    char: String.fromCharCode(i),
-                    dec: i,
-                    hex: i.toString(16).toUpperCase().padStart(2, '0'),
-                    bin: i.toString(2).padStart(7, '0'),
-                });
-            }
-
-            const asciiTableContainer = document.getElementById('ascii-table-container');
-            const asciiDetails = document.getElementById('ascii-details');
-            
-            asciiData.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'p-2 border rounded-md cursor-pointer hover:bg-teal-100 hover:shadow-md transition-all duration-200';
-                div.textContent = item.char === ' ' ? 'Space' : item.char;
-                div.addEventListener('mouseenter', () => {
-                    asciiDetails.innerHTML = `
-                        <div class="flex items-center space-x-4">
-                           <div class="text-4xl font-bold text-teal-600">${item.char === ' ' ? '␣' : item.char}</div>
-                           <div class="text-left text-sm">
-                               <p><strong>Decimal:</strong> ${item.dec}</p>
-                               <p><strong>Hex:</strong> 0x${item.hex}</p>
-                               <p><strong>Binary:</strong> ${item.bin}</p>
-                           </div>
-                        </div>
-                    `;
-                });
-                asciiTableContainer.appendChild(div);
-            });
-
-            const unicodePlanesContainer = document.getElementById('unicode-planes');
-            const planes = [
-                { name: 'BMP', range: 'U+0000-FFFF', desc: 'Basic Multilingual Plane: Most modern scripts and symbols.' },
-                { name: 'SMP', range: 'U+10000-1FFFF', desc: 'Supplementary Multilingual Plane: Historic scripts, emojis, symbols.' },
-                { name: 'SIP', range: 'U+20000-2FFFF', desc: 'Supplementary Ideographic Plane: Rare CJK ideographs.' },
-                { name: 'TIP', range: 'U+30000-3FFFF', desc: 'Tertiary Ideographic Plane: Oracle Bone script, rare CJK.' },
-                { name: 'Plane 4', range: 'Unassigned', desc: 'Reserved for future use.' },
-                { name: 'Plane 5', range: 'Unassigned', desc: 'Reserved for future use.' },
-                { name: 'Plane 6', range: 'Unassigned', desc: 'Reserved for future use.' },
-                { name: 'Plane 7', range: 'Unassigned', desc: 'Reserved for future use.' },
-                { name: 'Plane 8', range: 'Unassigned', desc: 'Reserved for future use.' },
-                { name: 'Plane 9', range: 'Unassigned', desc: 'Reserved for future use.' },
-                { name: 'Plane 10', range: 'Unassigned', desc: 'Reserved for future use.' },
-                { name: 'Plane 11', range: 'Unassigned', desc: 'Reserved for future use.' },
-                { name: 'Plane 12', range: 'Unassigned', desc: 'Reserved for future use.' },
-                { name: 'Plane 13', range: 'Unassigned', desc: 'Reserved for future use.' },
-                { name: 'SSP', range: 'U+E0000-EFFFF', desc: 'Supplementary Special-purpose Plane: Language tags.' },
-                { name: 'PUA', range: 'U+F0000-10FFFF', desc: 'Private Use Areas: For custom characters.' }
-            ];
-            
-            planes.forEach((plane, index) => {
-                const div = document.createElement('div');
-                div.className = `p-2 border rounded-md cursor-help text-center transition-colors ${index === 0 ? 'bg-teal-100' : 'bg-slate-100'} hover:bg-teal-200`;
-                div.textContent = `P${index}`;
-                div.title = `${plane.name} (${plane.range}): ${plane.desc}`;
-                unicodePlanesContainer.appendChild(div);
-            });
-            
-            const charInspectorInput = document.getElementById('char-inspector-input');
-            const charInspectorOutput = document.getElementById('char-inspector-output');
-            
-            function inspectChar() {
-                const text = charInspectorInput.value;
-                if (!text) {
-                     charInspectorOutput.innerHTML = `<p class="text-slate-500">Enter a character above.</p>`;
-                     return;
-                }
-                const char = Array.from(text)[0];
-                const codePoint = char.codePointAt(0);
-                const hex = codePoint.toString(16).toUpperCase().padStart(4, '0');
-                
-                charInspectorOutput.innerHTML = `
-                    <div class="flex items-center space-x-4">
-                       <div class="text-4xl font-bold text-teal-600">${char}</div>
-                       <div class="text-left text-sm md:text-base">
-                           <p><strong>Code Point:</strong> U+${hex}</p>
-                       </div>
-                    </div>
-                `;
-            }
-            charInspectorInput.addEventListener('input', inspectChar);
-            inspectChar();
-
-            const explorerInput = document.getElementById('explorer-input');
-            const outputAscii = document.getElementById('explorer-output-ascii');
-            const outputUtf8 = document.getElementById('explorer-output-utf8');
-            const outputUtf16 = document.getElementById('explorer-output-utf16');
-            const outputUtf32 = document.getElementById('explorer-output-utf32');
-            
-            let encodingChart;
-
-            function updateExplorer() {
-                const text = explorerInput.value;
-                
-                let asciiBytes = [];
-                let asciiValid = true;
-                for (let i = 0; i < text.length; i++) {
-                    const code = text.charCodeAt(i);
-                    if (code > 127) {
-                        asciiValid = false;
-                        break;
-                    }
-                    asciiBytes.push(code.toString(16).toUpperCase().padStart(2, '0'));
-                }
-
-                let utf8Bytes = [];
-                let utf16Bytes = [];
-                let utf32Bytes = [];
-
-                for (const char of text) {
-                    const codePoint = char.codePointAt(0);
-                    
-                    if (codePoint < 0x80) {
-                        utf8Bytes.push(codePoint);
-                    } else if (codePoint < 0x800) {
-                        utf8Bytes.push(0xC0 | (codePoint >> 6), 0x80 | (codePoint & 0x3F));
-                    } else if (codePoint < 0x10000) {
-                        utf8Bytes.push(0xE0 | (codePoint >> 12), 0x80 | ((codePoint >> 6) & 0x3F), 0x80 | (codePoint & 0x3F));
-                    } else {
-                        utf8Bytes.push(0xF0 | (codePoint >> 18), 0x80 | ((codePoint >> 12) & 0x3F), 0x80 | ((codePoint >> 6) & 0x3F), 0x80 | (codePoint & 0x3F));
-                    }
-
-                    if (codePoint < 0x10000) {
-                        utf16Bytes.push(codePoint);
-                    } else {
-                        const high = Math.floor((codePoint - 0x10000) / 0x400) + 0xD800;
-                        const low = ((codePoint - 0x10000) % 0x400) + 0xDC00;
-                        utf16Bytes.push(high, low);
-                    }
-                    
-                    utf32Bytes.push(codePoint);
-                }
-
-                const renderBytes = (bytes, unitSize) => bytes.map(b => {
-                    const hex = b.toString(16).toUpperCase().padStart(unitSize, '0');
-                    let color = 'bg-slate-200 text-slate-800';
-                    if (unitSize === 2) {
-                       const byteVal = parseInt(hex, 16);
-                       if (byteVal >= 0xD800 && byteVal <= 0xDBFF) color = 'bg-sky-200 text-sky-800'; // High surrogate
-                       if (byteVal >= 0xDC00 && byteVal <= 0xDFFF) color = 'bg-indigo-200 text-indigo-800'; // Low surrogate
-                    } else {
-                       if((b & 0xC0) === 0x80) color = 'bg-yellow-200 text-yellow-800'; // Continuation
-                       else if (b > 0x7F) color = 'bg-green-200 text-green-800'; // Start
-                    }
-
-                    return `<span class="inline-block font-mono text-xs p-1 rounded-md m-0.5 ${color}" title="0x${hex}">${hex}</span>`;
-                }).join('');
-
-                outputAscii.innerHTML = `
-                    <h4 class="font-semibold text-lg">ASCII (7-bit)</h4>
-                    ${asciiValid ? `
-                        <p class="text-sm text-slate-600">Total Bytes: ${asciiBytes.length}</p>
-                        <div class="mt-2 p-3 bg-slate-50 rounded-lg flex flex-wrap">${renderBytes(asciiBytes.map(b => parseInt(b, 16)), 2)}</div>
-                    ` : `
-                        <p class="p-3 bg-red-100 text-red-800 rounded-lg">Invalid ASCII: Contains characters beyond the 127 limit.</p>
-                    `}
-                `;
-                
-                outputUtf8.innerHTML = `
-                    <h4 class="font-semibold text-lg">UTF-8 (variable, 1-4 bytes)</h4>
-                    <p class="text-sm text-slate-600">Total Bytes: ${utf8Bytes.length}</p>
-                    <div class="mt-2 p-3 bg-slate-50 rounded-lg flex flex-wrap">${renderBytes(utf8Bytes, 2)}</div>
-                `;
-
-                outputUtf16.innerHTML = `
-                    <h4 class="font-semibold text-lg">UTF-16 (variable, 2 or 4 bytes)</h4>
-                    <p class="text-sm text-slate-600">Total Bytes: ${utf16Bytes.length * 2}</p>
-                    <div class="mt-2 p-3 bg-slate-50 rounded-lg flex flex-wrap">${renderBytes(utf16Bytes, 4)}</div>
-                `;
-
-                outputUtf32.innerHTML = `
-                    <h4 class="font-semibold text-lg">UTF-32 (fixed, 4 bytes)</h4>
-                    <p class="text-sm text-slate-600">Total Bytes: ${utf32Bytes.length * 4}</p>
-                    <div class="mt-2 p-3 bg-slate-50 rounded-lg flex flex-wrap">${renderBytes(utf32Bytes, 8)}</div>
-                `;
-                
-                updateChart(
-                    asciiValid ? asciiBytes.length : 0, 
-                    utf8Bytes.length, 
-                    utf16Bytes.length * 2, 
-                    utf32Bytes.length * 4
-                );
-            }
-
-            function updateChart(ascii, utf8, utf16, utf32) {
-                const ctx = document.getElementById('encoding-chart').getContext('2d');
-                const data = {
-                    labels: ['ASCII', 'UTF-8', 'UTF-16', 'UTF-32'],
-                    datasets: [{
-                        label: 'Bytes Used',
-                        data: [ascii, utf8, utf16, utf32],
-                        backgroundColor: [
-                            'rgba(148, 163, 184, 0.6)', // slate-400
-                            'rgba(14, 165, 233, 0.6)', // sky-500
-                            'rgba(99, 102, 241, 0.6)', // indigo-500
-                            'rgba(20, 184, 166, 0.6)', // teal-500
-                        ],
-                        borderColor: [
-                           'rgb(148, 163, 184)',
-                           'rgb(14, 165, 233)',
-                           'rgb(99, 102, 241)',
-                           'rgb(20, 184, 166)',
-                        ],
-                        borderWidth: 1
-                    }]
-                };
-
-                if (encodingChart) {
-                    encodingChart.data = data;
-                    encodingChart.update();
-                } else {
-                    encodingChart = new Chart(ctx, {
-                        type: 'bar',
-                        data: data,
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    title: {
-                                        display: true,
-                                        text: 'Number of Bytes'
-                                    }
-                                }
-                            },
-                            plugins: {
-                                legend: {
-                                    display: false
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            let label = context.dataset.label || '';
-                                            if (label) {
-                                                label += ': ';
-                                            }
-                                            if (context.parsed.y !== null) {
-                                                label += context.parsed.y + ' bytes';
-                                            }
-                                            return label;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-            }
-
-            explorerInput.addEventListener('input', updateExplorer);
-            explorerInput.value = 'Hello! 😊';
-            updateExplorer();
-        });
-    </script>
+<script src="script/01_script.js"></script>
 </body>
 </html>
